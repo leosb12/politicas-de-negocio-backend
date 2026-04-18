@@ -1,4 +1,4 @@
-package com.leo.politicas_de_negocio.model;
+package com.leo.politicas_de_negocio.dto.politica.colaboracion;
 
 import com.leo.politicas_de_negocio.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.model.politica.Conexion;
@@ -7,33 +7,21 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Document(collection = "politicas_negocio")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class PoliticaNegocio {
+public class ColaboracionEstadoResponse {
 
-    @Id
-    private String id;
-    
-    private String nombre;
-    private String descripcion;
-    private EstadoPolitica estado;
-    
+    private String politicaId;
+    private EstadoPolitica estadoPolitica;
+    private Long secuenciaActual;
     private List<Nodo> nodos;
     private List<Conexion> conexiones;
-
-    // Secuencia global de eventos colaborativos aplicados sobre esta politica.
-    private Long secuenciaColaboracion;
     private LocalDateTime fechaUltimaColaboracion;
-    
-    private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
 }

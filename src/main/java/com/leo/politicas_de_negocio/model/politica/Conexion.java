@@ -12,4 +12,6 @@ import lombok.NoArgsConstructor;
 public class Conexion {
     private String origen;
     private String destino;
+    private String puertoOrigen;
+    private String puertoDestino;
 }

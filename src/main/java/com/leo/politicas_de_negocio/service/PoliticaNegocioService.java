@@ -49,6 +49,8 @@ public class PoliticaNegocioService {
                 .estado(EstadoPolitica.BORRADOR)
                 .nodos(new ArrayList<>())
                 .conexiones(new ArrayList<>())
+                .secuenciaColaboracion(0L)
+                .fechaUltimaColaboracion(LocalDateTime.now())
                 .fechaCreacion(LocalDateTime.now())
                 .fechaActualizacion(LocalDateTime.now())
                 .build();
@@ -82,6 +84,7 @@ public class PoliticaNegocioService {
 
         List<Nodo> nodos = request.getNodos() != null ? request.getNodos() : new ArrayList<>();
         validarResponsablesYNodos(nodos, false);
+        inicializarMetadatosColaborativosNodos(nodos);
 
         politica.setNodos(nodos);
         politica.setConexiones(request.getConexiones() != null ? request.getConexiones() : new ArrayList<>());
@@ -227,5 +230,17 @@ public class PoliticaNegocioService {
             return id;
         }
         return "#" + index;
+    }
+
+    private void inicializarMetadatosColaborativosNodos(List<Nodo> nodos) {
+        LocalDateTime now = LocalDateTime.now();
+        for (Nodo nodo : nodos) {
+            if (nodo.getVersion() == null || nodo.getVersion() < 0) {
+                nodo.setVersion(0L);
+            }
+            if (nodo.getFechaActualizacion() == null) {
+                nodo.setFechaActualizacion(now);
+            }
+        }
     }
 }

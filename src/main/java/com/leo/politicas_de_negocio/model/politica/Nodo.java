@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -23,6 +24,14 @@ public class Nodo {
     // Responsable real de ejecucion.
     private String responsableTipo;
     private String responsableId;
+
+    // Coordenadas visuales para sincronizar movimientos en vivo.
+    private Double posX;
+    private Double posY;
+
+    // Version por nodo para detectar updates estructurales stale.
+    private Long version;
+    private LocalDateTime fechaActualizacion;
 
     private List<CampoFormulario> formulario;
     private List<CondicionDecision> condiciones;
