@@ -6,7 +6,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-@EnableMongoRepositories(basePackages = "com.leo.politicas_de_negocio.repository")
+@EnableMongoRepositories(basePackages = "com.leo.politicas_de_negocio")
 @EnableScheduling
 public class PoliticasDeNegocioApplication {
 
