@@ -32,6 +32,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class PoliticaNegocioService {
 
+    private static final String DEFAULT_LANE_ORIENTATION = "VERTICAL";
+    private static final double DEFAULT_LANE_WIDTH = 320d;
+    private static final double DEFAULT_LANE_HEIGHT = 220d;
+    private static final String RESPONSABLE_USUARIO_FINAL_ID = "__RESPONSABLE_USUARIO_FINAL__";
+    private static final String RESPONSABLE_INICIADOR_TRAMITE_ID = "__RESPONSABLE_INICIADOR_TRAMITE__";
+
     private static final Set<EstadoPolitica> ESTADOS_ELIMINABLES =
         Set.of(EstadoPolitica.BORRADOR, EstadoPolitica.DESHABILITADA);
 
@@ -70,6 +76,9 @@ public class PoliticaNegocioService {
             .fueActivada(false)
                 .nodos(new ArrayList<>())
                 .conexiones(new ArrayList<>())
+                .laneOrientation(DEFAULT_LANE_ORIENTATION)
+                .laneWidth(DEFAULT_LANE_WIDTH)
+                .laneHeight(DEFAULT_LANE_HEIGHT)
                 .secuenciaColaboracion(0L)
                 .fechaUltimaColaboracion(LocalDateTime.now())
                 .fechaCreacion(LocalDateTime.now())
@@ -109,6 +118,15 @@ public class PoliticaNegocioService {
 
         politica.setNodos(nodos);
         politica.setConexiones(request.getConexiones() != null ? request.getConexiones() : new ArrayList<>());
+        if (normalizeNullableText(politica.getLaneOrientation()) == null) {
+            politica.setLaneOrientation(DEFAULT_LANE_ORIENTATION);
+        }
+        if (politica.getLaneWidth() == null || politica.getLaneWidth() <= 0) {
+            politica.setLaneWidth(DEFAULT_LANE_WIDTH);
+        }
+        if (politica.getLaneHeight() == null || politica.getLaneHeight() <= 0) {
+            politica.setLaneHeight(DEFAULT_LANE_HEIGHT);
+        }
         politica.setFechaActualizacion(LocalDateTime.now());
 
         return repository.save(politica);
@@ -286,12 +304,21 @@ public class PoliticaNegocioService {
                 }
             }
             case USUARIO -> {
+                if (isResponsableUsuarioDinamico(responsableId)) {
+                    return;
+                }
+
                 if (!usuarioRepository.existsById(responsableId)) {
                     throw new ApiException(HttpStatus.BAD_REQUEST,
                             "El responsable USUARIO del nodo " + safeNodeName(nodo, index) + " no existe");
                 }
             }
         }
+    }
+
+    private boolean isResponsableUsuarioDinamico(String responsableId) {
+        return RESPONSABLE_USUARIO_FINAL_ID.equals(responsableId)
+                || RESPONSABLE_INICIADOR_TRAMITE_ID.equals(responsableId);
     }
 
     private ResponsableTipo parseResponsableTipo(Nodo nodo) {

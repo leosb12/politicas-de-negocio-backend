@@ -32,6 +32,10 @@ public class ColaboracionEventoResponse {
     private Double posX;
     private Double posY;
 
+    private String laneOrientation;
+    private Double laneWidth;
+    private Double laneHeight;
+
     private Nodo nodo;
     private Conexion conexion;
     private List<Nodo> nodos;

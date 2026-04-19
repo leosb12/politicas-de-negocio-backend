@@ -20,6 +20,9 @@ public class ColaboracionEstadoResponse {
     private String politicaId;
     private EstadoPolitica estadoPolitica;
     private Long secuenciaActual;
+    private String laneOrientation;
+    private Double laneWidth;
+    private Double laneHeight;
     private List<Nodo> nodos;
     private List<Conexion> conexiones;
     private LocalDateTime fechaUltimaColaboracion;

@@ -16,6 +16,7 @@ import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
+import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,10 +46,14 @@ public class WorkflowEngineService {
             EstadoTarea.EN_PROCESO
     );
 
+    private static final String RESPONSABLE_USUARIO_FINAL_ID = "__RESPONSABLE_USUARIO_FINAL__";
+    private static final String RESPONSABLE_INICIADOR_TRAMITE_ID = "__RESPONSABLE_INICIADOR_TRAMITE__";
+
     private static final int MAX_PASOS_TRANSICION = 1000;
 
     private final InstanciaPoliticaRepository instanciaRepository;
     private final TareaActividadRepository tareaRepository;
+    private final UsuarioRepository usuarioRepository;
     private final HistorialInstanciaService historialService;
 
     public void iniciarInstancia(InstanciaPolitica instancia, PoliticaNegocio politica, String actorUserId) {
@@ -189,9 +194,9 @@ public class WorkflowEngineService {
             String actorUserId
     ) {
         String responsableTipo = normalizarTexto(nodo.getResponsableTipo());
-        String responsableId = normalizarTexto(nodo.getResponsableId());
+        String responsableIdConfigurado = normalizarTexto(nodo.getResponsableId());
 
-        if (responsableTipo == null || responsableId == null) {
+        if (responsableTipo == null || responsableIdConfigurado == null) {
             throw new ApiException(HttpStatus.CONFLICT,
                     "El nodo ACTIVIDAD " + nodo.getId() + " debe tener responsableTipo y responsableId");
         }
@@ -200,6 +205,11 @@ public class WorkflowEngineService {
         if (!"USUARIO".equals(responsableTipoNormalizado) && !"DEPARTAMENTO".equals(responsableTipoNormalizado)) {
             throw new ApiException(HttpStatus.CONFLICT,
                     "responsableTipo invalido en nodo " + nodo.getId() + ": " + responsableTipo);
+        }
+
+        String responsableId = responsableIdConfigurado;
+        if ("USUARIO".equals(responsableTipoNormalizado)) {
+            responsableId = resolverResponsableUsuarioId(instancia, responsableIdConfigurado);
         }
 
         List<TareaActividad> tareasAbiertas = tareaRepository.findByInstanciaIdAndNodoIdAndEstadoTareaIn(
@@ -231,6 +241,75 @@ public class WorkflowEngineService {
                 actorUserId,
                 "Se creo tarea para nodo " + nodo.getId()
         );
+    }
+
+    private String resolverResponsableUsuarioId(
+            InstanciaPolitica instancia,
+            String responsableIdConfigurado
+    ) {
+        String normalized = normalizarTexto(responsableIdConfigurado);
+        if (normalized == null) {
+            return null;
+        }
+
+        if (RESPONSABLE_INICIADOR_TRAMITE_ID.equalsIgnoreCase(normalized)) {
+            String iniciadorId = normalizarTexto(instancia.getCreadaPor());
+            if (iniciadorId == null) {
+                throw new ApiException(
+                        HttpStatus.CONFLICT,
+                        "No se pudo resolver el usuario que inicio el tramite"
+                );
+            }
+            return iniciadorId;
+        }
+
+        if (RESPONSABLE_USUARIO_FINAL_ID.equalsIgnoreCase(normalized)) {
+            String usuarioFinalId = extraerUsuarioFinalDesdeContexto(instancia.getDatosContexto());
+            if (usuarioFinalId != null) {
+                return usuarioFinalId;
+            }
+
+            String iniciadorId = normalizarTexto(instancia.getCreadaPor());
+            if (iniciadorId != null) {
+                return iniciadorId;
+            }
+
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "No se pudo resolver el usuario final del tramite"
+            );
+        }
+
+        return normalized;
+    }
+
+    private String extraerUsuarioFinalDesdeContexto(Map<String, Object> contexto) {
+        if (contexto == null || contexto.isEmpty()) {
+            return null;
+        }
+
+        List<String> candidateKeys = List.of(
+                "usuarioFinalId",
+                "usuario_final_id",
+                "solicitanteId",
+                "solicitante_id",
+                "usuarioId",
+                "usuario_id",
+                "actorUserId",
+                "actor_user_id",
+                "creadaPor",
+                "creadoPor"
+        );
+
+        for (String key : candidateKeys) {
+            Object value = obtenerValorMapaCaseInsensitive(contexto, key);
+            String resolved = normalizarTexto(valorComoTexto(value));
+            if (resolved != null && usuarioRepository.existsById(resolved)) {
+                return resolved;
+            }
+        }
+
+        return null;
     }
 
     private void finalizarInstanciaSiCorresponde(InstanciaPolitica instancia, String actorUserId, String nodoFinId) {

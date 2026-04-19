@@ -34,6 +34,11 @@ public class PoliticaNegocio {
     private List<Nodo> nodos;
     private List<Conexion> conexiones;
 
+    // Configuracion visual compartida del canvas de diseño.
+    private String laneOrientation;
+    private Double laneWidth;
+    private Double laneHeight;
+
     // Secuencia global de eventos colaborativos aplicados sobre esta politica.
     private Long secuenciaColaboracion;
     private LocalDateTime fechaUltimaColaboracion;

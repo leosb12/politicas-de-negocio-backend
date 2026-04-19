@@ -39,6 +39,15 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 public class PoliticaColaboracionService {
 
+    private static final String LANE_ORIENTATION_VERTICAL = "VERTICAL";
+    private static final String LANE_ORIENTATION_HORIZONTAL = "HORIZONTAL";
+    private static final double DEFAULT_LANE_WIDTH = 320d;
+    private static final double DEFAULT_LANE_HEIGHT = 220d;
+    private static final double MIN_LANE_WIDTH = 220d;
+    private static final double MAX_LANE_WIDTH = 960d;
+    private static final double MIN_LANE_HEIGHT = 140d;
+    private static final double MAX_LANE_HEIGHT = 680d;
+
     private final PoliticaNegocioRepository politicaNegocioRepository;
     private final PoliticaNegocioService politicaNegocioService;
     private final UsuarioRepository usuarioRepository;
@@ -97,6 +106,8 @@ public class PoliticaColaboracionService {
                     resultado.flujoActualizado()
             );
 
+                aplicarResultadoCanvasConfig(persistidaFlujo, resultado);
+
             long siguienteSecuencia = secuenciaActual(persistidaFlujo) + 1;
             persistidaFlujo.setSecuenciaColaboracion(siguienteSecuencia);
             LocalDateTime now = LocalDateTime.now();
@@ -119,6 +130,9 @@ public class PoliticaColaboracionService {
                     .nodeVersion(resultado.nodeVersion())
                     .posX(request.getTipo() == TipoEventoColaboracion.MOVE_NODE ? request.getPosX() : null)
                     .posY(request.getTipo() == TipoEventoColaboracion.MOVE_NODE ? request.getPosY() : null)
+                    .laneOrientation(persistidaFlujo.getLaneOrientation())
+                    .laneWidth(persistidaFlujo.getLaneWidth())
+                    .laneHeight(persistidaFlujo.getLaneHeight())
                     .nodo(resultado.nodo())
                     .conexion(resultado.conexion())
                         .nodos(request.getTipo() == TipoEventoColaboracion.REPLACE_FLOW
@@ -201,6 +215,7 @@ public class PoliticaColaboracionService {
             case CREATE_NODE -> aplicarCreateNode(nodos, conexiones, request, now);
             case UPDATE_NODE -> aplicarUpdateNode(nodos, conexiones, request, now);
             case MOVE_NODE -> aplicarMoveNode(nodos, conexiones, request, now);
+            case UPDATE_CANVAS_CONFIG -> aplicarUpdateCanvasConfig(nodos, conexiones, request, politica);
             case DELETE_NODE -> aplicarDeleteNode(nodos, conexiones, request);
             case CREATE_EDGE -> aplicarCreateEdge(nodos, conexiones, request);
             case DELETE_EDGE -> aplicarDeleteEdge(nodos, conexiones, request);
@@ -240,7 +255,10 @@ public class PoliticaColaboracionService {
                 nuevo.getVersion(),
                 nuevo,
                 null,
-                "Nodo creado"
+            "Nodo creado",
+            null,
+            null,
+            null
         );
     }
 
@@ -280,7 +298,10 @@ public class PoliticaColaboracionService {
                 actualizado.getVersion(),
                 actualizado,
                 null,
-                "Nodo actualizado"
+            "Nodo actualizado",
+            null,
+            null,
+            null
         );
     }
 
@@ -322,7 +343,42 @@ public class PoliticaColaboracionService {
                 nodo.getVersion(),
                 nodo,
                 null,
-                "Nodo movido"
+                "Nodo movido",
+                null,
+                null,
+                null
+        );
+    }
+
+    private ResultadoAplicacion aplicarUpdateCanvasConfig(
+            List<Nodo> nodos,
+            List<Conexion> conexiones,
+            ColaboracionEventoRequest request,
+            PoliticaNegocio politica
+    ) {
+        String laneOrientation = normalizarLaneOrientation(request.getLaneOrientation());
+        Double laneWidth = normalizarLaneWidth(request.getLaneWidth());
+        Double laneHeight = normalizarLaneHeight(request.getLaneHeight());
+
+        String currentOrientation = normalizarLaneOrientation(politica.getLaneOrientation());
+        Double currentWidth = normalizarLaneWidth(politica.getLaneWidth());
+        Double currentHeight = normalizarLaneHeight(politica.getLaneHeight());
+
+        String resolvedOrientation =
+                laneOrientation != null ? laneOrientation : ensureLaneOrientationDefault(currentOrientation);
+        Double resolvedWidth = laneWidth != null ? laneWidth : ensureLaneWidthDefault(currentWidth);
+        Double resolvedHeight = laneHeight != null ? laneHeight : ensureLaneHeightDefault(currentHeight);
+
+        return new ResultadoAplicacion(
+                toFlujoRequest(nodos, conexiones),
+                null,
+                null,
+                null,
+                null,
+                "Configuracion del canvas actualizada",
+                resolvedOrientation,
+                resolvedWidth,
+                resolvedHeight
         );
     }
 
@@ -359,7 +415,10 @@ public class PoliticaColaboracionService {
                 null,
                 null,
                 null,
-                "Nodo eliminado"
+                "Nodo eliminado",
+                null,
+                null,
+                null
         );
     }
 
@@ -414,7 +473,10 @@ public class PoliticaColaboracionService {
                 null,
                 null,
                 clonarConexion(conexionNormalizada),
-                existe ? "Conexion actualizada" : "Conexion creada"
+            existe ? "Conexion actualizada" : "Conexion creada",
+            null,
+            null,
+            null
         );
     }
 
@@ -449,7 +511,10 @@ public class PoliticaColaboracionService {
                 .puertoOrigen(puertoOrigen)
                 .puertoDestino(puertoDestino)
                 .build(),
-                removida ? "Conexion eliminada" : "Conexion no existia"
+                removida ? "Conexion eliminada" : "Conexion no existia",
+                null,
+                null,
+                null
         );
     }
 
@@ -473,7 +538,10 @@ public class PoliticaColaboracionService {
                 null,
                 null,
                 null,
-                "Flujo reemplazado"
+            "Flujo reemplazado",
+            null,
+            null,
+            null
         );
     }
 
@@ -490,6 +558,16 @@ public class PoliticaColaboracionService {
         if (request.getTipo() == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "tipo de evento es obligatorio");
         }
+
+        if (request.getTipo() == TipoEventoColaboracion.UPDATE_CANVAS_CONFIG
+                && request.getLaneOrientation() == null
+                && request.getLaneWidth() == null
+                && request.getLaneHeight() == null) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "UPDATE_CANVAS_CONFIG requiere laneOrientation, laneWidth o laneHeight"
+            );
+        }
     }
 
     private void validarSecuenciaEsperada(ColaboracionEventoRequest request, PoliticaNegocio politica) {
@@ -500,6 +578,7 @@ public class PoliticaColaboracionService {
         long secuenciaActual = secuenciaActual(politica);
         if (request.getTipo() != TipoEventoColaboracion.MOVE_NODE
                 && request.getTipo() != TipoEventoColaboracion.UPDATE_NODE
+            && request.getTipo() != TipoEventoColaboracion.UPDATE_CANVAS_CONFIG
                 && request.getExpectedSequence() < secuenciaActual) {
             throw new ApiException(
                     HttpStatus.CONFLICT,
@@ -539,10 +618,19 @@ public class PoliticaColaboracionService {
     }
 
     private ColaboracionEstadoResponse toEstadoResponse(PoliticaNegocio politica) {
+        String laneOrientation = ensureLaneOrientationDefault(
+            normalizarLaneOrientation(politica.getLaneOrientation())
+        );
+        Double laneWidth = ensureLaneWidthDefault(normalizarLaneWidth(politica.getLaneWidth()));
+        Double laneHeight = ensureLaneHeightDefault(normalizarLaneHeight(politica.getLaneHeight()));
+
         return ColaboracionEstadoResponse.builder()
                 .politicaId(politica.getId())
                 .estadoPolitica(politica.getEstado())
                 .secuenciaActual(secuenciaActual(politica))
+            .laneOrientation(laneOrientation)
+            .laneWidth(laneWidth)
+            .laneHeight(laneHeight)
                 .nodos(clonarNodos(politica.getNodos()))
                 .conexiones(clonarConexiones(politica.getConexiones()))
                 .fechaUltimaColaboracion(politica.getFechaUltimaColaboracion())
@@ -678,6 +766,70 @@ public class PoliticaColaboracionService {
         return normalized.isEmpty() ? null : normalized;
     }
 
+    private void aplicarResultadoCanvasConfig(PoliticaNegocio politica, ResultadoAplicacion resultado) {
+        String laneOrientation = ensureLaneOrientationDefault(
+                resultado.laneOrientation() != null
+                        ? resultado.laneOrientation()
+                        : normalizarLaneOrientation(politica.getLaneOrientation())
+        );
+        Double laneWidth = ensureLaneWidthDefault(
+                resultado.laneWidth() != null
+                        ? resultado.laneWidth()
+                        : normalizarLaneWidth(politica.getLaneWidth())
+        );
+        Double laneHeight = ensureLaneHeightDefault(
+                resultado.laneHeight() != null
+                        ? resultado.laneHeight()
+                        : normalizarLaneHeight(politica.getLaneHeight())
+        );
+
+        politica.setLaneOrientation(laneOrientation);
+        politica.setLaneWidth(laneWidth);
+        politica.setLaneHeight(laneHeight);
+    }
+
+    private String normalizarLaneOrientation(String value) {
+        String normalized = normalizarTexto(value);
+        if (normalized == null) {
+            return null;
+        }
+
+        String upper = normalized.toUpperCase();
+        if (!LANE_ORIENTATION_VERTICAL.equals(upper) && !LANE_ORIENTATION_HORIZONTAL.equals(upper)) {
+            return null;
+        }
+
+        return upper;
+    }
+
+    private Double normalizarLaneWidth(Double value) {
+        if (value == null || !Double.isFinite(value)) {
+            return null;
+        }
+
+        return Math.max(MIN_LANE_WIDTH, Math.min(MAX_LANE_WIDTH, value));
+    }
+
+    private Double normalizarLaneHeight(Double value) {
+        if (value == null || !Double.isFinite(value)) {
+            return null;
+        }
+
+        return Math.max(MIN_LANE_HEIGHT, Math.min(MAX_LANE_HEIGHT, value));
+    }
+
+    private String ensureLaneOrientationDefault(String value) {
+        return value != null ? value : LANE_ORIENTATION_VERTICAL;
+    }
+
+    private Double ensureLaneWidthDefault(Double value) {
+        return value != null ? value : DEFAULT_LANE_WIDTH;
+    }
+
+    private Double ensureLaneHeightDefault(Double value) {
+        return value != null ? value : DEFAULT_LANE_HEIGHT;
+    }
+
     private String normalizarPuerto(String value) {
         String normalized = normalizarTexto(value);
         if (normalized == null) {
@@ -701,7 +853,10 @@ public class PoliticaColaboracionService {
             Long nodeVersion,
             Nodo nodo,
             Conexion conexion,
-            String detalle
+            String detalle,
+            String laneOrientation,
+            Double laneWidth,
+            Double laneHeight
     ) {
     }
 }

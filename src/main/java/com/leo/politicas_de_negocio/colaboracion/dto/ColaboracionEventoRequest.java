@@ -21,6 +21,11 @@ public class ColaboracionEventoRequest {
     private Double posX;
     private Double posY;
 
+    // Configuracion visual compartida del canvas.
+    private String laneOrientation;
+    private Double laneWidth;
+    private Double laneHeight;
+
     private Nodo nodo;
     private Conexion conexion;
 
