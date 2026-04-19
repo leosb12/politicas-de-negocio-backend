@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CondicionDecision {
-    private String resultado;
-    private String siguiente;
-    private String origenActividadId;
-    private GrupoCondicionDecision grupo;
+public class ReglaCondicionDecision {
+    private String campo;
+    private String tipo;
+    private String operador;
+    private Object valor;
 }

@@ -8,7 +8,9 @@ import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.CondicionDecision;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
+import com.leo.politicas_de_negocio.politicas.model.politica.GrupoCondicionDecision;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.ReglaCondicionDecision;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
@@ -143,6 +145,122 @@ class WorkflowEngineServiceTest {
         TareaActividad creada = captor.getValue();
         assertEquals("n-aprueba", creada.getNodoId());
         assertEquals("dep-1", creada.getResponsableId());
+    }
+
+    @Test
+    void avanzarDesdeNodo_enDecisionConGrupoDebeElegirRamaTrue() {
+        InstanciaPolitica instancia = instanciaBase("inst-2b");
+
+        Nodo decision = nodo("n-decision", TipoNodo.DECISION, null, null);
+        decision.setCondiciones(List.of(
+                CondicionDecision.builder()
+                        .resultado("true")
+                        .siguiente("n-aprueba")
+                        .grupo(GrupoCondicionDecision.builder()
+                                .operadorLogico("AND")
+                                .reglas(List.of(
+                                        ReglaCondicionDecision.builder()
+                                                .campo("aprobado")
+                                                .tipo("BOOLEANO")
+                                                .operador("ES_VERDADERO")
+                                                .build(),
+                                        ReglaCondicionDecision.builder()
+                                                .campo("monto")
+                                                .tipo("NUMERO")
+                                                .operador("MAYOR_QUE")
+                                                .valor(100)
+                                                .build()
+                                ))
+                                .grupos(List.of())
+                                .build())
+                        .build(),
+                CondicionDecision.builder().resultado("*").siguiente("n-rechaza").build()
+        ));
+
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-2b")
+                .nodos(List.of(
+                        nodo("n-actividad", TipoNodo.ACTIVIDAD, "USUARIO", "u-1"),
+                        decision,
+                        nodo("n-aprueba", TipoNodo.ACTIVIDAD, "DEPARTAMENTO", "dep-1"),
+                        nodo("n-rechaza", TipoNodo.ACTIVIDAD, "DEPARTAMENTO", "dep-2")
+                ))
+                .conexiones(List.of(
+                        conexion("n-actividad", "n-decision"),
+                        conexion("n-decision", "n-aprueba"),
+                        conexion("n-decision", "n-rechaza")
+                ))
+                .build();
+
+        Map<String, Object> contexto = new HashMap<>();
+        contexto.put("aprobado", true);
+        contexto.put("monto", 150);
+
+        service.avanzarDesdeNodo(instancia, politica, "n-actividad", "func-1", contexto);
+
+        ArgumentCaptor<TareaActividad> captor = ArgumentCaptor.forClass(TareaActividad.class);
+        verify(tareaRepository).save(captor.capture());
+
+        TareaActividad creada = captor.getValue();
+        assertEquals("n-aprueba", creada.getNodoId());
+    }
+
+    @Test
+    void avanzarDesdeNodo_enDecisionConGrupoDebeUsarDefaultCuandoNoCumple() {
+        InstanciaPolitica instancia = instanciaBase("inst-2c");
+
+        Nodo decision = nodo("n-decision", TipoNodo.DECISION, null, null);
+        decision.setCondiciones(List.of(
+                CondicionDecision.builder()
+                        .resultado("true")
+                        .siguiente("n-aprueba")
+                        .grupo(GrupoCondicionDecision.builder()
+                                .operadorLogico("AND")
+                                .reglas(List.of(
+                                        ReglaCondicionDecision.builder()
+                                                .campo("aprobado")
+                                                .tipo("BOOLEANO")
+                                                .operador("ES_VERDADERO")
+                                                .build(),
+                                        ReglaCondicionDecision.builder()
+                                                .campo("monto")
+                                                .tipo("NUMERO")
+                                                .operador("MAYOR_QUE")
+                                                .valor(100)
+                                                .build()
+                                ))
+                                .grupos(List.of())
+                                .build())
+                        .build(),
+                CondicionDecision.builder().resultado("*").siguiente("n-rechaza").build()
+        ));
+
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-2c")
+                .nodos(List.of(
+                        nodo("n-actividad", TipoNodo.ACTIVIDAD, "USUARIO", "u-1"),
+                        decision,
+                        nodo("n-aprueba", TipoNodo.ACTIVIDAD, "DEPARTAMENTO", "dep-1"),
+                        nodo("n-rechaza", TipoNodo.ACTIVIDAD, "DEPARTAMENTO", "dep-2")
+                ))
+                .conexiones(List.of(
+                        conexion("n-actividad", "n-decision"),
+                        conexion("n-decision", "n-aprueba"),
+                        conexion("n-decision", "n-rechaza")
+                ))
+                .build();
+
+        Map<String, Object> contexto = new HashMap<>();
+        contexto.put("aprobado", false);
+        contexto.put("monto", 250);
+
+        service.avanzarDesdeNodo(instancia, politica, "n-actividad", "func-1", contexto);
+
+        ArgumentCaptor<TareaActividad> captor = ArgumentCaptor.forClass(TareaActividad.class);
+        verify(tareaRepository).save(captor.capture());
+
+        TareaActividad creada = captor.getValue();
+        assertEquals("n-rechaza", creada.getNodoId());
     }
 
     @Test

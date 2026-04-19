@@ -423,9 +423,17 @@ public class TareaActividadService {
         Long versionActual = politica.getSecuenciaColaboracion() != null ? politica.getSecuenciaColaboracion() : 0L;
 
         if (!versionActual.equals(versionInstancia)) {
-            throw new ApiException(HttpStatus.CONFLICT,
-                    "La politica cambio de version mientras la instancia estaba en curso. "
-                            + "Version instancia: " + versionInstancia + ", version actual: " + versionActual);
+            instancia.setPoliticaVersion(versionActual);
+            instancia.setFechaActualizacion(LocalDateTime.now());
+
+            historialService.registrar(
+                instancia.getId(),
+                null,
+                "INSTANCIA_CONTINUIDAD_VERSION_ACTUALIZADA",
+                actorUserId,
+                "La instancia se sincronizo automaticamente de la version "
+                    + versionInstancia + " a la version " + versionActual + " de la politica"
+            );
         }
 
         if (politica.getEstado() != EstadoPolitica.ACTIVA) {

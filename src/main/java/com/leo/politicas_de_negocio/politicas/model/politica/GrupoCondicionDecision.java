@@ -5,13 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CondicionDecision {
-    private String resultado;
-    private String siguiente;
-    private String origenActividadId;
-    private GrupoCondicionDecision grupo;
+public class GrupoCondicionDecision {
+    private String operadorLogico;
+    private List<ReglaCondicionDecision> reglas;
+    private List<GrupoCondicionDecision> grupos;
 }

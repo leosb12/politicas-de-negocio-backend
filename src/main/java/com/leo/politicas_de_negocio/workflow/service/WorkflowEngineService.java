@@ -9,7 +9,9 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.politica.CondicionDecision;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
+import com.leo.politicas_de_negocio.politicas.model.politica.GrupoCondicionDecision;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.ReglaCondicionDecision;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
@@ -18,7 +20,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.lang.reflect.Array;
+import java.text.Normalizer;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -398,8 +405,12 @@ public class WorkflowEngineService {
                     "El nodo DECISION " + nodoDecision.getId() + " requiere condiciones configuradas");
         }
 
+        CondicionDecision condicion = buscarCondicionPorGrupo(condiciones, contexto);
+
         String resultado = extraerResultadoDecision(contexto);
-        CondicionDecision condicion = buscarCondicion(condiciones, resultado);
+        if (condicion == null) {
+            condicion = buscarCondicion(condiciones, resultado);
+        }
         if (condicion == null) {
             condicion = buscarCondicionDefault(condiciones);
         }
@@ -427,6 +438,410 @@ public class WorkflowEngineService {
         }
 
         return destino;
+    }
+
+    private CondicionDecision buscarCondicionPorGrupo(
+            List<CondicionDecision> condiciones,
+            Map<String, Object> contexto
+    ) {
+        for (CondicionDecision condicion : condiciones) {
+            if (condicion == null || condicion.getGrupo() == null) {
+                continue;
+            }
+
+            if (evaluarGrupoCondicion(condicion.getGrupo(), contexto)) {
+                return condicion;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean evaluarGrupoCondicion(
+            GrupoCondicionDecision grupo,
+            Map<String, Object> contexto
+    ) {
+        if (grupo == null) {
+            return false;
+        }
+
+        boolean operadorOr = "OR".equalsIgnoreCase(normalizarTexto(grupo.getOperadorLogico()));
+        List<Boolean> resultados = new ArrayList<>();
+
+        if (grupo.getReglas() != null) {
+            for (ReglaCondicionDecision regla : grupo.getReglas()) {
+                resultados.add(evaluarReglaCondicion(regla, contexto));
+            }
+        }
+
+        if (grupo.getGrupos() != null) {
+            for (GrupoCondicionDecision subgrupo : grupo.getGrupos()) {
+                resultados.add(evaluarGrupoCondicion(subgrupo, contexto));
+            }
+        }
+
+        if (resultados.isEmpty()) {
+            return false;
+        }
+
+        if (operadorOr) {
+            for (Boolean resultado : resultados) {
+                if (Boolean.TRUE.equals(resultado)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        for (Boolean resultado : resultados) {
+            if (!Boolean.TRUE.equals(resultado)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean evaluarReglaCondicion(
+            ReglaCondicionDecision regla,
+            Map<String, Object> contexto
+    ) {
+        if (regla == null) {
+            return false;
+        }
+
+        String operador = normalizarTexto(regla.getOperador());
+        if (operador == null) {
+            return false;
+        }
+
+        String tipo = normalizarTexto(regla.getTipo());
+        Object valorContexto = extraerValorCampoContexto(contexto, regla.getCampo());
+        Object valorRegla = regla.getValor();
+
+        return switch (operador.toUpperCase(Locale.ROOT)) {
+            case "ESTA_VACIO" -> esValorVacio(valorContexto);
+            case "NO_ESTA_VACIO" -> !esValorVacio(valorContexto);
+            case "ES_VERDADERO" -> Boolean.TRUE.equals(valorComoBooleano(valorContexto));
+            case "ES_FALSO" -> Boolean.FALSE.equals(valorComoBooleano(valorContexto));
+            case "IGUAL" -> compararIgual(tipo, valorContexto, valorRegla);
+            case "DISTINTO" -> !compararIgual(tipo, valorContexto, valorRegla);
+            case "CONTIENE" -> {
+                String izquierda = normalizarTexto(valorComoTexto(valorContexto));
+                String derecha = normalizarTexto(valorComoTexto(valorRegla));
+                yield izquierda != null
+                        && derecha != null
+                        && izquierda.toLowerCase(Locale.ROOT).contains(derecha.toLowerCase(Locale.ROOT));
+            }
+            case "NO_CONTIENE" -> {
+                String izquierda = normalizarTexto(valorComoTexto(valorContexto));
+                String derecha = normalizarTexto(valorComoTexto(valorRegla));
+                yield izquierda != null
+                        && derecha != null
+                        && !izquierda.toLowerCase(Locale.ROOT).contains(derecha.toLowerCase(Locale.ROOT));
+            }
+            case "INICIA_CON" -> {
+                String izquierda = normalizarTexto(valorComoTexto(valorContexto));
+                String derecha = normalizarTexto(valorComoTexto(valorRegla));
+                yield izquierda != null
+                        && derecha != null
+                        && izquierda.toLowerCase(Locale.ROOT).startsWith(derecha.toLowerCase(Locale.ROOT));
+            }
+            case "TERMINA_CON" -> {
+                String izquierda = normalizarTexto(valorComoTexto(valorContexto));
+                String derecha = normalizarTexto(valorComoTexto(valorRegla));
+                yield izquierda != null
+                        && derecha != null
+                        && izquierda.toLowerCase(Locale.ROOT).endsWith(derecha.toLowerCase(Locale.ROOT));
+            }
+            case "MAYOR_QUE" -> {
+                Double izquierda = valorComoNumero(valorContexto);
+                Double derecha = valorComoNumero(valorRegla);
+                yield izquierda != null && derecha != null && izquierda > derecha;
+            }
+            case "MAYOR_O_IGUAL" -> {
+                Double izquierda = valorComoNumero(valorContexto);
+                Double derecha = valorComoNumero(valorRegla);
+                yield izquierda != null && derecha != null && izquierda >= derecha;
+            }
+            case "MENOR_QUE" -> {
+                Double izquierda = valorComoNumero(valorContexto);
+                Double derecha = valorComoNumero(valorRegla);
+                yield izquierda != null && derecha != null && izquierda < derecha;
+            }
+            case "MENOR_O_IGUAL" -> {
+                Double izquierda = valorComoNumero(valorContexto);
+                Double derecha = valorComoNumero(valorRegla);
+                yield izquierda != null && derecha != null && izquierda <= derecha;
+            }
+            case "ANTES_DE" -> {
+                LocalDate izquierda = valorComoFecha(valorContexto);
+                LocalDate derecha = valorComoFecha(valorRegla);
+                yield izquierda != null && derecha != null && izquierda.isBefore(derecha);
+            }
+            case "DESPUES_DE" -> {
+                LocalDate izquierda = valorComoFecha(valorContexto);
+                LocalDate derecha = valorComoFecha(valorRegla);
+                yield izquierda != null && derecha != null && izquierda.isAfter(derecha);
+            }
+            case "EN_FECHA" -> {
+                LocalDate izquierda = valorComoFecha(valorContexto);
+                LocalDate derecha = valorComoFecha(valorRegla);
+                yield izquierda != null && derecha != null && izquierda.isEqual(derecha);
+            }
+            default -> false;
+        };
+    }
+
+    private Object extraerValorCampoContexto(Map<String, Object> contexto, String campo) {
+        if (contexto == null || contexto.isEmpty()) {
+            return null;
+        }
+
+        String normalizedCampo = normalizarTexto(campo);
+        if (normalizedCampo == null) {
+            return null;
+        }
+
+        Object valorDirecto = obtenerValorMapaCaseInsensitive(contexto, normalizedCampo);
+        if (valorDirecto != null) {
+            return valorDirecto;
+        }
+
+        if (!normalizedCampo.contains(".")) {
+            return null;
+        }
+
+        String[] segmentos = normalizedCampo.split("\\.");
+        Object actual = contexto;
+
+        for (String segmento : segmentos) {
+            String clave = normalizarTexto(segmento);
+            if (clave == null || !(actual instanceof Map<?, ?> mapaActual)) {
+                return null;
+            }
+
+            actual = obtenerValorMapaCaseInsensitive(mapaActual, clave);
+            if (actual == null) {
+                return null;
+            }
+        }
+
+        return actual;
+    }
+
+    private Object obtenerValorMapaCaseInsensitive(Map<?, ?> mapa, String claveBuscada) {
+        if (mapa == null || mapa.isEmpty()) {
+            return null;
+        }
+
+        String claveFlexibleBuscada = normalizarClaveFlexible(claveBuscada);
+
+        for (Map.Entry<?, ?> entry : mapa.entrySet()) {
+            if (!(entry.getKey() instanceof String key)) {
+                continue;
+            }
+
+            if (key.equalsIgnoreCase(claveBuscada)) {
+                return entry.getValue();
+            }
+
+            if (claveFlexibleBuscada != null
+                    && claveFlexibleBuscada.equals(normalizarClaveFlexible(key))) {
+                return entry.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    private String normalizarClaveFlexible(String value) {
+        String normalized = normalizarTexto(value);
+        if (normalized == null) {
+            return null;
+        }
+
+        String withoutDiacritics = Normalizer
+                .normalize(normalized, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "");
+
+        String collapsed = withoutDiacritics
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]", "");
+
+        return collapsed.isEmpty() ? null : collapsed;
+    }
+
+    private boolean compararIgual(String tipo, Object izquierdaRaw, Object derechaRaw) {
+        String normalizedTipo = tipo != null ? tipo.toUpperCase(Locale.ROOT) : "";
+
+        return switch (normalizedTipo) {
+            case "NUMERO" -> {
+                Double izquierda = valorComoNumero(izquierdaRaw);
+                Double derecha = valorComoNumero(derechaRaw);
+                yield izquierda != null && derecha != null && Double.compare(izquierda, derecha) == 0;
+            }
+            case "BOOLEANO" -> {
+                Boolean izquierda = valorComoBooleano(izquierdaRaw);
+                Boolean derecha = valorComoBooleano(derechaRaw);
+                yield izquierda != null && derecha != null && izquierda.equals(derecha);
+            }
+            case "FECHA" -> {
+                LocalDate izquierda = valorComoFecha(izquierdaRaw);
+                LocalDate derecha = valorComoFecha(derechaRaw);
+                yield izquierda != null && derecha != null && izquierda.isEqual(derecha);
+            }
+            default -> {
+                String izquierda = normalizarTexto(valorComoTexto(izquierdaRaw));
+                String derecha = normalizarTexto(valorComoTexto(derechaRaw));
+                if (izquierda == null || derecha == null) {
+                    yield izquierda == null && derecha == null;
+                }
+                yield izquierda.equalsIgnoreCase(derecha);
+            }
+        };
+    }
+
+    private boolean esValorVacio(Object valor) {
+        if (valor == null) {
+            return true;
+        }
+
+        if (valor instanceof String texto) {
+            return texto.trim().isEmpty();
+        }
+
+        if (valor instanceof Map<?, ?> mapa) {
+            return mapa.isEmpty();
+        }
+
+        if (valor instanceof List<?> lista) {
+            return lista.isEmpty();
+        }
+
+        if (valor instanceof Set<?> set) {
+            return set.isEmpty();
+        }
+
+        if (valor.getClass().isArray()) {
+            return Array.getLength(valor) == 0;
+        }
+
+        return false;
+    }
+
+    private String valorComoTexto(Object valor) {
+        if (valor == null) {
+            return null;
+        }
+
+        if (valor instanceof String texto) {
+            return texto.trim();
+        }
+
+        if (valor instanceof Map<?, ?> mapa) {
+            Object nombre = obtenerValorMapaCaseInsensitive(mapa, "nombre");
+            if (nombre != null) {
+                return nombre.toString().trim();
+            }
+
+            Object filename = obtenerValorMapaCaseInsensitive(mapa, "fileName");
+            if (filename != null) {
+                return filename.toString().trim();
+            }
+        }
+
+        return valor.toString().trim();
+    }
+
+    private Double valorComoNumero(Object valor) {
+        if (valor == null) {
+            return null;
+        }
+
+        if (valor instanceof Number numero) {
+            return numero.doubleValue();
+        }
+
+        String texto = normalizarTexto(valorComoTexto(valor));
+        if (texto == null) {
+            return null;
+        }
+
+        try {
+            return Double.parseDouble(texto);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private Boolean valorComoBooleano(Object valor) {
+        if (valor == null) {
+            return null;
+        }
+
+        if (valor instanceof Boolean bool) {
+            return bool;
+        }
+
+        if (valor instanceof Number numero) {
+            return numero.doubleValue() != 0d;
+        }
+
+        String texto = normalizarTexto(valorComoTexto(valor));
+        if (texto == null) {
+            return null;
+        }
+
+        String upper = texto.toUpperCase(Locale.ROOT);
+        if ("TRUE".equals(upper) || "SI".equals(upper) || "YES".equals(upper) || "1".equals(upper)) {
+            return true;
+        }
+        if ("FALSE".equals(upper) || "NO".equals(upper) || "0".equals(upper)) {
+            return false;
+        }
+
+        return null;
+    }
+
+    private LocalDate valorComoFecha(Object valor) {
+        if (valor == null) {
+            return null;
+        }
+
+        if (valor instanceof LocalDate fecha) {
+            return fecha;
+        }
+
+        if (valor instanceof LocalDateTime fechaHora) {
+            return fechaHora.toLocalDate();
+        }
+
+        String texto = normalizarTexto(valorComoTexto(valor));
+        if (texto == null) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(texto);
+        } catch (DateTimeParseException ignored) {
+            // Try next format.
+        }
+
+        try {
+            return LocalDateTime.parse(texto).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+            // Try YYYY-MM-DD prefix.
+        }
+
+        if (texto.length() >= 10) {
+            try {
+                return LocalDate.parse(texto.substring(0, 10));
+            } catch (DateTimeParseException ignored) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private CondicionDecision buscarCondicion(List<CondicionDecision> condiciones, String resultado) {
