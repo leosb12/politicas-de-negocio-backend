@@ -14,6 +14,7 @@ import com.leo.politicas_de_negocio.politicas.model.politica.ReglaCondicionDecis
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
+import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,13 +51,16 @@ class WorkflowEngineServiceTest {
     @Mock
     private HistorialInstanciaService historialService;
 
+    @Mock
+    private UsuarioRepository usuarioRepository;
+
     private AutoCloseable mocks;
     private WorkflowEngineService service;
 
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
-        service = new WorkflowEngineService(instanciaRepository, tareaRepository, historialService);
+        service = new WorkflowEngineService(instanciaRepository, tareaRepository, usuarioRepository, historialService);
 
         AtomicInteger secuenciaTarea = new AtomicInteger(0);
         when(tareaRepository.save(any(TareaActividad.class))).thenAnswer(invocation -> {
@@ -402,3 +406,7 @@ class WorkflowEngineServiceTest {
                 .build();
     }
 }
+
+
+
+

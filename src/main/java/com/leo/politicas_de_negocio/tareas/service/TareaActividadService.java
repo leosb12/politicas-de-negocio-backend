@@ -423,6 +423,11 @@ public class TareaActividadService {
         Long versionActual = politica.getSecuenciaColaboracion() != null ? politica.getSecuenciaColaboracion() : 0L;
 
         if (!versionActual.equals(versionInstancia)) {
+            if (politica.getEstado() != EstadoPolitica.ACTIVA) {
+                throw new ApiException(HttpStatus.CONFLICT,
+                        "No se puede completar la tarea por cambio de version de la politica");
+            }
+
             instancia.setPoliticaVersion(versionActual);
             instancia.setFechaActualizacion(LocalDateTime.now());
 

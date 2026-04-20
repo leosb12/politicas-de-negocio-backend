@@ -4,6 +4,7 @@ import com.leo.politicas_de_negocio.colaboracion.repository.EventoColaboracionAp
 import com.leo.politicas_de_negocio.colaboracion.repository.SnapshotColaboracionPoliticaRepository;
 import com.leo.politicas_de_negocio.colaboracion.service.PoliticaPresenciaService;
 import com.leo.politicas_de_negocio.politicas.dto.CreatePoliticaRequest;
+import com.leo.politicas_de_negocio.politicas.dto.TramiteDisponibleResponse;
 import com.leo.politicas_de_negocio.politicas.dto.UpdateFlujoRequest;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -90,6 +92,15 @@ public class PoliticaNegocioService {
     public List<PoliticaNegocio> obtenerTodas(String adminUserId) {
         assertAdmin(adminUserId);
         return repository.findAll();
+    }
+
+    public List<TramiteDisponibleResponse> obtenerTramitesDisponibles(String actorUserId) {
+        assertUsuarioActivo(actorUserId);
+
+        return repository.findByEstado(EstadoPolitica.ACTIVA).stream()
+                .sorted(Comparator.comparing(politica -> safeLower(politica.getNombre())))
+                .map(this::toTramiteDisponibleResponse)
+                .toList();
     }
 
     public PoliticaNegocio obtenerPorId(String adminUserId, String id) {
@@ -357,6 +368,32 @@ public class PoliticaNegocioService {
             return id;
         }
         return "#" + index;
+    }
+
+    private Usuario assertUsuarioActivo(String actorUserId) {
+        String userId = normalizeNullableText(actorUserId);
+        if (userId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar X-User-Id o X-Admin-User-Id");
+        }
+
+        return usuarioRepository.findByIdAndActivo(userId, true)
+                .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Usuario no autorizado"));
+    }
+
+    private TramiteDisponibleResponse toTramiteDisponibleResponse(PoliticaNegocio politica) {
+        return TramiteDisponibleResponse.builder()
+                .id(politica.getId())
+                .nombre(politica.getNombre())
+                .descripcion(politica.getDescripcion())
+                .build();
+    }
+
+    private String safeLower(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.toLowerCase(Locale.ROOT);
     }
 
     private void inicializarMetadatosColaborativosNodos(List<Nodo> nodos) {

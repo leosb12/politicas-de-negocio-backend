@@ -1,0 +1,16 @@
+.git
+.gitattributes
+.gitignore
+.idea
+.vscode
+
+HELP.md
+target/
+.env
+.env.local
+
+uploads/
+*.log
+hs_err_pid*
+*.tmp
+.DS_Store

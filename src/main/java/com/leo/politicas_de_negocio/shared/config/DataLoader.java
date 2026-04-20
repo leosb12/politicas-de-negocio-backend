@@ -67,47 +67,70 @@ public class DataLoader {
                                         .build()
                         ));
 
-                if (usuarioRepository.count() == 0) {
-                    usuarioRepository.save(
-                            Usuario.builder()
-                                    .nombre("Administrador General")
-                                    .correo("admin@demo.com")
-                                    .password("123456")
-                                    .rol(rolAdmin.getNombre())
-                                    .departamentoId(administracion.getId())
-                                    .activo(true)
-                                    .fechaCreacion(LocalDateTime.now())
-                                    .build()
-                    );
+                ensureUser(
+                        usuarioRepository,
+                        "Administrador General",
+                        "admin@demo.com",
+                        "123456",
+                        rolAdmin.getNombre(),
+                        administracion.getId()
+                );
 
-                    usuarioRepository.save(
-                            Usuario.builder()
-                                    .nombre("Funcionario Uno")
-                                    .correo("funcionario@demo.com")
-                                    .password("123456")
-                                    .rol(rolFuncionario.getNombre())
-                                    .departamentoId(atencion.getId())
-                                    .activo(true)
-                                    .fechaCreacion(LocalDateTime.now())
-                                    .build()
-                    );
+                ensureUser(
+                        usuarioRepository,
+                        "Funcionario Uno",
+                        "funcionario@demo.com",
+                        "123456",
+                        rolFuncionario.getNombre(),
+                        atencion.getId()
+                );
 
-                    usuarioRepository.save(
-                            Usuario.builder()
-                                    .nombre("Usuario Final")
-                                    .correo("usuario@demo.com")
-                                    .password("123456")
-                                    .rol(rolUsuario.getNombre())
-                                    .departamentoId(null)
-                                    .activo(true)
-                                    .fechaCreacion(LocalDateTime.now())
-                                    .build()
-                    );
-                }
+                ensureUser(
+                        usuarioRepository,
+                        "Usuario Final",
+                        "usuario@demo.com",
+                        "123456",
+                        rolUsuario.getNombre(),
+                        null
+                );
+
+                ensureUser(
+                        usuarioRepository,
+                        "Usuario Movil Demo",
+                        "movil@demo.com",
+                        "123456",
+                        rolUsuario.getNombre(),
+                        null
+                );
             } catch (Exception ex) {
                 log.warn("No se pudo inicializar datos semilla en MongoDB. La app continuará iniciando. Causa: {}", ex.getMessage());
             }
         };
+    }
+
+    private void ensureUser(
+            UsuarioRepository usuarioRepository,
+            String nombre,
+            String correo,
+            String password,
+            String rol,
+            String departamentoId
+    ) {
+        if (usuarioRepository.existsByCorreoIgnoreCase(correo)) {
+            return;
+        }
+
+        usuarioRepository.save(
+                Usuario.builder()
+                        .nombre(nombre)
+                        .correo(correo)
+                        .password(password)
+                        .rol(rol)
+                        .departamentoId(departamentoId)
+                        .activo(true)
+                        .fechaCreacion(LocalDateTime.now())
+                        .build()
+        );
     }
 
     private Rol ensureRole(RolRepository rolRepository, String nombre, String descripcion, boolean sistema) {

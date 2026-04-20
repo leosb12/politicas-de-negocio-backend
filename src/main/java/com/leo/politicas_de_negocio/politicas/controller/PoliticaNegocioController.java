@@ -1,14 +1,17 @@
 package com.leo.politicas_de_negocio.politicas.controller;
 
 import com.leo.politicas_de_negocio.politicas.dto.CreatePoliticaRequest;
+import com.leo.politicas_de_negocio.politicas.dto.TramiteDisponibleResponse;
 import com.leo.politicas_de_negocio.politicas.dto.UpdateFlujoRequest;
 import com.leo.politicas_de_negocio.politicas.dto.UpdatePoliticaRequest;
+import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,6 +36,15 @@ public class PoliticaNegocioController {
     public ResponseEntity<List<PoliticaNegocio>> obtenerTodas(
             @RequestHeader("X-Admin-User-Id") String adminUserId) {
         return ResponseEntity.ok(service.obtenerTodas(adminUserId));
+    }
+
+    @GetMapping("/movil/disponibles")
+    public ResponseEntity<List<TramiteDisponibleResponse>> obtenerTramitesDisponibles(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        return ResponseEntity.ok(service.obtenerTramitesDisponibles(actorUserId));
     }
 
     @GetMapping("/{id}")
@@ -80,5 +92,28 @@ public class PoliticaNegocioController {
             @PathVariable String id
     ) {
         service.eliminarPolitica(adminUserId, id);
+    }
+
+    private String resolverActorUserId(String userId, String adminUserId) {
+        String normalizadoUser = normalizar(userId);
+        if (normalizadoUser != null) {
+            return normalizadoUser;
+        }
+
+        String normalizadoAdmin = normalizar(adminUserId);
+        if (normalizadoAdmin != null) {
+            return normalizadoAdmin;
+        }
+
+        throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar X-User-Id o X-Admin-User-Id");
+    }
+
+    private String normalizar(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

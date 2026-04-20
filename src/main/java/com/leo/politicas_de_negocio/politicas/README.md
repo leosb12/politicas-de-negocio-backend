@@ -40,6 +40,16 @@ Recibe:
 Devuelve:
 - Lista de PoliticaNegocio.
 
+### GET /api/politicas/movil/disponibles
+Se usa para listar tramites disponibles para iniciar desde clientes moviles.
+Recibe:
+- Header X-User-Id o X-Admin-User-Id.
+Reglas:
+- Solo devuelve politicas en estado ACTIVA.
+- El actor debe estar activo en el sistema.
+Devuelve:
+- Lista de TramiteDisponibleResponse (id, nombre, descripcion).
+
 ### GET /api/politicas/{id}
 Se usa para consultar una politica por id.
 Recibe:

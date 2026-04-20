@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: politicas-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-default}
+      SPRING_MONGODB_URI: ${MONGODB_URI:?MONGODB_URI must be set in .env}
+      SPRING_DATA_MONGODB_URI: ${MONGODB_URI:?MONGODB_URI must be set in .env}
+      SPRING_MONGODB_DATABASE: ${MONGODB_DATABASE:-politicas_negocio_db}
+      SPRING_DATA_MONGODB_DATABASE: ${MONGODB_DATABASE:-politicas_negocio_db}
+      APP_STORAGE_LOCAL_BASE_PATH: /app/uploads
+    volumes:
+      - uploads_data:/app/uploads
+
+volumes:
+  uploads_data:
