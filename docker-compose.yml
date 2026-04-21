@@ -1,5 +1,6 @@
 services:
   app:
+    platform: ${DOCKER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,6 +14,11 @@ services:
       SPRING_DATA_MONGODB_URI: ${MONGODB_URI:?MONGODB_URI must be set in .env}
       SPRING_MONGODB_DATABASE: ${MONGODB_DATABASE:-politicas_negocio_db}
       SPRING_DATA_MONGODB_DATABASE: ${MONGODB_DATABASE:-politicas_negocio_db}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+      APP_STORAGE_TYPE: ${APP_STORAGE_TYPE:-local}
+      APP_STORAGE_S3_BUCKET: ${APP_STORAGE_S3_BUCKET:-}
+      APP_STORAGE_S3_REGION: ${APP_STORAGE_S3_REGION:-us-east-1}
+      APP_STORAGE_S3_KEY_PREFIX: ${APP_STORAGE_S3_KEY_PREFIX:-adjuntos/}
       APP_STORAGE_LOCAL_BASE_PATH: /app/uploads
     volumes:
       - uploads_data:/app/uploads

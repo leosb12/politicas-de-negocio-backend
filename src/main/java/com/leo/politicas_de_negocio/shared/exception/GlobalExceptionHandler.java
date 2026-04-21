@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -54,6 +55,15 @@ public class GlobalExceptionHandler {
         String message = "Falta el header requerido: " + headerName;
         log.warn("Header faltante en {} {}: {}", request.getMethod(), request.getRequestURI(), headerName);
         return buildResponse(HttpStatus.BAD_REQUEST, message, request.getRequestURI());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Recurso no encontrado en {} {}", request.getMethod(), request.getRequestURI());
+        return buildResponse(HttpStatus.NOT_FOUND, "Recurso no encontrado", request.getRequestURI());
     }
 
     @ExceptionHandler(Exception.class)
