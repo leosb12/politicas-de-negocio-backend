@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -13,6 +14,8 @@ import java.util.List;
 import java.util.Map;
 
 @Document(collection = "instancias_politica")
+@CompoundIndex(name = "idx_instancia_creada_por_fecha", def = "{'creadaPor': 1, 'fechaCreacion': -1}")
+@CompoundIndex(name = "idx_instancia_estado_fecha", def = "{'estadoInstancia': 1, 'fechaCreacion': -1}")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

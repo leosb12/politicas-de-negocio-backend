@@ -39,14 +39,14 @@ public class InstanciaPoliticaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<InstanciaPolitica>> listarInstancias(
+    public ResponseEntity<List<InstanciaDetalleResponse>> listarInstancias(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
             @RequestParam(value = "estado", required = false) String estado
     ) {
         String actorUserId = resolverActorUserId(userId, adminUserId);
         EstadoInstancia estadoInstancia = parseEstado(estado);
-        return ResponseEntity.ok(instanciaService.listar(actorUserId, estadoInstancia));
+        return ResponseEntity.ok(instanciaService.listarDetalle(actorUserId, estadoInstancia));
     }
 
     @GetMapping("/{id}")

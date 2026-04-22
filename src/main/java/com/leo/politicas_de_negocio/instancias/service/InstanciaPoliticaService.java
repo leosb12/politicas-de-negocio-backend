@@ -120,6 +120,15 @@ public class InstanciaPoliticaService {
         return instanciaRepository.findByCreadaPorOrderByFechaCreacionDesc(actor.getId());
     }
 
+    public List<InstanciaDetalleResponse> listarDetalle(String actorUserId, EstadoInstancia estadoInstancia) {
+        return listar(actorUserId, estadoInstancia).stream()
+                .map(instancia -> {
+                    PoliticaNegocio politica = politicaRepository.findById(instancia.getPoliticaId()).orElse(null);
+                    return construirDetalleInstancia(instancia, politica);
+                })
+                .toList();
+    }
+
     public List<HistorialInstancia> obtenerHistorial(String actorUserId, String instanciaId) {
         Usuario actor = assertUsuarioActivo(actorUserId);
         if (!"ADMIN".equalsIgnoreCase(actor.getRol())) {

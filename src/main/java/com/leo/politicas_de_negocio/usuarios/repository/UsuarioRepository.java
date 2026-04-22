@@ -8,13 +8,13 @@ import java.util.Optional;
 
 public interface UsuarioRepository extends MongoRepository<Usuario, String> {
 
-    Optional<Usuario> findByCorreoIgnoreCaseAndActivo(String correo, Boolean activo);
+    Optional<Usuario> findByCorreoAndActivo(String correo, Boolean activo);
 
     Optional<Usuario> findByIdAndActivo(String id, Boolean activo);
 
-    Optional<Usuario> findByCorreoIgnoreCase(String correo);
+    Optional<Usuario> findByCorreo(String correo);
 
-    boolean existsByCorreoIgnoreCase(String correo);
+    boolean existsByCorreo(String correo);
 
     long countByRolIgnoreCase(String rol);
 

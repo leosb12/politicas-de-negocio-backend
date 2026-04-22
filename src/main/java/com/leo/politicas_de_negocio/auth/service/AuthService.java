@@ -54,7 +54,7 @@ public class AuthService {
         String correo = normalizeEmail(request.getCorreo());
         String password = normalizePassword(request.getPassword());
 
-        if (usuarioRepository.existsByCorreoIgnoreCase(correo)) {
+        if (usuarioRepository.existsByCorreo(correo)) {
             throw new ApiException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo");
         }
 
@@ -77,8 +77,10 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Correo y contraseña son obligatorios");
         }
 
+        String correo = normalizeEmail(request.getCorreo());
+
         Usuario usuario = usuarioRepository
-                .findByCorreoIgnoreCaseAndActivo(request.getCorreo().trim(), true)
+                .findByCorreoAndActivo(correo, true)
                 .orElseThrow(this::invalidCredentialsException);
 
         if (!Objects.equals(usuario.getPassword(), request.getPassword())) {

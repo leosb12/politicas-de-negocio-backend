@@ -116,7 +116,7 @@ public class DataLoader {
             String rol,
             String departamentoId
     ) {
-        if (usuarioRepository.existsByCorreoIgnoreCase(correo)) {
+                if (usuarioRepository.existsByCorreo(correo)) {
             return;
         }
 

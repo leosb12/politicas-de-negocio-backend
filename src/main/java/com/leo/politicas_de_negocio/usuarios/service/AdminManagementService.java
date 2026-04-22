@@ -46,7 +46,7 @@ public class AdminManagementService {
         validateCreateUserRequest(request);
 
         String correo = normalizeEmail(request.getCorreo());
-        if (usuarioRepository.existsByCorreoIgnoreCase(correo)) {
+        if (usuarioRepository.existsByCorreo(correo)) {
             throw new ApiException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo");
         }
 
@@ -98,7 +98,7 @@ public class AdminManagementService {
         if (request.getCorreo() != null) {
             String correo = normalizeEmail(request.getCorreo());
             boolean cambiaCorreo = !correo.equalsIgnoreCase(usuario.getCorreo());
-            if (cambiaCorreo && usuarioRepository.existsByCorreoIgnoreCase(correo)) {
+            if (cambiaCorreo && usuarioRepository.existsByCorreo(correo)) {
                 throw new ApiException(HttpStatus.CONFLICT, "Ya existe una cuenta con ese correo");
             }
             usuario.setCorreo(correo);
