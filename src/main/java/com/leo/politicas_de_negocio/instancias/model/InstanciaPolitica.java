@@ -30,7 +30,9 @@ public class InstanciaPolitica {
 
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
+    private LocalDateTime fechaFinalizacion;
     private String creadaPor;
+    private String finalizadaPor;
 
     private Map<String, Object> datosContexto;
 

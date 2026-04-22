@@ -22,8 +22,11 @@ public class InstanciaDetalleResponse {
     private EstadoInstancia estadoInstancia;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
+    private LocalDateTime fechaFinalizacion;
     private String creadaPor;
     private String creadaPorNombre;
+    private String finalizadaPor;
+    private String finalizadaPorNombre;
     private Map<String, Object> datosContexto;
     private Map<String, List<String>> tokensJoin;
     private Long totalTareas;

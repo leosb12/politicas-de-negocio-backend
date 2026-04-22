@@ -333,8 +333,14 @@ public class WorkflowEngineService {
             return;
         }
 
+        LocalDateTime now = LocalDateTime.now();
         instancia.setEstadoInstancia(EstadoInstancia.FINALIZADA);
-        instancia.setFechaActualizacion(LocalDateTime.now());
+        instancia.setFechaActualizacion(now);
+        instancia.setFechaFinalizacion(now);
+        instancia.setFinalizadaPor(actorUserId);
+        if (instancia.getTokensJoin() != null) {
+            instancia.getTokensJoin().clear();
+        }
         historialService.registrar(
                 instancia.getId(),
                 null,
@@ -1000,6 +1006,10 @@ public class WorkflowEngineService {
     }
 
     private void controlarJoinesPendientesSinTrabajo(InstanciaPolitica instancia, String actorUserId) {
+        if (instancia.getEstadoInstancia() == EstadoInstancia.FINALIZADA) {
+            return;
+        }
+
         if (instancia.getTokensJoin() == null || instancia.getTokensJoin().isEmpty()) {
             return;
         }
