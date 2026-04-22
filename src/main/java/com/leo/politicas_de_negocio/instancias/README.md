@@ -31,5 +31,8 @@ Lista instancias (filtro opcional por estado).
 ### GET /api/instancias/{id}
 Obtiene detalle de instancia.
 
+### GET /api/instancias/{id}/seguimiento
+Devuelve una vista de solo lectura para pintar el diagrama del tramite en movil: nodos, conexiones, carriles, tareas de la instancia, nodos actuales y departamentos actuales.
+
 ### GET /api/instancias/{id}/historial
 Obtiene trazabilidad completa de la instancia.

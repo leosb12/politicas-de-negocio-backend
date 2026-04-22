@@ -2,6 +2,7 @@ package com.leo.politicas_de_negocio.instancias.controller;
 
 import com.leo.politicas_de_negocio.instancias.dto.CrearInstanciaRequest;
 import com.leo.politicas_de_negocio.instancias.dto.InstanciaDetalleResponse;
+import com.leo.politicas_de_negocio.instancias.dto.SeguimientoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.model.HistorialInstancia;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
@@ -57,6 +58,16 @@ public class InstanciaPoliticaController {
     ) {
         String actorUserId = resolverActorUserId(userId, adminUserId);
         return ResponseEntity.ok(instanciaService.obtenerDetallePorId(actorUserId, id));
+    }
+
+    @GetMapping("/{id}/seguimiento")
+    public ResponseEntity<SeguimientoInstanciaResponse> obtenerSeguimiento(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @PathVariable String id
+    ) {
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        return ResponseEntity.ok(instanciaService.obtenerSeguimientoPorId(actorUserId, id));
     }
 
     @GetMapping("/{id}/historial")
