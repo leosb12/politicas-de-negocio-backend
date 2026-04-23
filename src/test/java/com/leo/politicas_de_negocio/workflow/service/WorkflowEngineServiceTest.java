@@ -124,6 +124,30 @@ class WorkflowEngineServiceTest {
     }
 
     @Test
+    void iniciarInstancia_debeResolverResponsableAlUsuarioQueInicioElTramite() {
+        InstanciaPolitica instancia = instanciaBase("inst-1");
+        instancia.setCreadaPor("movil-1");
+
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-1")
+                .nodos(List.of(
+                        nodo("n0", TipoNodo.INICIO, null, null),
+                        nodo("n1", TipoNodo.ACTIVIDAD, "USUARIO", "__RESPONSABLE_INICIADOR_TRAMITE__")
+                ))
+                .conexiones(List.of(conexion("n0", "n1")))
+                .build();
+
+        service.iniciarInstancia(instancia, politica, "movil-1");
+
+        ArgumentCaptor<TareaActividad> captor = ArgumentCaptor.forClass(TareaActividad.class);
+        verify(tareaRepository).save(captor.capture());
+
+        TareaActividad creada = captor.getValue();
+        assertEquals("USUARIO", creada.getResponsableTipo());
+        assertEquals("movil-1", creada.getResponsableId());
+    }
+
+    @Test
     void avanzarDesdeNodo_enDecisionDebeElegirSalidaSegunContexto() {
         InstanciaPolitica instancia = instanciaBase("inst-2");
 
