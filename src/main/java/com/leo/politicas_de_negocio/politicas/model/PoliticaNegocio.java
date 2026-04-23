@@ -2,6 +2,7 @@ package com.leo.politicas_de_negocio.politicas.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import lombok.AllArgsConstructor;
@@ -29,6 +30,8 @@ public class PoliticaNegocio {
     private String nombre;
     private String descripcion;
     private EstadoPolitica estado;
+    private TipoPolitica tipoPolitica;
+    private String departamentoInicioId;
 
     @JsonIgnore
     private Boolean fueActivada;

@@ -6,6 +6,7 @@ import com.leo.politicas_de_negocio.colaboracion.service.PoliticaPresenciaServic
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoPolitica;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import java.util.Optional;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -143,6 +145,45 @@ class PoliticaNegocioServiceTest {
         verify(politicaRepository, never()).delete(any());
     }
 
+    @Test
+    void puedeIniciarPolitica_debePermitirSoloUsuariosEnPoliticaExterna() {
+        PoliticaNegocio politica = politicaConTipo("pol-ext", TipoPolitica.EXTERNA, null);
+
+        assertTrue(service.puedeIniciarPolitica(usuario("u-1", "USUARIO", null), politica));
+        assertTrue(service.puedeIniciarPolitica(usuario("u-2", "usuario", null), politica));
+        assertTrue(service.puedeIniciarPolitica(usuario("u-3", "USUARIO", "dep-1"), politica));
+        assertTrue(!service.puedeIniciarPolitica(usuario("a-1", "ADMIN", null), politica));
+        assertTrue(!service.puedeIniciarPolitica(usuario("f-1", "FUNCIONARIO", "dep-1"), politica));
+    }
+
+    @Test
+    void puedeIniciarPolitica_debePermitirAdminYFuncionarioEnInternaSinDepartamento() {
+        PoliticaNegocio politica = politicaConTipo("pol-int-any", TipoPolitica.INTERNA, null);
+
+        assertTrue(service.puedeIniciarPolitica(usuario("a-1", "ADMIN", null), politica));
+        assertTrue(service.puedeIniciarPolitica(usuario("f-1", "FUNCIONARIO", "dep-1"), politica));
+        assertTrue(!service.puedeIniciarPolitica(usuario("u-1", "USUARIO", null), politica));
+    }
+
+    @Test
+    void puedeIniciarPolitica_debePermitirSoloMismoDepartamentoEnInternaConDepartamento() {
+        PoliticaNegocio politica = politicaConTipo("pol-int-dep", TipoPolitica.INTERNA, "dep-1");
+
+        assertTrue(service.puedeIniciarPolitica(usuario("u-1", "USUARIO", "dep-1"), politica), "usuario mismo departamento");
+        assertTrue(service.puedeIniciarPolitica(usuario("f-1", "FUNCIONARIO", "dep-1"), politica), "funcionario mismo departamento");
+        assertTrue(!service.puedeIniciarPolitica(usuario("u-2", "USUARIO", "dep-2"), politica), "usuario otro departamento");
+        assertFalse(service.puedeIniciarPolitica(usuario("a-1", "ADMIN", null), politica), "admin sin departamento");
+    }
+
+    @Test
+    void puedeIniciarPolitica_debePermitirTodosEnAmbas() {
+        PoliticaNegocio politica = politicaConTipo("pol-amb", TipoPolitica.AMBAS, null);
+
+        assertTrue(service.puedeIniciarPolitica(usuario("u-1", "USUARIO", null), politica));
+        assertTrue(service.puedeIniciarPolitica(usuario("a-1", "ADMIN", null), politica));
+        assertTrue(service.puedeIniciarPolitica(usuario("f-1", "FUNCIONARIO", "dep-1"), politica));
+    }
+
     private void prepararEscenarioBaseEliminacion(PoliticaNegocio politica) {
         when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
         when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
@@ -159,12 +200,33 @@ class PoliticaNegocioServiceTest {
                 .build();
     }
 
+    private Usuario usuario(String id, String rol, String departamentoId) {
+        return Usuario.builder()
+                .id(id)
+                .rol(rol)
+                .departamentoId(departamentoId)
+                .activo(true)
+                .build();
+    }
+
     private PoliticaNegocio politica(String id, EstadoPolitica estado) {
         return PoliticaNegocio.builder()
                 .id(id)
                 .nombre("Politica prueba")
                 .estado(estado)
                 .fueActivada(false)
+                .secuenciaColaboracion(0L)
+                .build();
+    }
+
+    private PoliticaNegocio politicaConTipo(String id, TipoPolitica tipoPolitica, String departamentoInicioId) {
+        return PoliticaNegocio.builder()
+                .id(id)
+                .nombre("Politica prueba")
+                .estado(EstadoPolitica.ACTIVA)
+                .tipoPolitica(tipoPolitica)
+                .departamentoInicioId(departamentoInicioId)
+                .fueActivada(true)
                 .secuenciaColaboracion(0L)
                 .build();
     }

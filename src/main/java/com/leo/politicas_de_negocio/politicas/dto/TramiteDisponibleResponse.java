@@ -9,4 +9,7 @@ public class TramiteDisponibleResponse {
     private String id;
     private String nombre;
     private String descripcion;
+    private String tipoPolitica;
+    private String departamentoInicioId;
+    private String departamentoInicioNombre;
 }

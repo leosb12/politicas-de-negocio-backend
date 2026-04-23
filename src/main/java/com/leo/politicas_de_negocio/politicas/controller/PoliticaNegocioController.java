@@ -81,7 +81,14 @@ public class PoliticaNegocioController {
             @PathVariable String id,
             @RequestBody UpdatePoliticaRequest request) {
         return ResponseEntity.ok(
-            service.actualizarNombreDescripcion(adminUserId, id, request.getNombre(), request.getDescripcion())
+            service.actualizarMetadatos(
+                adminUserId,
+                id,
+                request.getNombre(),
+                request.getDescripcion(),
+                request.getTipoPolitica(),
+                request.getDepartamentoInicioId()
+            )
         );
     }
 

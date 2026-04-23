@@ -6,4 +6,6 @@ import lombok.Data;
 public class UpdatePoliticaRequest {
     private String nombre;
     private String descripcion;
+    private String tipoPolitica;
+    private String departamentoInicioId;
 }

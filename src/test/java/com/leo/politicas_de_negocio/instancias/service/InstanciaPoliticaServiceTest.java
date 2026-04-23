@@ -12,6 +12,7 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
+import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
@@ -58,6 +59,9 @@ class InstanciaPoliticaServiceTest {
     @Mock
     private TareaActividadRepository tareaRepository;
 
+        @Mock
+        private PoliticaNegocioService politicaNegocioService;
+
     private AutoCloseable mocks;
     private InstanciaPoliticaService service;
 
@@ -71,7 +75,8 @@ class InstanciaPoliticaServiceTest {
                 usuarioRepository,
                 historialService,
                 workflowEngineService,
-                tareaRepository
+                tareaRepository,
+                politicaNegocioService
         );
     }
 

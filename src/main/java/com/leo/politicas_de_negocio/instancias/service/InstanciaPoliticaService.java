@@ -15,6 +15,7 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
+import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
@@ -49,6 +50,7 @@ public class InstanciaPoliticaService {
     private final HistorialInstanciaService historialService;
     private final WorkflowEngineService workflowEngineService;
     private final TareaActividadRepository tareaRepository;
+    private final PoliticaNegocioService politicaNegocioService;
 
     public InstanciaPolitica crearInstancia(String actorUserId, CrearInstanciaRequest request) {
         Usuario actor = assertUsuarioActivo(actorUserId);
@@ -69,6 +71,8 @@ public class InstanciaPoliticaService {
             throw new ApiException(HttpStatus.CONFLICT,
                     "Solo se puede iniciar una instancia con una politica ACTIVA");
         }
+
+        politicaNegocioService.validarInicioPoliticaPorActor(actor, politica);
 
         LocalDateTime now = LocalDateTime.now();
         InstanciaPolitica instancia = InstanciaPolitica.builder()

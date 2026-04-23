@@ -11,6 +11,7 @@ import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.ResponsableTipo;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
@@ -37,6 +38,7 @@ public class PoliticaNegocioService {
     private static final String DEFAULT_LANE_ORIENTATION = "VERTICAL";
     private static final double DEFAULT_LANE_WIDTH = 320d;
     private static final double DEFAULT_LANE_HEIGHT = 220d;
+    private static final TipoPolitica DEFAULT_TIPO_POLITICA = TipoPolitica.EXTERNA;
     private static final String RESPONSABLE_USUARIO_FINAL_ID = "__RESPONSABLE_USUARIO_FINAL__";
     private static final String RESPONSABLE_INICIADOR_TRAMITE_ID = "__RESPONSABLE_INICIADOR_TRAMITE__";
 
@@ -71,10 +73,24 @@ public class PoliticaNegocioService {
 
     public PoliticaNegocio crearPolitica(String adminUserId, CreatePoliticaRequest request) {
         assertAdmin(adminUserId);
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar los datos de la politica");
+        }
+
+        String nombre = normalizeNullableText(request.getNombre());
+        if (nombre == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "El nombre de la politica es obligatorio");
+        }
+
+        TipoPolitica tipoPolitica = parseTipoPolitica(request.getTipoPolitica());
+        String departamentoInicioId = validarDepartamentoInicio(request.getDepartamentoInicioId(), tipoPolitica);
+
         PoliticaNegocio politica = PoliticaNegocio.builder()
-                .nombre(request.getNombre())
-                .descripcion(request.getDescripcion())
+                .nombre(nombre)
+                .descripcion(normalizeNullableText(request.getDescripcion()))
                 .estado(EstadoPolitica.BORRADOR)
+                .tipoPolitica(tipoPolitica)
+                .departamentoInicioId(departamentoInicioId)
             .fueActivada(false)
                 .nodos(new ArrayList<>())
                 .conexiones(new ArrayList<>())
@@ -95,9 +111,10 @@ public class PoliticaNegocioService {
     }
 
     public List<TramiteDisponibleResponse> obtenerTramitesDisponibles(String actorUserId) {
-        assertUsuarioActivo(actorUserId);
+        Usuario actor = assertUsuarioActivo(actorUserId);
 
         return repository.findByEstado(EstadoPolitica.ACTIVA).stream()
+                .filter(politica -> puedeIniciarPolitica(actor, politica))
                 .sorted(Comparator.comparing(politica -> safeLower(politica.getNombre())))
                 .map(this::toTramiteDisponibleResponse)
                 .toList();
@@ -381,10 +398,14 @@ public class PoliticaNegocioService {
     }
 
     private TramiteDisponibleResponse toTramiteDisponibleResponse(PoliticaNegocio politica) {
+        String departamentoInicioId = normalizeNullableText(politica.getDepartamentoInicioId());
         return TramiteDisponibleResponse.builder()
                 .id(politica.getId())
                 .nombre(politica.getNombre())
                 .descripcion(politica.getDescripcion())
+                .tipoPolitica((politica.getTipoPolitica() != null ? politica.getTipoPolitica() : DEFAULT_TIPO_POLITICA).name())
+                .departamentoInicioId(departamentoInicioId)
+                .departamentoInicioNombre(resolveDepartamentoNombre(departamentoInicioId))
                 .build();
     }
 
@@ -411,13 +432,146 @@ public class PoliticaNegocioService {
     public PoliticaNegocio actualizarNombreDescripcion(String adminUserId, String id, String nombre, String descripcion) {
         assertAdmin(adminUserId);
         PoliticaNegocio politica = obtenerPorId(adminUserId, id);
-        if (nombre != null && !nombre.isBlank()) {
-            politica.setNombre(nombre.trim());
+        String normalizedNombre = normalizeNullableText(nombre);
+        if (normalizedNombre != null) {
+            politica.setNombre(normalizedNombre);
         }
         if (descripcion != null) {
-            politica.setDescripcion(descripcion.trim());
+            politica.setDescripcion(normalizeNullableText(descripcion));
         }
         politica.setFechaActualizacion(LocalDateTime.now());
         return repository.save(politica);
+    }
+
+    public PoliticaNegocio actualizarMetadatos(
+            String adminUserId,
+            String id,
+            String nombre,
+            String descripcion,
+            String tipoPoliticaRaw,
+            String departamentoInicioIdRaw
+    ) {
+        assertAdmin(adminUserId);
+        PoliticaNegocio politica = obtenerPorId(adminUserId, id);
+
+        String normalizedNombre = normalizeNullableText(nombre);
+        if (normalizedNombre != null) {
+            politica.setNombre(normalizedNombre);
+        }
+
+        if (descripcion != null) {
+            politica.setDescripcion(normalizeNullableText(descripcion));
+        }
+
+        if (tipoPoliticaRaw != null) {
+            TipoPolitica tipoPolitica = parseTipoPolitica(tipoPoliticaRaw);
+            politica.setTipoPolitica(tipoPolitica);
+
+            String departamentoInicioId = departamentoInicioIdRaw != null
+                    ? departamentoInicioIdRaw
+                    : politica.getDepartamentoInicioId();
+            politica.setDepartamentoInicioId(validarDepartamentoInicio(departamentoInicioId, tipoPolitica));
+        } else if (departamentoInicioIdRaw != null) {
+            TipoPolitica tipoPoliticaActual = politica.getTipoPolitica() != null
+                    ? politica.getTipoPolitica()
+                    : DEFAULT_TIPO_POLITICA;
+            politica.setDepartamentoInicioId(validarDepartamentoInicio(departamentoInicioIdRaw, tipoPoliticaActual));
+        }
+
+        politica.setFechaActualizacion(LocalDateTime.now());
+        return repository.save(politica);
+    }
+
+    public boolean puedeIniciarPolitica(Usuario actor, PoliticaNegocio politica) {
+        if (actor == null || politica == null) {
+            return false;
+        }
+
+        TipoPolitica tipoPolitica = politica.getTipoPolitica() != null
+                ? politica.getTipoPolitica()
+                : DEFAULT_TIPO_POLITICA;
+
+        return switch (tipoPolitica) {
+            case EXTERNA -> esRol(actor, "USUARIO");
+            case AMBAS -> true;
+            case INTERNA -> {
+                String departamentoInicioId = normalizeNullableText(politica.getDepartamentoInicioId());
+                if (departamentoInicioId == null) {
+                    yield esRol(actor, "ADMIN") || esRol(actor, "FUNCIONARIO");
+                }
+
+                String actorDepartamentoId = normalizeNullableText(actor.getDepartamentoId());
+                yield departamentoInicioId.equals(actorDepartamentoId);
+            }
+        };
+    }
+
+    public void validarInicioPoliticaPorActor(Usuario actor, PoliticaNegocio politica) {
+        if (puedeIniciarPolitica(actor, politica)) {
+            return;
+        }
+
+        String detalle = switch (politica.getTipoPolitica() != null ? politica.getTipoPolitica() : DEFAULT_TIPO_POLITICA) {
+            case INTERNA -> {
+                String departamentoNombre = resolveDepartamentoNombre(politica.getDepartamentoInicioId());
+                if (departamentoNombre != null) {
+                    yield "Solo usuarios del departamento " + departamentoNombre + " pueden iniciar esta politica";
+                }
+                yield "Solo usuarios admin o funcionario pueden iniciar esta politica";
+            }
+            case EXTERNA -> "Solo usuarios con rol USUARIO pueden iniciar esta politica";
+            case AMBAS -> "No tiene permisos para iniciar esta politica";
+        };
+
+        throw new ApiException(HttpStatus.FORBIDDEN, detalle);
+    }
+
+    private TipoPolitica parseTipoPolitica(String rawTipoPolitica) {
+        String normalized = normalizeNullableText(rawTipoPolitica);
+        if (normalized == null) {
+            return DEFAULT_TIPO_POLITICA;
+        }
+
+        try {
+            return TipoPolitica.valueOf(normalized.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "tipoPolitica invalido: " + rawTipoPolitica + ". Valores permitidos: INTERNA, EXTERNA, AMBAS"
+            );
+        }
+    }
+
+    private String validarDepartamentoInicio(String rawDepartamentoInicioId, TipoPolitica tipoPolitica) {
+        String departamentoInicioId = normalizeNullableText(rawDepartamentoInicioId);
+
+        if (tipoPolitica != TipoPolitica.INTERNA) {
+            return null;
+        }
+
+        if (departamentoInicioId == null) {
+            return null;
+        }
+
+        if (!departamentoRepository.existsById(departamentoInicioId)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "El departamentoInicioId indicado no existe");
+        }
+
+        return departamentoInicioId;
+    }
+
+    private boolean esRol(Usuario actor, String rolEsperado) {
+        return actor != null && actor.getRol() != null && rolEsperado.equalsIgnoreCase(actor.getRol());
+    }
+
+    private String resolveDepartamentoNombre(String departamentoId) {
+        String normalizedId = normalizeNullableText(departamentoId);
+        if (normalizedId == null) {
+            return null;
+        }
+
+        return departamentoRepository.findById(normalizedId)
+                .map(departamento -> normalizeNullableText(departamento.getNombre()))
+                .orElse(null);
     }
 }
