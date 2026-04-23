@@ -20,6 +20,7 @@ services:
       APP_STORAGE_S3_REGION: ${APP_STORAGE_S3_REGION:-us-east-1}
       APP_STORAGE_S3_KEY_PREFIX: ${APP_STORAGE_S3_KEY_PREFIX:-adjuntos/}
       APP_STORAGE_LOCAL_BASE_PATH: /app/uploads
+      APP_NOTIFICATIONS_FIREBASE_ENABLED: ${APP_NOTIFICATIONS_FIREBASE_ENABLED:-true}
     volumes:
       - uploads_data:/app/uploads
 
