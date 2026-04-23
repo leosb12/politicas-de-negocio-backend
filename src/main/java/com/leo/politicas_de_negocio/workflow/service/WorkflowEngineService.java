@@ -4,6 +4,7 @@ import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.instancias.service.HistorialInstanciaService;
+import com.leo.politicas_de_negocio.notifications.application.WorkflowNotificationService;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
@@ -55,6 +56,7 @@ public class WorkflowEngineService {
     private final TareaActividadRepository tareaRepository;
     private final UsuarioRepository usuarioRepository;
     private final HistorialInstanciaService historialService;
+    private final WorkflowNotificationService workflowNotificationService;
 
     public void iniciarInstancia(InstanciaPolitica instancia, PoliticaNegocio politica, String actorUserId) {
         Nodo inicio = buscarNodoInicio(politica);
@@ -66,6 +68,7 @@ public class WorkflowEngineService {
                 "Workflow iniciado en nodo " + inicio.getId()
         );
         avanzarDesdeNodo(instancia, politica, inicio.getId(), actorUserId, instancia.getDatosContexto());
+        workflowNotificationService.notificarTramiteIniciado(instancia, politica);
     }
 
     public void avanzarDesdeNodo(
@@ -129,7 +132,7 @@ public class WorkflowEngineService {
             case DECISION -> procesarDecision(politica, nodo, contexto, cola, actorUserId, instancia.getId());
             case FORK -> encolarDestinosDesde(politica, nodo.getId(), cola);
             case JOIN -> procesarJoin(instancia, politica, nodo, nodoOrigenId, cola, actorUserId);
-            case FIN -> finalizarInstanciaSiCorresponde(instancia, actorUserId, nodo.getId());
+            case FIN -> finalizarInstanciaSiCorresponde(instancia, politica, actorUserId, nodo.getId());
         }
     }
 
@@ -241,6 +244,7 @@ public class WorkflowEngineService {
                 actorUserId,
                 "Se creo tarea para nodo " + nodo.getId()
         );
+        workflowNotificationService.notificarTareaCreada(instancia, politica, guardada);
     }
 
     private String resolverResponsableUsuarioId(
@@ -312,7 +316,12 @@ public class WorkflowEngineService {
         return null;
     }
 
-    private void finalizarInstanciaSiCorresponde(InstanciaPolitica instancia, String actorUserId, String nodoFinId) {
+    private void finalizarInstanciaSiCorresponde(
+            InstanciaPolitica instancia,
+            PoliticaNegocio politica,
+            String actorUserId,
+            String nodoFinId
+    ) {
         long tareasAbiertas = tareaRepository.countByInstanciaIdAndEstadoTareaIn(
                 instancia.getId(),
                 ESTADOS_TAREA_ABIERTA
@@ -348,6 +357,7 @@ public class WorkflowEngineService {
                 actorUserId,
                 "La instancia finalizo correctamente en nodo " + nodoFinId
         );
+        workflowNotificationService.notificarTramiteFinalizado(instancia, politica);
     }
 
     private boolean registrarLlegadaJoin(

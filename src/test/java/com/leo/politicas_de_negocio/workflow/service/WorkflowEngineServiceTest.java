@@ -4,6 +4,7 @@ import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.instancias.service.HistorialInstanciaService;
+import com.leo.politicas_de_negocio.notifications.application.WorkflowNotificationService;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.CondicionDecision;
@@ -54,13 +55,22 @@ class WorkflowEngineServiceTest {
     @Mock
     private UsuarioRepository usuarioRepository;
 
+    @Mock
+    private WorkflowNotificationService workflowNotificationService;
+
     private AutoCloseable mocks;
     private WorkflowEngineService service;
 
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
-        service = new WorkflowEngineService(instanciaRepository, tareaRepository, usuarioRepository, historialService);
+        service = new WorkflowEngineService(
+                instanciaRepository,
+                tareaRepository,
+                usuarioRepository,
+                historialService,
+                workflowNotificationService
+        );
 
         AtomicInteger secuenciaTarea = new AtomicInteger(0);
         when(tareaRepository.save(any(TareaActividad.class))).thenAnswer(invocation -> {

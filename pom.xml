@@ -29,6 +29,7 @@
 	<properties>
 		<java.version>17</java.version>
 		<aws.sdk.version>2.31.66</aws.sdk.version>
+		<firebase.admin.version>9.8.0</firebase.admin.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -47,6 +48,11 @@
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>s3</artifactId>
 			<version>${aws.sdk.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.firebase</groupId>
+			<artifactId>firebase-admin</artifactId>
+			<version>${firebase.admin.version}</version>
 		</dependency>
 
 		<dependency>

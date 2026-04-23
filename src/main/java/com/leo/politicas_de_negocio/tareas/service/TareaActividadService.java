@@ -7,6 +7,7 @@ import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.instancias.service.HistorialInstanciaService;
 import com.leo.politicas_de_negocio.instancias.model.HistorialInstancia;
+import com.leo.politicas_de_negocio.notifications.application.WorkflowNotificationService;
 import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
@@ -54,6 +55,7 @@ public class TareaActividadService {
     private final UsuarioRepository usuarioRepository;
     private final HistorialInstanciaService historialService;
     private final WorkflowEngineService workflowEngineService;
+    private final WorkflowNotificationService workflowNotificationService;
 
     public List<TareaActividad> listarMisTareas(String actorUserId) {
         Usuario actor = assertUsuarioActivo(actorUserId);
@@ -287,6 +289,7 @@ public class TareaActividadService {
                 actor.getId(),
                 "Tarea completada en nodo " + guardada.getNodoId()
         );
+        workflowNotificationService.notificarTareaCompletada(instancia, politica, guardada, actor.getId());
 
         workflowEngineService.avanzarDesdeNodo(
                 instancia,

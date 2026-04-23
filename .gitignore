@@ -3,6 +3,7 @@ target/
 uploads/
 .env
 .env.local
+src/main/java/com/leo/politicas_de_negocio/notifications/secrets/*.json
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

@@ -4,6 +4,7 @@ import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.instancias.service.HistorialInstanciaService;
+import com.leo.politicas_de_negocio.notifications.application.WorkflowNotificationService;
 import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
@@ -60,6 +61,9 @@ class TareaActividadServiceTest {
     @Mock
     private WorkflowEngineService workflowEngineService;
 
+    @Mock
+    private WorkflowNotificationService workflowNotificationService;
+
     private AutoCloseable mocks;
     private TareaActividadService service;
 
@@ -72,7 +76,8 @@ class TareaActividadServiceTest {
                 politicaRepository,
                 usuarioRepository,
                 historialService,
-                workflowEngineService
+                workflowEngineService,
+                workflowNotificationService
         );
     }
 
