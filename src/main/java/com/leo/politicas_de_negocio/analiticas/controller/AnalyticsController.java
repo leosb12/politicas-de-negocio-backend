@@ -1,0 +1,104 @@
+package com.leo.politicas_de_negocio.analiticas.controller;
+
+import com.leo.politicas_de_negocio.analiticas.dto.response.AttentionTimesAnalyticsResponse;
+import com.leo.politicas_de_negocio.analiticas.dto.response.BottlenecksAnalyticsResponse;
+import com.leo.politicas_de_negocio.analiticas.dto.response.DashboardSummaryResponse;
+import com.leo.politicas_de_negocio.analiticas.dto.response.GeneralAnalyticsResponse;
+import com.leo.politicas_de_negocio.analiticas.dto.response.PolicyImprovementAnalyticsResponse;
+import com.leo.politicas_de_negocio.analiticas.dto.response.TaskAccumulationAnalyticsResponse;
+import com.leo.politicas_de_negocio.analiticas.dto.response.TaskRedistributionAnalyticsResponse;
+import com.leo.politicas_de_negocio.analiticas.service.AnalyticsService;
+import com.leo.politicas_de_negocio.shared.exception.ApiException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/analytics")
+@RequiredArgsConstructor
+public class AnalyticsController {
+
+    private final AnalyticsService analyticsService;
+
+    @GetMapping("/general")
+    public ResponseEntity<GeneralAnalyticsResponse> getGeneral(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        return ResponseEntity.ok(analyticsService.getGeneralMetrics(resolveActorUserId(userId, adminUserId)));
+    }
+
+    @GetMapping("/attention-times")
+    public ResponseEntity<AttentionTimesAnalyticsResponse> getAttentionTimes(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        return ResponseEntity.ok(analyticsService.getAttentionTimes(resolveActorUserId(userId, adminUserId)));
+    }
+
+    @GetMapping("/task-accumulation")
+    public ResponseEntity<TaskAccumulationAnalyticsResponse> getTaskAccumulation(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        return ResponseEntity.ok(analyticsService.getTaskAccumulation(resolveActorUserId(userId, adminUserId)));
+    }
+
+    @GetMapping("/dashboard-summary")
+    public ResponseEntity<DashboardSummaryResponse> getDashboardSummary(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        return ResponseEntity.ok(analyticsService.getDashboardSummary(resolveActorUserId(userId, adminUserId)));
+    }
+
+    @GetMapping("/bottlenecks")
+    public ResponseEntity<BottlenecksAnalyticsResponse> getBottlenecks(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        return ResponseEntity.ok(analyticsService.getBottlenecks(resolveActorUserId(userId, adminUserId)));
+    }
+
+        @GetMapping({"/task-redistribution", "/recommendations/task-redistribution"})
+    public ResponseEntity<TaskRedistributionAnalyticsResponse> getTaskRedistribution(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        return ResponseEntity.ok(analyticsService.getTaskRedistribution(resolveActorUserId(userId, adminUserId)));
+    }
+
+        @GetMapping({"/policy-improvement", "/recommendations/policy-improvement"})
+    public ResponseEntity<PolicyImprovementAnalyticsResponse> getPolicyImprovement(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        return ResponseEntity.ok(analyticsService.getPolicyImprovement(resolveActorUserId(userId, adminUserId)));
+    }
+
+    private String resolveActorUserId(String userId, String adminUserId) {
+        String normalizedUser = normalize(userId);
+        if (normalizedUser != null) {
+            return normalizedUser;
+        }
+
+        String normalizedAdmin = normalize(adminUserId);
+        if (normalizedAdmin != null) {
+            return normalizedAdmin;
+        }
+
+        throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar X-User-Id o X-Admin-User-Id");
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+}
