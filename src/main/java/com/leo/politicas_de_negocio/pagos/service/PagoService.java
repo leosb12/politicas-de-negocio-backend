@@ -98,11 +98,6 @@ public class PagoService {
         PoliticaNegocio politica = cargarPoliticaPagada(request.getPoliticaId(), actor);
         validarMontoYDescripcionCliente(request.getMonto(), request.getDescripcion(), politica);
 
-        Pago pagoAprobado = buscarPagoAprobadoSinDuplicar(actor.getId(), politica.getId());
-        if (pagoAprobado != null) {
-            return toResponse(pagoAprobado, null);
-        }
-
         Pago pagoExistente = pagoRepository.findFirstByUsuarioIdAndPoliticaIdAndProveedorAndEstadoInOrderByFechaCreacionDesc(
                 actor.getId(),
                 politica.getId(),
@@ -110,7 +105,13 @@ public class PagoService {
                 ESTADOS_NO_FINALES
         ).orElse(null);
         if (pagoExistente != null && normalizar(pagoExistente.getStripeSessionId()) != null) {
-            return toResponse(pagoExistente, resolveStripeCheckoutUrlFromSession(pagoExistente.getStripeSessionId()));
+            String checkoutUrl = resolveStripeCheckoutUrlFromSession(pagoExistente.getStripeSessionId());
+            if (checkoutUrl != null) {
+                return toResponse(pagoExistente, checkoutUrl);
+            }
+            // Si la sesion previa ya no es recuperable, se crea una nueva para evitar respuestas invalidas al cliente.
+            pagoExistente.setEstado(EstadoPago.FALLIDO);
+            pagoRepository.save(pagoExistente);
         }
 
         validarStripeConfigurado();
@@ -173,16 +174,40 @@ public class PagoService {
         }
     }
 
+    public PagoResponse verificarStripeDesdeRetornoPublico(String sessionId) {
+        String normalizedSessionId = normalizar(sessionId);
+        if (normalizedSessionId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar sessionId");
+        }
+
+        Pago pago = pagoRepository.findByStripeSessionId(normalizedSessionId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Pago Stripe no encontrado"));
+
+        if (ESTADOS_APROBADOS.contains(pago.getEstado()) && normalizar(pago.getInstanciaId()) != null) {
+            return toResponse(pago, null);
+        }
+
+        try {
+            Stripe.apiKey = stripeSecretKey;
+            Session session = Session.retrieve(normalizedSessionId);
+            String paymentStatus = normalizar(session.getPaymentStatus());
+            if ("paid".equalsIgnoreCase(paymentStatus)) {
+                aprobarPagoStripeYCrearInstanciaSiCorresponde(pago.getUsuarioId(), pago);
+            } else if ("unpaid".equalsIgnoreCase(paymentStatus)) {
+                pago.setEstado(EstadoPago.PENDIENTE);
+                pagoRepository.save(pago);
+            }
+            return toResponse(pagoRepository.findById(pago.getId()).orElse(pago), session.getUrl());
+        } catch (StripeException ex) {
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "No se pudo verificar la sesion de Stripe");
+        }
+    }
+
     public PagoResponse crearPaypalLink(String actorUserId, PaypalLinkRequest request) {
         Usuario actor = assertUsuarioActivo(actorUserId);
         validarUsuarioRequest(actor.getId(), request.getUsuarioId());
         PoliticaNegocio politica = cargarPoliticaPagada(request.getPoliticaId(), actor);
         validarMontoYDescripcionCliente(request.getMonto(), request.getDescripcion(), politica);
-
-        Pago pagoAprobado = buscarPagoAprobadoSinDuplicar(actor.getId(), politica.getId());
-        if (pagoAprobado != null) {
-            return toResponse(pagoAprobado, null);
-        }
 
         Optional<Pago> pagoExistente = pagoRepository.findFirstByUsuarioIdAndPoliticaIdAndProveedorAndEstadoInOrderByFechaCreacionDesc(
                 actor.getId(),
@@ -288,19 +313,6 @@ public class PagoService {
     private void iniciarInstanciaDesdePago(Pago pago) {
         if (normalizar(pago.getInstanciaId()) != null) {
             return;
-        }
-
-        List<Pago> pagosAprobados = pagoRepository.findByUsuarioIdAndPoliticaIdAndEstadoInOrderByFechaCreacionDesc(
-                pago.getUsuarioId(),
-                pago.getPoliticaId(),
-                ESTADOS_APROBADOS
-        );
-        for (Pago approved : pagosAprobados) {
-            if (!pago.getId().equals(approved.getId()) && normalizar(approved.getInstanciaId()) != null) {
-                pago.setInstanciaId(approved.getInstanciaId());
-                pagoRepository.save(pago);
-                return;
-            }
         }
 
         CrearInstanciaRequest request = new CrearInstanciaRequest();
@@ -444,7 +456,7 @@ public class PagoService {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl)
                 .queryParam("cmd", "_xclick")
                 .queryParam("business", businessEmail)
-                .queryParam("amount", pago.getMonto())
+                .queryParam("amount", formatPayPalAmount(pago.getMonto()))
                 .queryParam("currency_code", pago.getMoneda())
                 .queryParam("item_name", resolveSafeDescripcionPago(pago));
 
@@ -459,21 +471,25 @@ public class PagoService {
             builder.queryParam("cancel_return", cancelUrl);
         }
 
-        return builder.build(false).toUriString();
+        return builder.build().encode().toUriString();
     }
 
     private String resolveSafeDescripcionPago(Pago pago) {
         String descripcion = normalizar(pago.getDescripcion());
-        return descripcion != null ? descripcion : "Pago de politica";
+        return descripcion != null ? descripcion : "Pago Workflow";
     }
 
-    private Pago buscarPagoAprobadoSinDuplicar(String usuarioId, String politicaId) {
-        List<Pago> pagosAprobados = pagoRepository.findByUsuarioIdAndPoliticaIdAndEstadoInOrderByFechaCreacionDesc(
-                usuarioId,
-                politicaId,
-                ESTADOS_APROBADOS
-        );
-        return pagosAprobados.isEmpty() ? null : pagosAprobados.get(0);
+    private String formatPayPalAmount(BigDecimal amount) {
+        if (amount == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "El monto del pago es invalido");
+        }
+
+        BigDecimal normalized = amount.setScale(2, RoundingMode.HALF_UP);
+        if (normalized.signum() <= 0) {
+            throw new ApiException(HttpStatus.CONFLICT, "El monto del pago debe ser mayor a cero");
+        }
+
+        return normalized.toPlainString();
     }
 
     private String resolveStripeCheckoutUrlFromSession(String sessionId) {

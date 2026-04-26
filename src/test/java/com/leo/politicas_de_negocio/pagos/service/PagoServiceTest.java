@@ -5,8 +5,10 @@ import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.service.InstanciaPoliticaService;
 import com.leo.politicas_de_negocio.pagos.config.PaymentsProperties;
 import com.leo.politicas_de_negocio.pagos.dto.InicioInstanciaResponse;
+import com.leo.politicas_de_negocio.pagos.dto.PaypalLinkRequest;
 import com.leo.politicas_de_negocio.pagos.model.Pago;
 import com.leo.politicas_de_negocio.pagos.model.enums.EstadoPago;
+import com.leo.politicas_de_negocio.pagos.model.enums.ProveedorPago;
 import com.leo.politicas_de_negocio.pagos.repository.PagoRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
@@ -22,7 +24,6 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -120,16 +122,44 @@ class PagoServiceTest {
         when(usuarioRepository.findByIdAndActivo("admin-1", true)).thenReturn(Optional.of(admin));
         when(pagoRepository.findById("pay-1")).thenReturn(Optional.of(pago));
         when(pagoRepository.save(any(Pago.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(pagoRepository.findByUsuarioIdAndPoliticaIdAndEstadoInOrderByFechaCreacionDesc(
-                org.mockito.ArgumentMatchers.eq("user-1"),
-                org.mockito.ArgumentMatchers.eq("pol-1"),
-                anyCollection()
-        )).thenReturn(List.of());
         when(instanciaPoliticaService.crearInstanciaDirecta(any(), any())).thenReturn(instancia);
 
         var response = service.confirmarPaypalManual("admin-1", "pay-1");
 
         assertEquals(EstadoPago.APROBADO_MANUALMENTE, response.getEstado());
         assertEquals("inst-1", response.getInstanciaId());
+    }
+
+    @Test
+    void crearPaypalLink_debeFormatearMontoConDosDecimales() {
+        Usuario actor = Usuario.builder().id("user-1").rol("USUARIO").activo(true).build();
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-1")
+                .nombre("Licencia")
+                .estado(EstadoPolitica.ACTIVA)
+                .requierePago(true)
+                .montoPago(new BigDecimal("20"))
+                .monedaPago("USD")
+                .descripcionPago("Licencia municipal")
+                .build();
+        PaypalLinkRequest request = new PaypalLinkRequest();
+        request.setPoliticaId("pol-1");
+        request.setUsuarioId("user-1");
+        request.setMonto(new BigDecimal("20"));
+        request.setDescripcion("Licencia municipal");
+
+        when(usuarioRepository.findByIdAndActivo("user-1", true)).thenReturn(Optional.of(actor));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(pagoRepository.findFirstByUsuarioIdAndPoliticaIdAndProveedorAndEstadoInOrderByFechaCreacionDesc(
+                eq("user-1"),
+                eq("pol-1"),
+                eq(ProveedorPago.PAYPAL),
+                anyCollection()
+        )).thenReturn(Optional.empty());
+        when(pagoRepository.save(any(Pago.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.crearPaypalLink("user-1", request);
+
+        assertTrue(response.getPaypalUrl().contains("amount=20"));
     }
 }
