@@ -7,9 +7,10 @@ import com.leo.politicas_de_negocio.instancias.dto.MisTramiteCardResponse;
 import com.leo.politicas_de_negocio.instancias.dto.PagedResponse;
 import com.leo.politicas_de_negocio.instancias.dto.SeguimientoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.model.HistorialInstancia;
-import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.service.InstanciaPoliticaService;
+import com.leo.politicas_de_negocio.pagos.dto.InicioInstanciaResponse;
+import com.leo.politicas_de_negocio.pagos.service.PagoService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,15 +32,17 @@ import java.util.List;
 public class InstanciaPoliticaController {
 
     private final InstanciaPoliticaService instanciaService;
+    private final PagoService pagoService;
 
     @PostMapping
-    public ResponseEntity<InstanciaPolitica> crearInstancia(
+    public ResponseEntity<InicioInstanciaResponse> crearInstancia(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
             @RequestBody CrearInstanciaRequest request
     ) {
         String actorUserId = resolverActorUserId(userId, adminUserId);
-        return new ResponseEntity<>(instanciaService.crearInstancia(actorUserId, request), HttpStatus.CREATED);
+        InicioInstanciaResponse response = pagoService.evaluarInicioInstancia(actorUserId, request);
+        return new ResponseEntity<>(response, response.isRequierePago() ? HttpStatus.OK : HttpStatus.CREATED);
     }
 
     @GetMapping

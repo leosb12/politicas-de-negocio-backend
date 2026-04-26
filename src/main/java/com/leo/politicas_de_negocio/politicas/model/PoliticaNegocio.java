@@ -13,6 +13,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,6 +33,10 @@ public class PoliticaNegocio {
     private EstadoPolitica estado;
     private TipoPolitica tipoPolitica;
     private String departamentoInicioId;
+    private Boolean requierePago;
+    private BigDecimal montoPago;
+    private String monedaPago;
+    private String descripcionPago;
 
     @JsonIgnore
     private Boolean fueActivada;

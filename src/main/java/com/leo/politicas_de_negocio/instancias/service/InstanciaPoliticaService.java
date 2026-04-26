@@ -62,7 +62,7 @@ public class InstanciaPoliticaService {
     private final TareaActividadRepository tareaRepository;
     private final PoliticaNegocioService politicaNegocioService;
 
-    public InstanciaPolitica crearInstancia(String actorUserId, CrearInstanciaRequest request) {
+    public InstanciaPolitica crearInstanciaDirecta(String actorUserId, CrearInstanciaRequest request) {
         Usuario actor = assertUsuarioActivo(actorUserId);
         if (request == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar los datos de la instancia");

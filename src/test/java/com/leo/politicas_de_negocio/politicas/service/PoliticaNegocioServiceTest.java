@@ -4,6 +4,7 @@ import com.leo.politicas_de_negocio.colaboracion.repository.EventoColaboracionAp
 import com.leo.politicas_de_negocio.colaboracion.repository.SnapshotColaboracionPoliticaRepository;
 import com.leo.politicas_de_negocio.colaboracion.service.PoliticaPresenciaService;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
+import com.leo.politicas_de_negocio.politicas.dto.CreatePoliticaRequest;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoPolitica;
@@ -20,6 +21,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.Set;
 
@@ -182,6 +184,41 @@ class PoliticaNegocioServiceTest {
         assertTrue(service.puedeIniciarPolitica(usuario("u-1", "USUARIO", null), politica));
         assertTrue(service.puedeIniciarPolitica(usuario("a-1", "ADMIN", null), politica));
         assertTrue(service.puedeIniciarPolitica(usuario("f-1", "FUNCIONARIO", "dep-1"), politica));
+    }
+
+    @Test
+    void crearPolitica_debeValidarMontoCuandoRequierePago() {
+        CreatePoliticaRequest request = new CreatePoliticaRequest();
+        request.setNombre("Politica pagada");
+        request.setRequierePago(true);
+        request.setMontoPago(BigDecimal.ZERO);
+
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+
+        ApiException ex = assertThrows(ApiException.class,
+                () -> service.crearPolitica("admin-1", request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatus());
+        assertTrue(ex.getMessage().contains("montoPago"));
+    }
+
+    @Test
+    void crearPolitica_debeAsignarUsdPorDefectoCuandoRequierePago() {
+        CreatePoliticaRequest request = new CreatePoliticaRequest();
+        request.setNombre("Politica pagada");
+        request.setDescripcion("Desc");
+        request.setRequierePago(true);
+        request.setMontoPago(new BigDecimal("10.00"));
+
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaRepository.save(any(PoliticaNegocio.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PoliticaNegocio politica = service.crearPolitica("admin-1", request);
+
+        assertTrue(Boolean.TRUE.equals(politica.getRequierePago()));
+        assertEquals("USD", politica.getMonedaPago());
+        assertEquals(0, new BigDecimal("10").compareTo(politica.getMontoPago()));
     }
 
     private void prepararEscenarioBaseEliminacion(PoliticaNegocio politica) {

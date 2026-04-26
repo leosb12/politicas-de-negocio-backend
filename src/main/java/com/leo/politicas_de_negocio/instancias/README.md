@@ -23,7 +23,10 @@ Este modulo gestiona la ejecucion real de una politica como caso (tramite) en cu
 
 ## Endpoints
 ### POST /api/instancias
-Inicia una nueva instancia de politica.
+Intenta iniciar una nueva instancia de politica.
+Reglas:
+- Si la politica es gratuita, crea la instancia y devuelve `201 Created`.
+- Si la politica requiere pago, no crea la instancia y devuelve `200 OK` con `requierePago=true`, monto, moneda y descripcion para que el frontend abra el modal/pantalla de pago.
 
 ### GET /api/instancias
 Lista instancias (filtro opcional por estado).
@@ -36,3 +39,8 @@ Devuelve una vista de solo lectura para pintar el diagrama del tramite en movil:
 
 ### GET /api/instancias/{id}/historial
 Obtiene trazabilidad completa de la instancia.
+
+## Relacion con pagos
+- El inicio real de instancias pagadas ocurre solo despues de confirmar el pago.
+- Stripe inicia automaticamente la instancia al verificar `payment_status=paid`.
+- PayPal por link queda en `PENDIENTE_CONFIRMACION_PAYPAL` hasta aprobacion manual/demo o una integracion futura con IPN/webhook.

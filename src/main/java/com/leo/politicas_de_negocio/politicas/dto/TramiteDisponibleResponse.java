@@ -3,6 +3,8 @@ package com.leo.politicas_de_negocio.politicas.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 public class TramiteDisponibleResponse {
@@ -12,4 +14,8 @@ public class TramiteDisponibleResponse {
     private String tipoPolitica;
     private String departamentoInicioId;
     private String departamentoInicioNombre;
+    private Boolean requierePago;
+    private BigDecimal montoPago;
+    private String monedaPago;
+    private String descripcionPago;
 }

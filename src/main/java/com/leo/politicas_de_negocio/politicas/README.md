@@ -11,6 +11,7 @@ Resuelve el problema de definir, guardar y controlar el ciclo de vida de cada po
 - Cambiar estado de la politica (por ejemplo BORRADOR, ACTIVA, PAUSADA, DESHABILITADA).
 - Eliminar politicas de forma controlada solo cuando no tienen uso ni historial asociado.
 - Validar reglas de negocio antes de activar o modificar flujos.
+- Configurar si una politica es gratuita o pagada.
 
 ## Clases principales
 ### Controllers
@@ -23,13 +24,18 @@ Resuelve el problema de definir, guardar y controlar el ciclo de vida de cada po
 - PoliticaNegocio: entidad principal de la politica.
 - Nodo y Conexion: estructura del flujo de trabajo.
 - EstadoPolitica, TipoNodo, TipoCampo, ResponsableTipo: enums de comportamiento del flujo.
+- Campos de pago en PoliticaNegocio:
+  - requierePago
+  - montoPago
+  - monedaPago
+  - descripcionPago
 
 ## Endpoints
 ### POST /api/politicas
 Se usa para crear una politica nueva.
 Recibe:
 - Header X-Admin-User-Id.
-- Body CreatePoliticaRequest (nombre, descripcion).
+- Body CreatePoliticaRequest (nombre, descripcion, tipoPolitica, departamentoInicioId, requierePago, montoPago, monedaPago, descripcionPago).
 Devuelve:
 - PoliticaNegocio creada.
 
@@ -48,7 +54,7 @@ Reglas:
 - Solo devuelve politicas en estado ACTIVA.
 - El actor debe estar activo en el sistema.
 Devuelve:
-- Lista de TramiteDisponibleResponse (id, nombre, descripcion).
+- Lista de TramiteDisponibleResponse (id, nombre, descripcion, requierePago, montoPago, monedaPago, descripcionPago).
 
 ### GET /api/politicas/{id}
 Se usa para consultar una politica por id.
@@ -75,6 +81,12 @@ Recibe:
 - Body con la clave estado.
 Devuelve:
 - PoliticaNegocio actualizada.
+
+### PATCH /api/politicas/{id}
+Permite actualizar metadatos generales y configuracion de pago.
+Reglas:
+- Si `requierePago=true`, `montoPago` debe ser mayor a 0.
+- `monedaPago` usa `USD` por defecto si no se envia.
 
 ### DELETE /api/politicas/{id}
 Se usa para eliminar una politica de forma permanente solo si es seguro.

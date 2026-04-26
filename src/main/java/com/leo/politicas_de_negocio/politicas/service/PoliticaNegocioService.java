@@ -24,6 +24,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -39,6 +40,7 @@ public class PoliticaNegocioService {
     private static final double DEFAULT_LANE_WIDTH = 320d;
     private static final double DEFAULT_LANE_HEIGHT = 220d;
     private static final TipoPolitica DEFAULT_TIPO_POLITICA = TipoPolitica.EXTERNA;
+    private static final String DEFAULT_MONEDA_PAGO = "USD";
     private static final String RESPONSABLE_USUARIO_FINAL_ID = "__RESPONSABLE_USUARIO_FINAL__";
     private static final String RESPONSABLE_INICIADOR_TRAMITE_ID = "__RESPONSABLE_INICIADOR_TRAMITE__";
 
@@ -84,6 +86,12 @@ public class PoliticaNegocioService {
 
         TipoPolitica tipoPolitica = parseTipoPolitica(request.getTipoPolitica());
         String departamentoInicioId = validarDepartamentoInicio(request.getDepartamentoInicioId(), tipoPolitica);
+        PaymentConfig paymentConfig = normalizePaymentConfig(
+                request.getRequierePago(),
+                request.getMontoPago(),
+                request.getMonedaPago(),
+                request.getDescripcionPago()
+        );
 
         PoliticaNegocio politica = PoliticaNegocio.builder()
                 .nombre(nombre)
@@ -91,6 +99,10 @@ public class PoliticaNegocioService {
                 .estado(EstadoPolitica.BORRADOR)
                 .tipoPolitica(tipoPolitica)
                 .departamentoInicioId(departamentoInicioId)
+                .requierePago(paymentConfig.requierePago())
+                .montoPago(paymentConfig.montoPago())
+                .monedaPago(paymentConfig.monedaPago())
+                .descripcionPago(paymentConfig.descripcionPago())
             .fueActivada(false)
                 .nodos(new ArrayList<>())
                 .conexiones(new ArrayList<>())
@@ -406,6 +418,10 @@ public class PoliticaNegocioService {
                 .tipoPolitica((politica.getTipoPolitica() != null ? politica.getTipoPolitica() : DEFAULT_TIPO_POLITICA).name())
                 .departamentoInicioId(departamentoInicioId)
                 .departamentoInicioNombre(resolveDepartamentoNombre(departamentoInicioId))
+                .requierePago(Boolean.TRUE.equals(politica.getRequierePago()))
+                .montoPago(politica.getMontoPago())
+                .monedaPago(resolveMonedaPago(politica))
+                .descripcionPago(resolveDescripcionPago(politica))
                 .build();
     }
 
@@ -449,7 +465,11 @@ public class PoliticaNegocioService {
             String nombre,
             String descripcion,
             String tipoPoliticaRaw,
-            String departamentoInicioIdRaw
+            String departamentoInicioIdRaw,
+            Boolean requierePago,
+            BigDecimal montoPago,
+            String monedaPago,
+            String descripcionPago
     ) {
         assertAdmin(adminUserId);
         PoliticaNegocio politica = obtenerPorId(adminUserId, id);
@@ -476,6 +496,23 @@ public class PoliticaNegocioService {
                     ? politica.getTipoPolitica()
                     : DEFAULT_TIPO_POLITICA;
             politica.setDepartamentoInicioId(validarDepartamentoInicio(departamentoInicioIdRaw, tipoPoliticaActual));
+        }
+
+        boolean shouldUpdatePayment = requierePago != null
+                || montoPago != null
+                || monedaPago != null
+                || descripcionPago != null;
+        if (shouldUpdatePayment) {
+            PaymentConfig paymentConfig = normalizePaymentConfig(
+                    requierePago != null ? requierePago : politica.getRequierePago(),
+                    montoPago != null ? montoPago : politica.getMontoPago(),
+                    monedaPago != null ? monedaPago : politica.getMonedaPago(),
+                    descripcionPago != null ? descripcionPago : politica.getDescripcionPago()
+            );
+            politica.setRequierePago(paymentConfig.requierePago());
+            politica.setMontoPago(paymentConfig.montoPago());
+            politica.setMonedaPago(paymentConfig.monedaPago());
+            politica.setDescripcionPago(paymentConfig.descripcionPago());
         }
 
         politica.setFechaActualizacion(LocalDateTime.now());
@@ -573,5 +610,54 @@ public class PoliticaNegocioService {
         return departamentoRepository.findById(normalizedId)
                 .map(departamento -> normalizeNullableText(departamento.getNombre()))
                 .orElse(null);
+    }
+
+    private PaymentConfig normalizePaymentConfig(
+            Boolean requierePago,
+            BigDecimal montoPago,
+            String monedaPago,
+            String descripcionPago
+    ) {
+        boolean requierePagoNormalizado = Boolean.TRUE.equals(requierePago);
+        String descripcionPagoNormalizada = normalizeNullableText(descripcionPago);
+
+        if (!requierePagoNormalizado) {
+            return new PaymentConfig(false, null, DEFAULT_MONEDA_PAGO, descripcionPagoNormalizada);
+        }
+
+        if (montoPago == null || montoPago.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Si la politica requiere pago, montoPago debe ser mayor a 0");
+        }
+
+        return new PaymentConfig(
+                true,
+                montoPago.stripTrailingZeros(),
+                normalizeNullableText(monedaPago) != null
+                        ? normalizeNullableText(monedaPago).toUpperCase(Locale.ROOT)
+                        : DEFAULT_MONEDA_PAGO,
+                descripcionPagoNormalizada
+        );
+    }
+
+    private String resolveMonedaPago(PoliticaNegocio politica) {
+        String monedaPago = normalizeNullableText(politica.getMonedaPago());
+        return monedaPago != null ? monedaPago : DEFAULT_MONEDA_PAGO;
+    }
+
+    private String resolveDescripcionPago(PoliticaNegocio politica) {
+        String descripcionPago = normalizeNullableText(politica.getDescripcionPago());
+        if (descripcionPago != null) {
+            return descripcionPago;
+        }
+        return normalizeNullableText(politica.getNombre());
+    }
+
+    private record PaymentConfig(
+            boolean requierePago,
+            BigDecimal montoPago,
+            String monedaPago,
+            String descripcionPago
+    ) {
     }
 }

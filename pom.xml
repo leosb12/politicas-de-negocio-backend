@@ -30,6 +30,7 @@
 		<java.version>17</java.version>
 		<aws.sdk.version>2.31.66</aws.sdk.version>
 		<firebase.admin.version>9.8.0</firebase.admin.version>
+		<stripe.java.version>28.4.0</stripe.java.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -53,6 +54,11 @@
 			<groupId>com.google.firebase</groupId>
 			<artifactId>firebase-admin</artifactId>
 			<version>${firebase.admin.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.stripe</groupId>
+			<artifactId>stripe-java</artifactId>
+			<version>${stripe.java.version}</version>
 		</dependency>
 
 		<dependency>

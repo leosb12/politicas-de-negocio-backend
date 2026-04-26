@@ -87,7 +87,11 @@ public class PoliticaNegocioController {
                 request.getNombre(),
                 request.getDescripcion(),
                 request.getTipoPolitica(),
-                request.getDepartamentoInicioId()
+                request.getDepartamentoInicioId(),
+                request.getRequierePago(),
+                request.getMontoPago(),
+                request.getMonedaPago(),
+                request.getDescripcionPago()
             )
         );
     }
