@@ -3,7 +3,7 @@ package com.leo.politicas_de_negocio.iaeditorflujo.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.leo.politicas_de_negocio.analiticas.config.AnalyticsIaProperties;
+import com.leo.politicas_de_negocio.analiticas.config.AiServiceUrlBuilder;
 import com.leo.politicas_de_negocio.iaeditorflujo.dto.WorkflowAiEditIaRequest;
 import com.leo.politicas_de_negocio.iaeditorflujo.dto.WorkflowAiEditProposalResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +27,10 @@ public class WorkflowAiEditorClient {
     private static final ObjectMapper JSON = JsonMapper.builder().findAndAddModules().build();
 
     private final RestTemplate analyticsIaRestTemplate;
-    private final AnalyticsIaProperties analyticsIaProperties;
+    private final AiServiceUrlBuilder aiServiceUrlBuilder;
 
     public WorkflowAiEditProposalResponse previewEdition(WorkflowAiEditIaRequest payload) {
-        String url = buildUrl("/api/ia/editar-flujo");
+        String url = aiServiceUrlBuilder.buildUrl("/api/ia/editar-flujo");
         String serializedPayload = safeJson(payload);
         log.info("[WF-EDIT-IA-REQ] POST {} body={}", url, truncate(serializedPayload));
 
@@ -74,16 +74,6 @@ public class WorkflowAiEditorClient {
             log.error("[WF-EDIT-IA-ERR] POST {} response parse error message={}", url, ex.getMessage(), ex);
             return null;
         }
-    }
-
-    private String buildUrl(String path) {
-        String baseUrl = analyticsIaProperties.getBaseUrl() != null
-                ? analyticsIaProperties.getBaseUrl().trim()
-                : "http://localhost:8001";
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-        return baseUrl + path;
     }
 
     private String safeJson(Object value) {

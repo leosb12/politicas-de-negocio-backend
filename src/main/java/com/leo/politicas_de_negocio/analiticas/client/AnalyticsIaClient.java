@@ -1,6 +1,6 @@
 package com.leo.politicas_de_negocio.analiticas.client;
 
-import com.leo.politicas_de_negocio.analiticas.config.AnalyticsIaProperties;
+import com.leo.politicas_de_negocio.analiticas.config.AiServiceUrlBuilder;
 import com.leo.politicas_de_negocio.analiticas.dto.response.BottlenecksAnalyticsResponse;
 import com.leo.politicas_de_negocio.analiticas.dto.response.PolicyImprovementAnalyticsResponse;
 import com.leo.politicas_de_negocio.analiticas.dto.response.TaskRedistributionAnalyticsResponse;
@@ -20,6 +20,8 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +34,7 @@ public class AnalyticsIaClient {
     private static final ObjectMapper JSON = JsonMapper.builder().findAndAddModules().build();
 
     private final RestTemplate analyticsIaRestTemplate;
-    private final AnalyticsIaProperties analyticsIaProperties;
+    private final AiServiceUrlBuilder aiServiceUrlBuilder;
 
     public BottlenecksAnalyticsResponse analyzeBottlenecks(Object dashboard) {
         return post(
@@ -77,7 +79,7 @@ public class AnalyticsIaClient {
     }
 
     private <T> T post(String path, Object payload, Class<T> responseType, T fallback) {
-        String url = buildUrl(path);
+        String url = aiServiceUrlBuilder.buildUrl(path);
 
         T primary = doPost(url, payload, responseType);
         if (isValidResponse(primary)) {
@@ -98,11 +100,13 @@ public class AnalyticsIaClient {
 
     private <T> T doPost(String url, Object payload, Class<T> responseType) {
         String serializedPayload = safeJson(payload);
-        log.info("[IA-REQ] POST {} body={}", url, truncate(serializedPayload));
+        log.info("[IA-REQ] POST {} payloadChars={}", url, serializedPayload.length());
+        log.debug("[IA-REQ-BODY] POST {} body={}", url, truncate(serializedPayload));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<Object> requestEntity = new HttpEntity<>(payload, headers);
+        Instant startedAt = Instant.now();
 
         try {
             ResponseEntity<String> responseEntity = analyticsIaRestTemplate.exchange(
@@ -114,11 +118,13 @@ public class AnalyticsIaClient {
 
             String responseBody = responseEntity.getBody();
             log.info(
-                    "[IA-RES] {} status={} body={}",
+                    "[IA-RES] {} status={} durationMs={} responseChars={}",
                     url,
                     responseEntity.getStatusCode().value(),
-                    truncate(responseBody)
+                    Duration.between(startedAt, Instant.now()).toMillis(),
+                    responseBody != null ? responseBody.length() : 0
             );
+            log.debug("[IA-RES-BODY] {} body={}", url, truncate(responseBody));
 
             if (responseBody == null || responseBody.isBlank()) {
                 return null;
@@ -203,13 +209,4 @@ public class AnalyticsIaClient {
         return text.substring(0, limit) + "...";
     }
 
-    private String buildUrl(String path) {
-        String baseUrl = analyticsIaProperties.getBaseUrl() != null
-                ? analyticsIaProperties.getBaseUrl().trim()
-                : "http://localhost:8001";
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-        return baseUrl + path;
-    }
 }

@@ -3,7 +3,7 @@ package com.leo.politicas_de_negocio.guide.cliente;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.leo.politicas_de_negocio.analiticas.config.AnalyticsIaProperties;
+import com.leo.politicas_de_negocio.analiticas.config.AiServiceUrlBuilder;
 import com.leo.politicas_de_negocio.guide.administrador.dto.RespuestaGuiaAdministrador;
 import com.leo.politicas_de_negocio.guide.administrador.dto.SolicitudGuiaAdministrador;
 import com.leo.politicas_de_negocio.guide.funcionario.dto.RespuestaGuiaFuncionario;
@@ -31,7 +31,7 @@ public class ClienteGuiaIa {
     private static final ObjectMapper JSON = JsonMapper.builder().findAndAddModules().build();
 
     private final RestTemplate analyticsIaRestTemplate;
-    private final AnalyticsIaProperties analyticsIaProperties;
+    private final AiServiceUrlBuilder aiServiceUrlBuilder;
 
     public RespuestaGuiaAdministrador guiarAdministrador(SolicitudGuiaAdministrador cargaUtil) {
         return publicarParaRespuesta("/api/ia/guide/admin", cargaUtil, RespuestaGuiaAdministrador.class);
@@ -46,7 +46,7 @@ public class ClienteGuiaIa {
     }
 
     private <T> T publicarParaRespuesta(String ruta, Object cargaUtil, Class<T> tipoRespuesta) {
-        String url = construirUrl(ruta);
+        String url = aiServiceUrlBuilder.buildUrl(ruta);
         String cargaSerializada = jsonSeguro(cargaUtil);
         log.info("[GUIDE-IA-REQ] POST {} body={}", url, truncar(cargaSerializada));
 
@@ -99,16 +99,6 @@ public class ClienteGuiaIa {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         return headers;
-    }
-
-    private String construirUrl(String ruta) {
-        String baseUrl = analyticsIaProperties.getBaseUrl() != null
-                ? analyticsIaProperties.getBaseUrl().trim()
-                : "http://localhost:8001";
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
-        }
-        return baseUrl + ruta;
     }
 
     private String jsonSeguro(Object valor) {

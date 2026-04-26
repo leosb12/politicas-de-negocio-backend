@@ -1,9 +1,11 @@
-package com.leo.politicas_de_negocio.simulation.client;
+package com.leo.politicas_de_negocio.formulariointeligente.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.leo.politicas_de_negocio.analiticas.config.AiServiceUrlBuilder;
+import com.leo.politicas_de_negocio.formulariointeligente.dto.FormularioInteligenteRequest;
+import com.leo.politicas_de_negocio.formulariointeligente.dto.FormularioInteligenteResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,54 +19,20 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 @Component
 @RequiredArgsConstructor
-public class SimulationIaClient {
+public class FormularioInteligenteIaClient {
 
-    private static final Logger log = LoggerFactory.getLogger(SimulationIaClient.class);
+    private static final Logger log = LoggerFactory.getLogger(FormularioInteligenteIaClient.class);
     private static final ObjectMapper JSON = JsonMapper.builder().findAndAddModules().build();
 
     private final RestTemplate analyticsIaRestTemplate;
     private final AiServiceUrlBuilder aiServiceUrlBuilder;
 
-    public SimulationAiInsightResponse analyzeSimulation(Object payload) {
-        return post(
-                "/api/ia/simulations/analyze",
-                payload,
-                SimulationAiInsightResponse.class,
-                SimulationAiInsightResponse.unavailable()
-        );
-    }
-
-    public SimulationAiInsightResponse comparePolicies(Object payload) {
-        return post(
-                "/api/ia/simulations/compare",
-                payload,
-                SimulationAiInsightResponse.class,
-                SimulationAiInsightResponse.unavailable()
-        );
-    }
-
-    private <T> T post(String path, Object payload, Class<T> responseType, T fallback) {
-        String url = aiServiceUrlBuilder.buildUrl(path);
-
-        T directResponse = doPost(url, payload, responseType);
-        if (directResponse != null) {
-            return directResponse;
-        }
-
-        Map<String, Object> wrappedPayload = new LinkedHashMap<>();
-        wrappedPayload.put("data", payload);
-        T wrappedResponse = doPost(url, wrappedPayload, responseType);
-        return wrappedResponse != null ? wrappedResponse : fallback;
-    }
-
-    private <T> T doPost(String url, Object payload, Class<T> responseType) {
+    public FormularioInteligenteResponse completarFormulario(FormularioInteligenteRequest payload) {
+        String url = aiServiceUrlBuilder.buildUrl("/api/ia/forms/fill");
         String serializedPayload = safeJson(payload);
-        log.info("[SIM-IA-REQ] POST {} body={}", url, truncate(serializedPayload));
+        log.info("[FORM-FILL-IA-REQ] POST {} body={}", url, truncate(serializedPayload));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -78,14 +46,14 @@ public class SimulationIaClient {
                     String.class
             );
             String body = responseEntity.getBody();
-            log.info("[SIM-IA-RES] {} status={} body={}", url, responseEntity.getStatusCode().value(), truncate(body));
+            log.info("[FORM-FILL-IA-RES] {} status={} body={}", url, responseEntity.getStatusCode().value(), truncate(body));
             if (body == null || body.isBlank()) {
                 return null;
             }
-            return JSON.readValue(body, responseType);
+            return JSON.readValue(body, FormularioInteligenteResponse.class);
         } catch (RestClientResponseException ex) {
             log.error(
-                    "[SIM-IA-ERR] POST {} status={} requestBody={} responseBody={}",
+                    "[FORM-FILL-IA-ERR] POST {} status={} requestBody={} responseBody={}",
                     url,
                     ex.getStatusCode().value(),
                     truncate(serializedPayload),
@@ -94,10 +62,16 @@ public class SimulationIaClient {
             );
             return null;
         } catch (RestClientException ex) {
-            log.error("[SIM-IA-ERR] POST {} requestBody={} message={}", url, truncate(serializedPayload), ex.getMessage(), ex);
+            log.error(
+                    "[FORM-FILL-IA-ERR] POST {} requestBody={} message={}",
+                    url,
+                    truncate(serializedPayload),
+                    ex.getMessage(),
+                    ex
+            );
             return null;
         } catch (JsonProcessingException ex) {
-            log.error("[SIM-IA-ERR] POST {} response parse error message={}", url, ex.getMessage(), ex);
+            log.error("[FORM-FILL-IA-ERR] POST {} response parse error message={}", url, ex.getMessage(), ex);
             return null;
         }
     }
