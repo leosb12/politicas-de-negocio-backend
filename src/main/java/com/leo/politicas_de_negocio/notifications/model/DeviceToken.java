@@ -33,6 +33,7 @@ public class DeviceToken {
     private String token;
 
     private DevicePlatform platform;
+    private String role;
     private String deviceId;
     private String appVersion;
     private Boolean active;

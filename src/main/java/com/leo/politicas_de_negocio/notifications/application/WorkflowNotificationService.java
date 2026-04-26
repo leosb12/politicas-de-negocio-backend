@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -59,8 +60,8 @@ public class WorkflowNotificationService {
                 : "TAREA_ASIGNADA";
 
         enviarAUsuarios(responsables, mensaje(
-                tituloTareaAsignada(tarea),
-                cuerpoTareaAsignada(instancia, politica, tarea),
+                "Nueva tarea asignada",
+                "Tienes una nueva tarea pendiente en la politica " + etiquetaPolitica(politica) + ".",
                 type,
                 instancia != null ? instancia.getId() : tarea.getInstanciaId(),
                 tarea.getId(),
@@ -86,19 +87,33 @@ public class WorkflowNotificationService {
             TareaActividad tarea,
             String actorUserId
     ) {
-        String creadorId = normalizar(instancia != null ? instancia.getCreadaPor() : null);
-        if (creadorId == null || creadorId.equals(normalizar(actorUserId))) {
+        Set<String> adminIds = resolverAdministradoresActivos();
+        String actorNormalizado = normalizar(actorUserId);
+        if (actorNormalizado != null) {
+            adminIds.remove(actorNormalizado);
+        }
+
+        if (adminIds.isEmpty()) {
             return;
         }
 
-        enviarAUsuarios(Set.of(creadorId), mensaje(
-                "Actividad completada",
-                "Se completo " + etiquetaActividad(tarea) + " del tramite " + etiquetaTramite(instancia, politica) + ".",
+        enviarAUsuarios(adminIds, mensaje(
+                "Tarea completada",
+                nombreUsuario(actorUserId) + " completo la tarea " + etiquetaActividad(tarea) + ".",
                 "TAREA_COMPLETADA",
                 instancia.getId(),
                 tarea != null ? tarea.getId() : null,
                 ACTION_OPEN_TRAMITE
         ));
+    }
+
+    private Set<String> resolverAdministradoresActivos() {
+        Set<String> adminIds = new LinkedHashSet<>();
+        List<Usuario> admins = usuarioRepository.findAllByRolIgnoreCaseAndActivo("ADMIN", true);
+        for (Usuario admin : admins) {
+            agregarSiPresente(adminIds, admin.getId());
+        }
+        return adminIds;
     }
 
     public void notificarTramiteFinalizado(InstanciaPolitica instancia, PoliticaNegocio politica) {
@@ -223,6 +238,23 @@ public class WorkflowNotificationService {
         }
         return "El tramite " + etiquetaTramite(instancia, politica)
                 + " avanzo a " + etiquetaActividad(tarea) + ".";
+    }
+
+    private String etiquetaPolitica(PoliticaNegocio politica) {
+        String nombre = normalizar(politica != null ? politica.getNombre() : null);
+        return nombre != null ? nombre : "sin nombre";
+    }
+
+    private String nombreUsuario(String userId) {
+        String normalized = normalizar(userId);
+        if (normalized == null) {
+            return "Un funcionario";
+        }
+
+        return usuarioRepository.findByIdAndActivo(normalized, true)
+                .map(Usuario::getNombre)
+                .map(this::normalizar)
+                .orElse("Un funcionario");
     }
 
     private String etiquetaTramite(InstanciaPolitica instancia, PoliticaNegocio politica) {

@@ -21,4 +21,6 @@ public interface UsuarioRepository extends MongoRepository<Usuario, String> {
     long countByDepartamentoId(String departamentoId);
 
     List<Usuario> findAllByDepartamentoId(String departamentoId);
+
+    List<Usuario> findAllByRolIgnoreCaseAndActivo(String rol, Boolean activo);
 }

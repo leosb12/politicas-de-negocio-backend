@@ -8,6 +8,8 @@ import com.leo.politicas_de_negocio.guide.administrador.dto.RespuestaGuiaAdminis
 import com.leo.politicas_de_negocio.guide.administrador.dto.SolicitudGuiaAdministrador;
 import com.leo.politicas_de_negocio.guide.funcionario.dto.RespuestaGuiaFuncionario;
 import com.leo.politicas_de_negocio.guide.funcionario.dto.SolicitudGuiaFuncionario;
+import com.leo.politicas_de_negocio.guide.usuario_movil.dto.RespuestaGuiaUsuarioMovil;
+import com.leo.politicas_de_negocio.guide.usuario_movil.dto.SolicitudGuiaUsuarioMovil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,10 @@ public class ClienteGuiaIa {
 
     public RespuestaGuiaFuncionario guiarFuncionario(SolicitudGuiaFuncionario cargaUtil) {
         return publicarParaRespuesta("/api/ia/guide/employee", cargaUtil, RespuestaGuiaFuncionario.class);
+    }
+
+    public RespuestaGuiaUsuarioMovil guiarUsuarioMovil(SolicitudGuiaUsuarioMovil cargaUtil) {
+        return publicarParaRespuesta("/api/ia/guide/mobile-user", cargaUtil, RespuestaGuiaUsuarioMovil.class);
     }
 
     private <T> T publicarParaRespuesta(String ruta, Object cargaUtil, Class<T> tipoRespuesta) {

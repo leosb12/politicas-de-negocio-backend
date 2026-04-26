@@ -18,6 +18,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,7 +48,9 @@ class RegisterDeviceTokenUseCaseTest {
     @Test
     void execute_debeCrearTokenActivoParaUsuario() {
         RegisterDeviceTokenRequest request = request(" fcm-token ", "android");
-        Usuario usuario = Usuario.builder().id("u-1").activo(true).build();
+        request.setUserId("u-1");
+        request.setRole("FUNCIONARIO");
+        Usuario usuario = Usuario.builder().id("u-1").rol("FUNCIONARIO").activo(true).build();
 
         when(usuarioRepository.findByIdAndActivo("u-1", true)).thenReturn(Optional.of(usuario));
         when(deviceTokenRepository.findByToken("fcm-token")).thenReturn(Optional.empty());
@@ -62,6 +65,7 @@ class RegisterDeviceTokenUseCaseTest {
         assertEquals("dt-1", response.getId());
         assertEquals("u-1", response.getUserId());
         assertEquals(DevicePlatform.ANDROID, response.getPlatform());
+        assertEquals("FUNCIONARIO", response.getRole());
         assertEquals(true, response.getActive());
         assertNotNull(response.getRegisteredAt());
         assertNotNull(response.getLastSeenAt());
@@ -70,12 +74,15 @@ class RegisterDeviceTokenUseCaseTest {
     @Test
     void execute_debeReasignarTokenExistenteAlUsuarioActual() {
         RegisterDeviceTokenRequest request = request("fcm-token", "ios");
-        Usuario usuario = Usuario.builder().id("u-2").activo(true).build();
+        request.setUserId("u-2");
+        request.setRole("ADMIN");
+        Usuario usuario = Usuario.builder().id("u-2").rol("ADMIN").activo(true).build();
         DeviceToken existente = DeviceToken.builder()
                 .id("dt-1")
                 .userId("u-1")
                 .token("fcm-token")
                 .platform(DevicePlatform.ANDROID)
+                .role("FUNCIONARIO")
                 .active(false)
                 .registeredAt(LocalDateTime.now().minusDays(3))
                 .failureCount(2)
@@ -90,9 +97,21 @@ class RegisterDeviceTokenUseCaseTest {
 
         assertEquals("u-2", response.getUserId());
         assertEquals(DevicePlatform.IOS, response.getPlatform());
+        assertEquals("ADMIN", response.getRole());
         assertEquals(true, response.getActive());
         assertEquals(0, existente.getFailureCount());
         verify(deviceTokenRepository).save(existente);
+    }
+
+    @Test
+    void execute_debeRechazarRegistroSiUserIdNoCoincideConActor() {
+        RegisterDeviceTokenRequest request = request("web-token", "web");
+        request.setUserId("otro-usuario");
+        Usuario usuario = Usuario.builder().id("u-3").rol("FUNCIONARIO").activo(true).build();
+
+        when(usuarioRepository.findByIdAndActivo("u-3", true)).thenReturn(Optional.of(usuario));
+
+        assertThrows(RuntimeException.class, () -> useCase.execute("u-3", request));
     }
 
     private RegisterDeviceTokenRequest request(String token, String platform) {

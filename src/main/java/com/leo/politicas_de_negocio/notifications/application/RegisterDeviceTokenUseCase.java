@@ -25,6 +25,7 @@ public class RegisterDeviceTokenUseCase {
 
     public DeviceTokenResponse execute(String actorUserId, RegisterDeviceTokenRequest request) {
         Usuario actor = assertUsuarioActivo(actorUserId);
+        assertActorMatchesRequest(actor, request);
         String token = requireToken(request);
         LocalDateTime now = LocalDateTime.now();
 
@@ -44,6 +45,7 @@ public class RegisterDeviceTokenUseCase {
     ) {
         existing.setUserId(userId);
         existing.setPlatform(DevicePlatform.from(request.getPlatform()));
+        existing.setRole(resolveRole(request, userId));
         existing.setDeviceId(normalizeOptional(request.getDeviceId()));
         existing.setAppVersion(normalizeOptional(request.getAppVersion()));
         existing.setActive(true);
@@ -63,6 +65,7 @@ public class RegisterDeviceTokenUseCase {
                 .userId(userId)
                 .token(token)
                 .platform(DevicePlatform.from(request.getPlatform()))
+                .role(resolveRole(request, userId))
                 .deviceId(normalizeOptional(request.getDeviceId()))
                 .appVersion(normalizeOptional(request.getAppVersion()))
                 .active(true)
@@ -90,6 +93,23 @@ public class RegisterDeviceTokenUseCase {
         }
     }
 
+    private void assertActorMatchesRequest(Usuario actor, RegisterDeviceTokenRequest request) {
+        if (request == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar el token del dispositivo");
+        }
+
+        String requestUserId = normalizeOptional(request.getUserId());
+        if (requestUserId != null && !requestUserId.equals(actor.getId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "No puede registrar tokens push para otro usuario");
+        }
+
+        String requestRole = normalizeOptional(request.getRole());
+        String actorRole = normalizeOptional(actor.getRol());
+        if (requestRole != null && actorRole != null && !requestRole.equalsIgnoreCase(actorRole)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "El rol del token no coincide con el usuario autenticado");
+        }
+    }
+
     private Usuario assertUsuarioActivo(String userId) {
         String normalized = normalizeRequired(userId, "Debe enviar X-User-Id o X-Admin-User-Id");
         return usuarioRepository.findByIdAndActivo(normalized, true)
@@ -114,11 +134,25 @@ public class RegisterDeviceTokenUseCase {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
+    private String resolveRole(RegisterDeviceTokenRequest request, String userId) {
+        String requestRole = request != null ? normalizeOptional(request.getRole()) : null;
+        if (requestRole != null) {
+            return requestRole.toUpperCase();
+        }
+
+        return usuarioRepository.findById(userId)
+                .map(Usuario::getRol)
+                .map(this::normalizeOptional)
+                .map(String::toUpperCase)
+                .orElse(null);
+    }
+
     private DeviceTokenResponse toResponse(DeviceToken deviceToken) {
         return DeviceTokenResponse.builder()
                 .id(deviceToken.getId())
                 .userId(deviceToken.getUserId())
                 .platform(deviceToken.getPlatform())
+                .role(deviceToken.getRole())
                 .deviceId(deviceToken.getDeviceId())
                 .appVersion(deviceToken.getAppVersion())
                 .active(deviceToken.getActive())

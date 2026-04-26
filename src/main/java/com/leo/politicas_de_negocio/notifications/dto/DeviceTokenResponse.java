@@ -13,6 +13,7 @@ public class DeviceTokenResponse {
     private String id;
     private String userId;
     private DevicePlatform platform;
+    private String role;
     private String deviceId;
     private String appVersion;
     private Boolean active;
