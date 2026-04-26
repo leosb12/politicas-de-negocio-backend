@@ -216,7 +216,11 @@ public class PagoService {
                 ESTADOS_NO_FINALES
         );
         if (pagoExistente.isPresent()) {
-            return toResponse(pagoExistente.get(), null);
+            Pago existing = pagoExistente.get();
+            // Regenerar la URL con la logica corregida (charset + sanitizacion)
+            existing.setPaypalUrl(buildPaypalUrl(existing));
+            pagoRepository.save(existing);
+            return toResponse(existing, null);
         }
 
         Pago pago = Pago.builder()
@@ -453,12 +457,17 @@ public class PagoService {
             throw new ApiException(HttpStatus.CONFLICT, "La configuracion de PayPal no esta completa");
         }
 
+        String safeItemName = sanitizeForPaypal(resolveSafeDescripcionPago(pago));
+
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrl)
                 .queryParam("cmd", "_xclick")
                 .queryParam("business", businessEmail)
                 .queryParam("amount", formatPayPalAmount(pago.getMonto()))
                 .queryParam("currency_code", pago.getMoneda())
-                .queryParam("item_name", resolveSafeDescripcionPago(pago));
+                .queryParam("item_name", safeItemName)
+                .queryParam("charset", "utf-8")
+                .queryParam("no_shipping", "1")
+                .queryParam("no_note", "1");
 
         String returnUrl = normalizar(paymentsProperties.getPaypal().getReturnUrl());
         if (returnUrl != null) {
@@ -472,6 +481,17 @@ public class PagoService {
         }
 
         return builder.build().encode().toUriString();
+    }
+
+    private String sanitizeForPaypal(String value) {
+        if (value == null) {
+            return "Pago";
+        }
+        // Reemplaza caracteres que causan problemas en PayPal webscr
+        return value
+                .replaceAll("[^a-zA-Z0-9 ._-]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private String resolveSafeDescripcionPago(Pago pago) {
