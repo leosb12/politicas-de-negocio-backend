@@ -3,11 +3,15 @@ package com.leo.politicas_de_negocio.instancias.service;
 import com.leo.politicas_de_negocio.departamentos.model.Departamento;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
 import com.leo.politicas_de_negocio.instancias.dto.CrearInstanciaRequest;
+import com.leo.politicas_de_negocio.instancias.dto.FlujoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.model.HistorialInstancia;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.dto.InstanciaDetalleResponse;
+import com.leo.politicas_de_negocio.instancias.dto.MisTramiteCardResponse;
+import com.leo.politicas_de_negocio.instancias.dto.PagedResponse;
 import com.leo.politicas_de_negocio.instancias.dto.SeguimientoInstanciaResponse;
+import com.leo.politicas_de_negocio.instancias.repository.InstanciaCardProjection;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
@@ -15,6 +19,7 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
+import com.leo.politicas_de_negocio.politicas.repository.PoliticaNombreProjection;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
@@ -24,11 +29,16 @@ import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import com.leo.politicas_de_negocio.workflow.service.WorkflowEngineService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -191,6 +201,44 @@ public class InstanciaPoliticaService {
                 .departamentosActuales(departamentosActuales)
                 .nodosActualesIds(nodosActualesIds)
                 .build();
+    }
+
+    public FlujoInstanciaResponse obtenerFlujoPorId(String actorUserId, String instanciaId) {
+        SeguimientoInstanciaResponse seguimiento = obtenerSeguimientoPorId(actorUserId, instanciaId);
+        return construirFlujoInstancia(seguimiento);
+    }
+
+    public PagedResponse<MisTramiteCardResponse> listarMisTramitesCards(String actorUserId, int page, int size) {
+        Usuario actor = assertUsuarioActivo(actorUserId);
+        int normalizedPage = Math.max(page, 0);
+        int normalizedSize = Math.min(Math.max(size, 1), 100);
+        Pageable pageable = PageRequest.of(
+                normalizedPage,
+                normalizedSize,
+                Sort.by(Sort.Direction.DESC, "fechaCreacion")
+        );
+
+        Page<InstanciaCardProjection> cardsPage = instanciaRepository.findCardsByCreadaPor(actor.getId(), pageable);
+        Map<String, String> nombresPolitica = cargarNombresPolitica(cardsPage.getContent());
+
+        List<MisTramiteCardResponse> content = cardsPage.getContent().stream()
+                .map(card -> MisTramiteCardResponse.builder()
+                        .id(card.getId())
+                        .codigoTramite(card.getCodigoTramite())
+                        .nombre(nombresPolitica.get(card.getPoliticaId()))
+                        .estadoInstancia(card.getEstadoInstancia())
+                        .fechaCreacion(card.getFechaCreacion())
+                        .build())
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                cardsPage.getNumber(),
+                cardsPage.getSize(),
+                cardsPage.getTotalElements(),
+                cardsPage.getTotalPages(),
+                cardsPage.isLast()
+        );
     }
 
     public List<InstanciaPolitica> listar(String actorUserId, EstadoInstancia estadoInstancia) {
@@ -650,6 +698,104 @@ public class InstanciaPoliticaService {
                 .tareasCompletadas(tareaRepository.countByInstanciaIdAndEstadoTarea(instancia.getId(), EstadoTarea.COMPLETADA))
                 .tareasCanceladas(tareaRepository.countByInstanciaIdAndEstadoTarea(instancia.getId(), EstadoTarea.CANCELADA))
                 .tareasRechazadas(tareaRepository.countByInstanciaIdAndEstadoTarea(instancia.getId(), EstadoTarea.RECHAZADA))
+                .build();
+    }
+
+    private Map<String, String> cargarNombresPolitica(Collection<InstanciaCardProjection> cards) {
+        List<String> politicaIds = cards.stream()
+                .map(InstanciaCardProjection::getPoliticaId)
+                .map(this::normalizarTexto)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+
+        if (politicaIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> nombres = new HashMap<>();
+        for (PoliticaNombreProjection politica : politicaRepository.findNombreByIdIn(politicaIds)) {
+            if (politica == null) {
+                continue;
+            }
+            String id = normalizarTexto(politica.getId());
+            if (id != null) {
+                nombres.put(id, normalizarTexto(politica.getNombre()));
+            }
+        }
+        return nombres;
+    }
+
+    private FlujoInstanciaResponse construirFlujoInstancia(SeguimientoInstanciaResponse seguimiento) {
+        return FlujoInstanciaResponse.builder()
+                .instanciaId(seguimiento.getInstanciaId())
+                .politicaId(seguimiento.getPoliticaId())
+                .politicaNombre(seguimiento.getPoliticaNombre())
+                .codigoTramite(seguimiento.getCodigoTramite())
+                .estadoInstancia(seguimiento.getEstadoInstancia() != null
+                        ? seguimiento.getEstadoInstancia().name()
+                        : null)
+                .laneOrientation(seguimiento.getLaneOrientation())
+                .laneWidth(seguimiento.getLaneWidth())
+                .laneHeight(seguimiento.getLaneHeight())
+                .nodos(seguimiento.getNodos() == null ? List.of() : seguimiento.getNodos().stream()
+                        .map(nodo -> FlujoInstanciaResponse.NodoFlujoResponse.builder()
+                                .id(nodo.getId())
+                                .tipo(nodo.getTipo() != null ? nodo.getTipo().name() : null)
+                                .nombre(nodo.getNombre())
+                                .departamentoId(nodo.getDepartamentoId())
+                                .departamentoNombre(nodo.getDepartamentoNombre())
+                                .responsableTipo(nodo.getResponsableTipo())
+                                .responsableId(nodo.getResponsableId())
+                                .responsableNombre(nodo.getResponsableNombre())
+                                .posX(nodo.getPosX())
+                                .posY(nodo.getPosY())
+                                .estadoSeguimiento(nodo.getEstadoSeguimiento())
+                                .tareaActualId(nodo.getTareaActualId())
+                                .estadoTareaActual(nodo.getEstadoTareaActual() != null
+                                        ? nodo.getEstadoTareaActual().name()
+                                        : null)
+                                .asignadoA(nodo.getAsignadoA())
+                                .asignadoANombre(nodo.getAsignadoANombre())
+                                .build())
+                        .toList())
+                .conexiones(seguimiento.getConexiones() == null ? List.of() : seguimiento.getConexiones().stream()
+                        .map(conexion -> FlujoInstanciaResponse.ConexionFlujoResponse.builder()
+                                .origen(conexion.getOrigen())
+                                .destino(conexion.getDestino())
+                                .puertoOrigen(conexion.getPuertoOrigen())
+                                .puertoDestino(conexion.getPuertoDestino())
+                                .build())
+                        .toList())
+                .tareas(seguimiento.getTareas() == null ? List.of() : seguimiento.getTareas().stream()
+                        .map(tarea -> FlujoInstanciaResponse.TareaFlujoResponse.builder()
+                                .id(tarea.getId())
+                                .nodoId(tarea.getNodoId())
+                                .nombre(tarea.getNombreNodo())
+                                .responsableTipo(tarea.getResponsableTipo())
+                                .responsableId(tarea.getResponsableId())
+                                .responsableNombre(tarea.getResponsableNombre())
+                                .estado(tarea.getEstadoTarea() != null ? tarea.getEstadoTarea().name() : null)
+                                .asignadoA(tarea.getAsignadoA())
+                                .asignadoANombre(tarea.getAsignadoANombre())
+                                .build())
+                        .toList())
+                .departamentosActuales(seguimiento.getDepartamentosActuales() == null
+                        ? List.of()
+                        : seguimiento.getDepartamentosActuales().stream()
+                        .map(item -> FlujoInstanciaResponse.DepartamentoActualFlujoResponse.builder()
+                                .departamentoId(item.getDepartamentoId())
+                                .departamentoNombre(item.getDepartamentoNombre())
+                                .nodoId(item.getNodoId())
+                                .nodoNombre(item.getNodoNombre())
+                                .tareaId(item.getTareaId())
+                                .estadoTarea(item.getEstadoTarea() != null ? item.getEstadoTarea().name() : null)
+                                .responsableTipo(item.getResponsableTipo())
+                                .responsableNombre(item.getResponsableNombre())
+                                .asignadoANombre(item.getAsignadoANombre())
+                                .build())
+                        .toList())
+                .nodosActualesIds(seguimiento.getNodosActualesIds() == null ? List.of() : seguimiento.getNodosActualesIds())
                 .build();
     }
 

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
@@ -31,9 +32,12 @@ public class InstanciaPolitica {
 
     private EstadoInstancia estadoInstancia;
 
+    @Indexed(name = "idx_instancia_fecha_creacion")
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
     private LocalDateTime fechaFinalizacion;
+
+    @Indexed(name = "idx_instancia_creada_por")
     private String creadaPor;
     private String finalizadaPor;
 

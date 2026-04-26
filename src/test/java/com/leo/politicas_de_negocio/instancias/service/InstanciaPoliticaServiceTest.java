@@ -2,8 +2,12 @@ package com.leo.politicas_de_negocio.instancias.service;
 
 import com.leo.politicas_de_negocio.departamentos.model.Departamento;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
+import com.leo.politicas_de_negocio.instancias.dto.FlujoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.dto.InstanciaDetalleResponse;
+import com.leo.politicas_de_negocio.instancias.dto.MisTramiteCardResponse;
+import com.leo.politicas_de_negocio.instancias.dto.PagedResponse;
 import com.leo.politicas_de_negocio.instancias.dto.SeguimientoInstanciaResponse;
+import com.leo.politicas_de_negocio.instancias.repository.InstanciaCardProjection;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
@@ -12,6 +16,7 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
+import com.leo.politicas_de_negocio.politicas.repository.PoliticaNombreProjection;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
@@ -25,7 +30,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -121,6 +129,71 @@ class InstanciaPoliticaServiceTest {
     }
 
     @Test
+    void listarMisTramitesCards_debeRetornarProyeccionPaginadaYLigera() {
+        Usuario actor = Usuario.builder()
+                .id("user-1")
+                .rol("CLIENTE")
+                .activo(true)
+                .build();
+
+        LocalDateTime fechaCreacion = LocalDateTime.of(2026, 4, 26, 10, 15);
+        InstanciaCardProjection projection = new InstanciaCardProjection() {
+            @Override
+            public String getId() {
+                return "inst-1";
+            }
+
+            @Override
+            public String getPoliticaId() {
+                return "pol-1";
+            }
+
+            @Override
+            public String getCodigoTramite() {
+                return "TRM-1";
+            }
+
+            @Override
+            public EstadoInstancia getEstadoInstancia() {
+                return EstadoInstancia.EN_CURSO;
+            }
+
+            @Override
+            public LocalDateTime getFechaCreacion() {
+                return fechaCreacion;
+            }
+        };
+        PoliticaNombreProjection politicaProjection = new PoliticaNombreProjection() {
+            @Override
+            public String getId() {
+                return "pol-1";
+            }
+
+            @Override
+            public String getNombre() {
+                return "Solicitud de vacaciones";
+            }
+        };
+
+        when(usuarioRepository.findByIdAndActivo("user-1", true)).thenReturn(Optional.of(actor));
+        when(instanciaRepository.findCardsByCreadaPor(eq("user-1"), eq(PageRequest.of(0, 10,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaCreacion")))))
+                .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
+        when(politicaRepository.findNombreByIdIn(List.of("pol-1")))
+                .thenReturn(List.of(politicaProjection));
+
+        PagedResponse<MisTramiteCardResponse> response = service.listarMisTramitesCards("user-1", 0, 10);
+
+        assertEquals(1, response.content().size());
+        assertEquals("inst-1", response.content().get(0).getId());
+        assertEquals("TRM-1", response.content().get(0).getCodigoTramite());
+        assertEquals("Solicitud de vacaciones", response.content().get(0).getNombre());
+        assertEquals(EstadoInstancia.EN_CURSO, response.content().get(0).getEstadoInstancia());
+        assertEquals(fechaCreacion, response.content().get(0).getFechaCreacion());
+        assertEquals(1L, response.totalElements());
+    }
+
+    @Test
     void obtenerSeguimientoPorId_debeRetornarDiagramaConNodoActual() {
         Usuario actor = Usuario.builder()
                 .id("cliente-1")
@@ -200,6 +273,76 @@ class InstanciaPoliticaServiceTest {
                 .anyMatch(nodo -> "firma".equals(nodo.getId())
                         && "ACTUAL".equals(nodo.getEstadoSeguimiento())
                         && "t-2".equals(nodo.getTareaActualId())));
+    }
+
+    @Test
+    void obtenerFlujoPorId_debeRetornarSoloCamposNecesariosParaPantalla() {
+        Usuario actor = Usuario.builder()
+                .id("cliente-1")
+                .nombre("Cliente Demo")
+                .rol("CLIENTE")
+                .activo(true)
+                .build();
+
+        InstanciaPolitica instancia = InstanciaPolitica.builder()
+                .id("inst-1")
+                .creadaPor("cliente-1")
+                .politicaId("pol-1")
+                .politicaVersion(3L)
+                .codigoTramite("TRM-1")
+                .estadoInstancia(EstadoInstancia.EN_CURSO)
+                .fechaCreacion(LocalDateTime.now())
+                .build();
+
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-1")
+                .nombre("Solicitud demo")
+                .nodos(List.of(
+                        Nodo.builder().id("inicio").tipo(TipoNodo.INICIO).nombre("Inicio").build(),
+                        Nodo.builder().id("revision").tipo(TipoNodo.ACTIVIDAD).nombre("Revision").departamentoId("dep-1").responsableTipo("DEPARTAMENTO").responsableId("dep-1").posX(10d).posY(20d).build()
+                ))
+                .conexiones(List.of(
+                        Conexion.builder().origen("inicio").destino("revision").puertoOrigen("east").puertoDestino("west").build()
+                ))
+                .laneOrientation("VERTICAL")
+                .laneWidth(320d)
+                .laneHeight(220d)
+                .build();
+
+        TareaActividad tareaActual = TareaActividad.builder()
+                .id("t-2")
+                .instanciaId("inst-1")
+                .politicaId("pol-1")
+                .nodoId("revision")
+                .nombreNodo("Revision")
+                .responsableTipo("DEPARTAMENTO")
+                .responsableId("dep-1")
+                .estadoTarea(EstadoTarea.PENDIENTE)
+                .build();
+
+        when(usuarioRepository.findByIdAndActivo("cliente-1", true)).thenReturn(Optional.of(actor));
+        when(instanciaRepository.findById("inst-1")).thenReturn(Optional.of(instancia));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(tareaRepository.findByInstanciaIdOrderByFechaCreacionAsc("inst-1"))
+                .thenReturn(List.of(tareaActual));
+        when(departamentoRepository.findById("dep-1"))
+                .thenReturn(Optional.of(Departamento.builder().id("dep-1").nombre("Mesa de Entrada").build()));
+
+        FlujoInstanciaResponse response = service.obtenerFlujoPorId("cliente-1", "inst-1");
+
+        assertEquals("inst-1", response.getInstanciaId());
+        assertEquals("pol-1", response.getPoliticaId());
+        assertEquals("Solicitud demo", response.getPoliticaNombre());
+        assertEquals("TRM-1", response.getCodigoTramite());
+        assertEquals("EN_CURSO", response.getEstadoInstancia());
+        assertEquals(2, response.getNodos().size());
+        assertEquals(1, response.getConexiones().size());
+        assertEquals(1, response.getTareas().size());
+        assertEquals(1, response.getDepartamentosActuales().size());
+        assertEquals(List.of("revision"), response.getNodosActualesIds());
+        assertEquals("Revision", response.getTareas().get(0).getNombre());
+        assertEquals("PENDIENTE", response.getTareas().get(0).getEstado());
+        assertEquals("ACTIVIDAD", response.getNodos().get(1).getTipo());
     }
 
     @Test

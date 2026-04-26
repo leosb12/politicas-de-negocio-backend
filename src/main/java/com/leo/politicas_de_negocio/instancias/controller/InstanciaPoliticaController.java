@@ -1,7 +1,10 @@
 package com.leo.politicas_de_negocio.instancias.controller;
 
 import com.leo.politicas_de_negocio.instancias.dto.CrearInstanciaRequest;
+import com.leo.politicas_de_negocio.instancias.dto.FlujoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.dto.InstanciaDetalleResponse;
+import com.leo.politicas_de_negocio.instancias.dto.MisTramiteCardResponse;
+import com.leo.politicas_de_negocio.instancias.dto.PagedResponse;
 import com.leo.politicas_de_negocio.instancias.dto.SeguimientoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.model.HistorialInstancia;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
@@ -50,6 +53,17 @@ public class InstanciaPoliticaController {
         return ResponseEntity.ok(instanciaService.listarDetalle(actorUserId, estadoInstancia));
     }
 
+    @GetMapping("/mis-tramites/cards")
+    public ResponseEntity<PagedResponse<MisTramiteCardResponse>> listarMisTramitesCards(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "20") int size
+    ) {
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        return ResponseEntity.ok(instanciaService.listarMisTramitesCards(actorUserId, page, size));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<InstanciaDetalleResponse> obtenerInstancia(
             @RequestHeader(value = "X-User-Id", required = false) String userId,
@@ -68,6 +82,16 @@ public class InstanciaPoliticaController {
     ) {
         String actorUserId = resolverActorUserId(userId, adminUserId);
         return ResponseEntity.ok(instanciaService.obtenerSeguimientoPorId(actorUserId, id));
+    }
+
+    @GetMapping("/{id}/flujo")
+    public ResponseEntity<FlujoInstanciaResponse> obtenerFlujo(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @PathVariable String id
+    ) {
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        return ResponseEntity.ok(instanciaService.obtenerFlujoPorId(actorUserId, id));
     }
 
     @GetMapping("/{id}/historial")

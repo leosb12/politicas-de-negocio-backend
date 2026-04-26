@@ -96,7 +96,7 @@ class AdminGuideServiceTest {
 
         ArgumentCaptor<AdminGuideIaRequest> captor = ArgumentCaptor.forClass(AdminGuideIaRequest.class);
         org.mockito.Mockito.verify(guideIaClient).guideAdmin(captor.capture());
-        AdminGuideIaRequest iaRequest = captor.getValue();
+        AdminGuideIaRequest iaRequest = captor.getValue();olítica ya creada, donde el usuario:
         assertEquals("admin-1", iaRequest.getUserId());
         assertEquals("Instalacion de medidor", iaRequest.getContext().getPolicyName());
         assertEquals("BORRADOR", iaRequest.getContext().getPolicyStatus());
