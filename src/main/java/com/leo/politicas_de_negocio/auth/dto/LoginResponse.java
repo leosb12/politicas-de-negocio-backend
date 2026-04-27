@@ -11,4 +11,5 @@ public class LoginResponse {
     private String correo;
     private String rol;
     private String departamentoId;
+    private String departamentoNombre;
 }

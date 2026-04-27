@@ -164,12 +164,15 @@ public class AuthService {
     }
 
     private LoginResponse toLoginResponse(Usuario usuario) {
+        String departamentoId = usuario.getDepartamentoId();
+
         return LoginResponse.builder()
                 .id(usuario.getId())
                 .nombre(usuario.getNombre())
                 .correo(usuario.getCorreo())
                 .rol(usuario.getRol())
-                .departamentoId(usuario.getDepartamentoId())
+                .departamentoId(departamentoId)
+                .departamentoNombre(resolveDepartmentName(departamentoId))
                 .build();
     }
 
@@ -226,6 +229,17 @@ public class AuthService {
 
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String resolveDepartmentName(String departamentoId) {
+        String normalizedDepartmentId = requireOptionalText(departamentoId);
+        if (normalizedDepartmentId == null) {
+            return null;
+        }
+
+        return departamentoRepository.findById(normalizedDepartmentId)
+                .map(departamento -> requireOptionalText(departamento.getNombre()))
+                .orElse(normalizedDepartmentId);
     }
 
     private ApiException invalidCredentialsException() {
