@@ -21,6 +21,7 @@ services:
       APP_STORAGE_S3_KEY_PREFIX: ${APP_STORAGE_S3_KEY_PREFIX:-adjuntos/}
       APP_STORAGE_LOCAL_BASE_PATH: /app/uploads
       APP_NOTIFICATIONS_FIREBASE_ENABLED: ${APP_NOTIFICATIONS_FIREBASE_ENABLED:-true}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
     volumes:
       - uploads_data:/app/uploads
 
