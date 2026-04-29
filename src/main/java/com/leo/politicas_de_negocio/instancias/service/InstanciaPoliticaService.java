@@ -19,12 +19,14 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
+import com.leo.politicas_de_negocio.politicas.repository.PoliticaCardInfoProjection;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNombreProjection;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
+import com.leo.politicas_de_negocio.tareas.repository.TareaResumenProjection;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import com.leo.politicas_de_negocio.workflow.service.WorkflowEngineService;
@@ -39,10 +41,12 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -220,6 +224,8 @@ public class InstanciaPoliticaService {
 
         Page<InstanciaCardProjection> cardsPage = instanciaRepository.findCardsByCreadaPor(actor.getId(), pageable);
         Map<String, String> nombresPolitica = cargarNombresPolitica(cardsPage.getContent());
+        Map<String, PoliticaCardInfoProjection> politicasInfo = cargarPoliticasCardInfo(cardsPage.getContent());
+        Map<String, List<TareaResumenProjection>> tareasPorInstancia = cargarTareasResumenPorInstancia(cardsPage.getContent());
 
         List<MisTramiteCardResponse> content = cardsPage.getContent().stream()
                 .map(card -> MisTramiteCardResponse.builder()
@@ -227,6 +233,11 @@ public class InstanciaPoliticaService {
                         .codigoTramite(card.getCodigoTramite())
                         .nombre(nombresPolitica.get(card.getPoliticaId()))
                         .estadoInstancia(card.getEstadoInstancia())
+                        .porcentaje(calcularPorcentajeCard(
+                                card,
+                                politicasInfo.get(normalizarTexto(card.getPoliticaId())),
+                                tareasPorInstancia.getOrDefault(card.getId(), List.of())
+                        ))
                         .fechaCreacion(card.getFechaCreacion())
                         .build())
                 .toList();
@@ -724,6 +735,144 @@ public class InstanciaPoliticaService {
             }
         }
         return nombres;
+    }
+
+    private Map<String, PoliticaCardInfoProjection> cargarPoliticasCardInfo(Collection<InstanciaCardProjection> cards) {
+        List<String> politicaIds = cards.stream()
+                .map(InstanciaCardProjection::getPoliticaId)
+                .map(this::normalizarTexto)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+
+        if (politicaIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, PoliticaCardInfoProjection> politicas = new HashMap<>();
+        for (PoliticaCardInfoProjection politica : politicaRepository.findCardInfoByIdIn(politicaIds)) {
+            if (politica == null) {
+                continue;
+            }
+            String id = normalizarTexto(politica.getId());
+            if (id != null) {
+                politicas.put(id, politica);
+            }
+        }
+        return politicas;
+    }
+
+    private Map<String, List<TareaResumenProjection>> cargarTareasResumenPorInstancia(Collection<InstanciaCardProjection> cards) {
+        List<String> instanciaIds = cards.stream()
+                .map(InstanciaCardProjection::getId)
+                .map(this::normalizarTexto)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        if (instanciaIds.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, List<TareaResumenProjection>> tareasPorInstancia = new HashMap<>();
+        for (TareaResumenProjection tarea : tareaRepository.findResumenByInstanciaIdIn(instanciaIds)) {
+            if (tarea == null) {
+                continue;
+            }
+            String instanciaId = normalizarTexto(tarea.getInstanciaId());
+            if (instanciaId == null) {
+                continue;
+            }
+            tareasPorInstancia.computeIfAbsent(instanciaId, key -> new ArrayList<>()).add(tarea);
+        }
+
+        tareasPorInstancia.values().forEach(tareas -> tareas.sort(
+                Comparator.comparing(
+                        TareaResumenProjection::getFechaCreacion,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                )
+        ));
+        return tareasPorInstancia;
+    }
+
+    private int calcularPorcentajeCard(
+            InstanciaCardProjection card,
+            PoliticaCardInfoProjection politica,
+            List<TareaResumenProjection> tareas
+    ) {
+        Map<String, List<TareaResumenProjection>> tareasPorNodo = agruparResumenTareasPorNodo(tareas);
+        int totalNodosPolitica = politica != null && politica.getTotalNodos() != null
+                ? politica.getTotalNodos()
+                : 0;
+        int total = Math.max(totalNodosPolitica, tareasPorNodo.size() + 2);
+        total = Math.max(total, 1);
+
+        int completados = card.getFechaCreacion() != null ? 1 : 0;
+        int actuales = 0;
+
+        for (List<TareaResumenProjection> tareasNodo : tareasPorNodo.values()) {
+            TareaResumenProjection tareaAbierta = buscarTareaResumenAbierta(tareasNodo);
+            if (tareaAbierta != null) {
+                actuales++;
+                continue;
+            }
+
+            TareaResumenProjection ultimaTarea = buscarUltimaTareaResumen(tareasNodo);
+            if (ultimaTarea != null) {
+                if (ultimaTarea.getEstadoTarea() == EstadoTarea.COMPLETADA) {
+                    completados++;
+                }
+            }
+        }
+
+        if (card.getEstadoInstancia() == EstadoInstancia.FINALIZADA) {
+            completados++;
+        }
+
+        double progreso = ((double) completados + (actuales * 0.5d)) / total;
+        return (int) Math.round(Math.max(0d, Math.min(1d, progreso)) * 100d);
+    }
+
+    private Map<String, List<TareaResumenProjection>> agruparResumenTareasPorNodo(
+            List<TareaResumenProjection> tareas
+    ) {
+        Map<String, List<TareaResumenProjection>> tareasPorNodo = new HashMap<>();
+        if (tareas == null || tareas.isEmpty()) {
+            return tareasPorNodo;
+        }
+
+        for (TareaResumenProjection tarea : tareas) {
+            if (tarea == null) {
+                continue;
+            }
+            String nodoId = normalizarTexto(tarea.getNodoId());
+            if (nodoId == null) {
+                continue;
+            }
+            tareasPorNodo.computeIfAbsent(nodoId, key -> new ArrayList<>()).add(tarea);
+        }
+        return tareasPorNodo;
+    }
+
+    private TareaResumenProjection buscarTareaResumenAbierta(List<TareaResumenProjection> tareas) {
+        if (tareas == null || tareas.isEmpty()) {
+            return null;
+        }
+
+        for (int i = tareas.size() - 1; i >= 0; i--) {
+            TareaResumenProjection tarea = tareas.get(i);
+            if (tarea != null && ESTADOS_TAREA_ABIERTA.contains(tarea.getEstadoTarea())) {
+                return tarea;
+            }
+        }
+        return null;
+    }
+
+    private TareaResumenProjection buscarUltimaTareaResumen(List<TareaResumenProjection> tareas) {
+        if (tareas == null || tareas.isEmpty()) {
+            return null;
+        }
+        return tareas.get(tareas.size() - 1);
     }
 
     private FlujoInstanciaResponse construirFlujoInstancia(SeguimientoInstanciaResponse seguimiento) {

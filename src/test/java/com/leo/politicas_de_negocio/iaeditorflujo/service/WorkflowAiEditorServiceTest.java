@@ -11,7 +11,9 @@ import com.leo.politicas_de_negocio.iaeditorflujo.dto.WorkflowAiEditPreviewRespo
 import com.leo.politicas_de_negocio.iaeditorflujo.dto.WorkflowAiEditProposalResponse;
 import com.leo.politicas_de_negocio.iaeditorflujo.validator.WorkflowAiEditValidator;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
@@ -151,6 +153,60 @@ class WorkflowAiEditorServiceTest {
         assertEquals("dep-admision", politica.getNodos().get(1).getResponsableId());
     }
 
+    @Test
+    void applyEdition_debeAgregarCampoFormularioDinamicoEnActividad() {
+        PoliticaNegocio politica = policy();
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaNegocioRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaNegocioRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowAiEditOperationDto operation = operationWithType("ADD_FORM_FIELD");
+        operation.setNodeName("Validar datos");
+        operation.addProperty("fieldLabel", "Comprobante de pago");
+        operation.addProperty("fieldType", "ARCHIVO");
+        operation.addProperty("required", false);
+        operation.addProperty("placeholder", "Adjunta el comprobante en PDF");
+
+        WorkflowAiEditApplyRequest request = new WorkflowAiEditApplyRequest();
+        request.setPrompt("Agrega comprobante de pago al formulario de Validar datos");
+        request.setOperations(List.of(operation));
+
+        WorkflowAiEditApplyResponse response = service.applyEdition("admin-1", "pol-1", request);
+
+        assertTrue(response.isSuccess());
+        Nodo validar = politica.getNodos().get(2);
+        assertTrue(validar.getFormulario().stream().anyMatch(field ->
+                "Comprobante de pago".equals(field.getCampo())
+                        && field.getTipo() == TipoCampo.ARCHIVO
+                        && Boolean.FALSE.equals(field.getRequerido())
+                        && "Adjunta el comprobante en PDF".equals(field.getPlaceholder())));
+    }
+
+    @Test
+    void applyEdition_debeEditarCampoFormularioExistente() {
+        PoliticaNegocio politica = policy();
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaNegocioRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaNegocioRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowAiEditOperationDto operation = operationWithType("UPDATE_FORM");
+        operation.setNodeName("Validar datos");
+        operation.addProperty("fieldLabel", "Observacion");
+        operation.addProperty("newName", "Observaciones finales");
+        operation.addProperty("fieldType", "TEXTO");
+
+        WorkflowAiEditApplyRequest request = new WorkflowAiEditApplyRequest();
+        request.setPrompt("Modifica el campo Observacion del formulario de Validar datos");
+        request.setOperations(List.of(operation));
+
+        WorkflowAiEditApplyResponse response = service.applyEdition("admin-1", "pol-1", request);
+
+        assertTrue(response.isSuccess());
+        Nodo validar = politica.getNodos().get(2);
+        assertEquals("Observaciones finales", validar.getFormulario().get(0).getCampo());
+        assertEquals(TipoCampo.TEXTO, validar.getFormulario().get(0).getTipo());
+    }
+
     private WorkflowAiEditPreviewRequest previewRequest(String prompt) {
         WorkflowAiEditPreviewRequest request = new WorkflowAiEditPreviewRequest();
         request.setPrompt(prompt);
@@ -245,7 +301,15 @@ class WorkflowAiEditorServiceTest {
                 .nodos(List.of(
                         Nodo.builder().id("n1").tipo(TipoNodo.INICIO).nombre("Inicio").build(),
                         Nodo.builder().id("n2").tipo(TipoNodo.ACTIVIDAD).nombre("Solicitar datos del paciente").build(),
-                        Nodo.builder().id("n3").tipo(TipoNodo.ACTIVIDAD).nombre("Validar datos").build(),
+                        Nodo.builder()
+                                .id("n3")
+                                .tipo(TipoNodo.ACTIVIDAD)
+                                .nombre("Validar datos")
+                                .formulario(List.of(CampoFormulario.builder()
+                                        .campo("Observacion")
+                                        .tipo(TipoCampo.TEXTO)
+                                        .build()))
+                                .build(),
                         Nodo.builder().id("n4").tipo(TipoNodo.FIN).nombre("Fin").build()
                 ))
                 .conexiones(List.of(

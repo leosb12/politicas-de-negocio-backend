@@ -45,9 +45,15 @@ public class TareaActividadService {
             EstadoTarea.EN_PROCESO
     );
 
-        private static final List<EstadoTarea> ESTADOS_COMPLETADAS_VISIBLES = List.of(
+    private static final List<EstadoTarea> ESTADOS_COMPLETADAS_VISIBLES = List.of(
             EstadoTarea.COMPLETADA
-        );
+    );
+
+    private static final List<EstadoTarea> ESTADOS_CERRADOS = List.of(
+            EstadoTarea.COMPLETADA,
+            EstadoTarea.RECHAZADA,
+            EstadoTarea.CANCELADA
+    );
 
     private final TareaActividadRepository tareaRepository;
     private final InstanciaPoliticaRepository instanciaRepository;
@@ -112,11 +118,10 @@ public class TareaActividadService {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar la instancia");
         }
 
-        if (!instanciaRepository.existsById(id)) {
-            throw new ApiException(HttpStatus.NOT_FOUND, "Instancia no encontrada con ID: " + id);
-        }
-
-        validarAccesoLecturaInstancia(actor, id);
+        InstanciaPolitica instancia = instanciaRepository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                        "Instancia no encontrada con ID: " + id));
+        validarAccesoLecturaInstancia(actor, instancia);
 
         return construirResumenTareas(tareaRepository.findByInstanciaIdOrderByFechaCreacionAsc(id));
     }
@@ -164,12 +169,10 @@ public class TareaActividadService {
         Usuario actor = assertUsuarioActivo(actorUserId);
         TareaActividad tarea = buscarTarea(tareaId);
 
-        validarPermisoLecturaTarea(actor, tarea);
-        validarAccesoLecturaInstancia(actor, tarea.getInstanciaId());
-
         InstanciaPolitica instancia = instanciaRepository.findById(tarea.getInstanciaId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
                         "Instancia no encontrada para tarea " + tarea.getId()));
+        validarPermisoLecturaTarea(actor, tarea, instancia);
 
         PoliticaNegocio politica = politicaRepository.findById(instancia.getPoliticaId()).orElse(null);
 
@@ -330,40 +333,90 @@ public class TareaActividadService {
         }
     }
 
-    private void validarPermisoLecturaTarea(Usuario actor, TareaActividad tarea) {
+    private void validarPermisoLecturaTarea(Usuario actor, TareaActividad tarea, InstanciaPolitica instancia) {
         if ("ADMIN".equalsIgnoreCase(actor.getRol())) {
             return;
         }
-        validarPermisoEjecucion(actor, tarea);
+
+        if (esResponsableDeTarea(actor, tarea)) {
+            return;
+        }
+
+        if (esTareaCerrada(tarea) && tieneAccesoLecturaInstancia(actor, instancia)) {
+            return;
+        }
+
+        throw new ApiException(HttpStatus.FORBIDDEN,
+                "No tiene permisos para consultar esta tarea");
     }
 
-    private void validarAccesoLecturaInstancia(Usuario actor, String instanciaId) {
-        if ("ADMIN".equalsIgnoreCase(actor.getRol())) {
+    private void validarAccesoLecturaInstancia(Usuario actor, InstanciaPolitica instancia) {
+        if (tieneAccesoLecturaInstancia(actor, instancia)) {
             return;
+        }
+
+        throw new ApiException(HttpStatus.FORBIDDEN,
+                "No tiene permisos para consultar datos de esta instancia");
+    }
+
+    private boolean tieneAccesoLecturaInstancia(Usuario actor, InstanciaPolitica instancia) {
+        if (actor == null || instancia == null) {
+            return false;
+        }
+
+        if ("ADMIN".equalsIgnoreCase(actor.getRol())) {
+            return true;
+        }
+
+        if (actor.getId().equals(normalizarTexto(instancia.getCreadaPor()))) {
+            return true;
+        }
+
+        String instanciaId = normalizarTexto(instancia.getId());
+        if (instanciaId == null) {
+            return false;
         }
 
         if (tareaRepository.existsByInstanciaIdAndAsignadoA(instanciaId, actor.getId())) {
-            return;
+            return true;
         }
 
         if (tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId(
                 instanciaId,
                 "USUARIO",
                 actor.getId())) {
-            return;
+            return true;
         }
 
         String departamentoId = normalizarTexto(actor.getDepartamentoId());
-        if (departamentoId != null
+        return departamentoId != null
                 && tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId(
-                    instanciaId,
-                    "DEPARTAMENTO",
-                    departamentoId)) {
-            return;
+                        instanciaId,
+                        "DEPARTAMENTO",
+                        departamentoId
+                );
+    }
+
+    private boolean esResponsableDeTarea(Usuario actor, TareaActividad tarea) {
+        if (actor == null || tarea == null) {
+            return false;
         }
 
-        throw new ApiException(HttpStatus.FORBIDDEN,
-                "No tiene permisos para consultar datos de esta instancia");
+        String responsableTipo = normalizarTexto(tarea.getResponsableTipo());
+        String responsableId = normalizarTexto(tarea.getResponsableId());
+        if (responsableTipo == null || responsableId == null) {
+            return false;
+        }
+
+        return switch (responsableTipo.toUpperCase(Locale.ROOT)) {
+            case "USUARIO" -> actor.getId().equals(responsableId);
+            case "DEPARTAMENTO" -> responsableId.equals(normalizarTexto(actor.getDepartamentoId()));
+            default -> false;
+        };
+    }
+
+    private boolean esTareaCerrada(TareaActividad tarea) {
+        return tarea != null && ESTADOS_CERRADOS.contains(tarea.getEstadoTarea());
     }
 
     private void validarTareaTomable(TareaActividad tarea, String actorUserId) {
@@ -582,6 +635,9 @@ public class TareaActividadService {
 
         List<String> faltantes = new ArrayList<>();
         for (CampoFormulario campo : definicion) {
+            if (campo != null && Boolean.FALSE.equals(campo.getRequerido())) {
+                continue;
+            }
             String clave = normalizarTexto(campo != null ? campo.getCampo() : null);
             if (clave == null) {
                 continue;
@@ -595,7 +651,7 @@ public class TareaActividadService {
         if (!faltantes.isEmpty()) {
             throw new ApiException(
                     HttpStatus.BAD_REQUEST,
-                    "Todos los campos son obligatorios excepto observaciones. Faltan: " + String.join(", ", faltantes)
+                    "Faltan campos obligatorios del formulario: " + String.join(", ", faltantes)
             );
         }
     }

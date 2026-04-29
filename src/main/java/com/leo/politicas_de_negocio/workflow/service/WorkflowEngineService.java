@@ -1002,6 +1002,13 @@ public class WorkflowEngineService {
             copia.add(CampoFormulario.builder()
                     .campo(campo.getCampo())
                     .tipo(campo.getTipo())
+                    .etiqueta(campo.getEtiqueta())
+                    .requerido(campo.getRequerido())
+                    .placeholder(campo.getPlaceholder())
+                    .ayuda(campo.getAyuda())
+                    .orden(campo.getOrden())
+                    .opciones(campo.getOpciones() != null ? new ArrayList<>(campo.getOpciones()) : null)
+                    .validaciones(campo.getValidaciones())
                     .build());
         }
         return copia;

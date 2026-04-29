@@ -133,11 +133,46 @@ class TareaActividadServiceTest {
 
         when(usuarioRepository.findByIdAndActivo("u-1", true)).thenReturn(Optional.of(actor));
         when(tareaRepository.findById("t-1")).thenReturn(Optional.of(tareaAjena));
+        when(instanciaRepository.findById("inst-1")).thenReturn(Optional.of(instancia("inst-1", "pol-1", 1L)));
 
         ApiException ex = assertThrows(ApiException.class,
                 () -> service.obtenerDetalleTarea("u-1", "t-1"));
 
         assertEquals(403, ex.getStatus().value());
+    }
+
+    @Test
+    void obtenerDetalleTarea_debePermitirLeerTareaCompletadaDeMismaInstancia() {
+        Usuario actor = usuario("u-1", "dep-1");
+        TareaActividad tareaPrevia = tarea("t-1", "inst-1", "USUARIO", "u-2", EstadoTarea.COMPLETADA);
+        tareaPrevia.setFormularioRespuesta(Map.of("monto", 100, "aprobado", true));
+        tareaPrevia.setObservaciones("validado");
+
+        InstanciaPolitica instancia = instancia("inst-1", "pol-1", 1L);
+        PoliticaNegocio politica = politica("pol-1", EstadoPolitica.ACTIVA, 1L);
+        politica.setNombre("Politica Test");
+
+        when(usuarioRepository.findByIdAndActivo("u-1", true)).thenReturn(Optional.of(actor));
+        when(tareaRepository.findById("t-1")).thenReturn(Optional.of(tareaPrevia));
+        when(instanciaRepository.findById("inst-1")).thenReturn(Optional.of(instancia));
+        when(tareaRepository.existsByInstanciaIdAndAsignadoA("inst-1", "u-1")).thenReturn(false);
+        when(tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId("inst-1", "USUARIO", "u-1"))
+                .thenReturn(false);
+        when(tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId("inst-1", "DEPARTAMENTO", "dep-1"))
+                .thenReturn(true);
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(tareaRepository.countByInstanciaId("inst-1")).thenReturn(2L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTareaIn(eq("inst-1"), any())).thenReturn(0L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTarea("inst-1", EstadoTarea.COMPLETADA)).thenReturn(1L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTarea("inst-1", EstadoTarea.CANCELADA)).thenReturn(0L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTarea("inst-1", EstadoTarea.RECHAZADA)).thenReturn(0L);
+
+        TareaDetalleResponse result = service.obtenerDetalleTarea("u-1", "t-1");
+
+        assertEquals("t-1", result.getId());
+        assertEquals(EstadoTarea.COMPLETADA, result.getEstadoTarea());
+        assertEquals(100, result.getFormularioRespuesta().get("monto"));
+        assertEquals(true, result.getFormularioRespuesta().get("aprobado"));
     }
 
     @Test

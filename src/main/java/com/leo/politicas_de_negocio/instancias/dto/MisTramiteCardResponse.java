@@ -13,5 +13,6 @@ public class MisTramiteCardResponse {
     private String codigoTramite;
     private String nombre;
     private EstadoInstancia estadoInstancia;
+    private Integer porcentaje;
     private LocalDateTime fechaCreacion;
 }

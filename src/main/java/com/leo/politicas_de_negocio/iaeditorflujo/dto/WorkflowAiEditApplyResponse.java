@@ -1,5 +1,6 @@
 package com.leo.politicas_de_negocio.iaeditorflujo.dto;
 
+import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import lombok.Builder;
 import lombok.Value;
 
@@ -15,5 +16,8 @@ public class WorkflowAiEditApplyResponse {
     String message;
     int appliedOperations;
     List<WorkflowAiEditOperationDto> operations;
+    PoliticaNegocio workflow;
+    List<String> warnings;
+    List<String> errors;
     LocalDateTime appliedAt;
 }

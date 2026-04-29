@@ -16,12 +16,14 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
+import com.leo.politicas_de_negocio.politicas.repository.PoliticaCardInfoProjection;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNombreProjection;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
+import com.leo.politicas_de_negocio.tareas.repository.TareaResumenProjection;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import com.leo.politicas_de_negocio.workflow.service.WorkflowEngineService;
@@ -163,7 +165,7 @@ class InstanciaPoliticaServiceTest {
                 return fechaCreacion;
             }
         };
-        PoliticaNombreProjection politicaProjection = new PoliticaNombreProjection() {
+        PoliticaNombreProjection politicaNombreProjection = new PoliticaNombreProjection() {
             @Override
             public String getId() {
                 return "pol-1";
@@ -174,13 +176,54 @@ class InstanciaPoliticaServiceTest {
                 return "Solicitud de vacaciones";
             }
         };
+        PoliticaCardInfoProjection politicaCardInfoProjection = new PoliticaCardInfoProjection() {
+            @Override
+            public String getId() {
+                return "pol-1";
+            }
+
+            @Override
+            public String getNombre() {
+                return "Solicitud de vacaciones";
+            }
+
+            @Override
+            public Integer getTotalNodos() {
+                return 3;
+            }
+        };
+        TareaResumenProjection tareaActual = new TareaResumenProjection() {
+            @Override
+            public String getInstanciaId() {
+                return "inst-1";
+            }
+
+            @Override
+            public String getNodoId() {
+                return "revision";
+            }
+
+            @Override
+            public EstadoTarea getEstadoTarea() {
+                return EstadoTarea.PENDIENTE;
+            }
+
+            @Override
+            public LocalDateTime getFechaCreacion() {
+                return fechaCreacion;
+            }
+        };
 
         when(usuarioRepository.findByIdAndActivo("user-1", true)).thenReturn(Optional.of(actor));
         when(instanciaRepository.findCardsByCreadaPor(eq("user-1"), eq(PageRequest.of(0, 10,
                 org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaCreacion")))))
                 .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
         when(politicaRepository.findNombreByIdIn(List.of("pol-1")))
-                .thenReturn(List.of(politicaProjection));
+                .thenReturn(List.of(politicaNombreProjection));
+        when(politicaRepository.findCardInfoByIdIn(List.of("pol-1")))
+                .thenReturn(List.of(politicaCardInfoProjection));
+        when(tareaRepository.findResumenByInstanciaIdIn(List.of("inst-1")))
+                .thenReturn(List.of(tareaActual));
 
         PagedResponse<MisTramiteCardResponse> response = service.listarMisTramitesCards("user-1", 0, 10);
 
@@ -189,6 +232,7 @@ class InstanciaPoliticaServiceTest {
         assertEquals("TRM-1", response.content().get(0).getCodigoTramite());
         assertEquals("Solicitud de vacaciones", response.content().get(0).getNombre());
         assertEquals(EstadoInstancia.EN_CURSO, response.content().get(0).getEstadoInstancia());
+        assertEquals(50, response.content().get(0).getPorcentaje());
         assertEquals(fechaCreacion, response.content().get(0).getFechaCreacion());
         assertEquals(1L, response.totalElements());
     }

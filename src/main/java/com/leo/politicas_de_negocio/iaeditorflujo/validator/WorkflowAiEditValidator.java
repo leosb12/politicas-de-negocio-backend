@@ -28,9 +28,11 @@ public class WorkflowAiEditValidator {
             "ADD_FORM_FIELD",
             "DELETE_FORM_FIELD",
             "RENAME_NODE",
+            "REMOVE_RESPONSIBLE",
             "CREATE_LOOP",
             "UPDATE_DECISION_CONDITION",
             "MOVE_NODE",
+            "REORDER_FLOW",
             "ADD_BUSINESS_RULE",
             "DELETE_BUSINESS_RULE"
     );
@@ -90,7 +92,7 @@ public class WorkflowAiEditValidator {
             return;
         }
 
-        String normalizedType = type.toUpperCase(Locale.ROOT);
+        String normalizedType = normalizeOperationType(type);
         if (!ALLOWED_OPERATION_TYPES.contains(normalizedType)) {
             warnings.add("La operacion " + humanLabel(operation, index) + " usa un type no reconocido: " + type);
         }
@@ -163,6 +165,19 @@ public class WorkflowAiEditValidator {
         if (alternativeValue instanceof String text) {
             return normalize(text);
         }
+        Object payload = operation.property("payload");
+        if (payload instanceof java.util.Map<?, ?> payloadMap) {
+            Object payloadValue = payloadMap.get(fieldName);
+            if (payloadValue instanceof String text) {
+                return normalize(text);
+            }
+            for (String alias : aliasesFor(fieldName)) {
+                Object aliasValue = payloadMap.get(alias);
+                if (aliasValue instanceof String text) {
+                    return normalize(text);
+                }
+            }
+        }
         for (String alias : aliasesFor(fieldName)) {
             Object aliasValue = operation.property(alias);
             if (aliasValue instanceof String text) {
@@ -179,6 +194,26 @@ public class WorkflowAiEditValidator {
             case "nodeName" -> List.of("name", "activityName", "node_name", "activity_name");
             case "targetNodeName" -> List.of("target_node_name");
             default -> List.of();
+        };
+    }
+
+    private String normalizeOperationType(String rawType) {
+        String normalized = normalize(rawType);
+        if (normalized == null) {
+            return null;
+        }
+        String upper = normalized.toUpperCase(Locale.ROOT);
+        return switch (upper) {
+            case "CREATE_NODE", "CREAR_NODO", "INSERT_BETWEEN", "INSERTAR_ENTRE" -> "ADD_NODE";
+            case "CONNECT", "CONECTAR", "CREATE_EDGE" -> "ADD_TRANSITION";
+            case "DISCONNECT", "DESCONECTAR", "DELETE_EDGE", "ELIMINAR_CONEXION" -> "DELETE_TRANSITION";
+            case "CHANGE_RESPONSIBLE", "CAMBIAR_RESPONSABLE" -> "ASSIGN_RESPONSIBLE";
+            case "QUITAR_RESPONSABLE", "REMOVE_ASSIGNEE" -> "REMOVE_RESPONSIBLE";
+            case "ADD_FIELD", "AGREGAR_CAMPO_FORMULARIO" -> "ADD_FORM_FIELD";
+            case "DELETE_FIELD", "ELIMINAR_CAMPO_FORMULARIO" -> "DELETE_FORM_FIELD";
+            case "EDIT_FIELD", "EDITAR_CAMPO_FORMULARIO" -> "UPDATE_FORM";
+            case "REORDER_SEQUENCE", "REORDENAR_FLUJO" -> "REORDER_FLOW";
+            default -> upper;
         };
     }
 
