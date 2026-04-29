@@ -19,7 +19,6 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
-import com.leo.politicas_de_negocio.politicas.repository.PoliticaCardInfoProjection;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNombreProjection;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
@@ -224,7 +223,7 @@ public class InstanciaPoliticaService {
 
         Page<InstanciaCardProjection> cardsPage = instanciaRepository.findCardsByCreadaPor(actor.getId(), pageable);
         Map<String, String> nombresPolitica = cargarNombresPolitica(cardsPage.getContent());
-        Map<String, PoliticaCardInfoProjection> politicasInfo = cargarPoliticasCardInfo(cardsPage.getContent());
+        Map<String, PoliticaNegocio> politicas = cargarPoliticas(cardsPage.getContent());
         Map<String, List<TareaResumenProjection>> tareasPorInstancia = cargarTareasResumenPorInstancia(cardsPage.getContent());
 
         List<MisTramiteCardResponse> content = cardsPage.getContent().stream()
@@ -235,7 +234,7 @@ public class InstanciaPoliticaService {
                         .estadoInstancia(card.getEstadoInstancia())
                         .porcentaje(calcularPorcentajeCard(
                                 card,
-                                politicasInfo.get(normalizarTexto(card.getPoliticaId())),
+                                politicas.get(normalizarTexto(card.getPoliticaId())),
                                 tareasPorInstancia.getOrDefault(card.getId(), List.of())
                         ))
                         .fechaCreacion(card.getFechaCreacion())
@@ -737,7 +736,7 @@ public class InstanciaPoliticaService {
         return nombres;
     }
 
-    private Map<String, PoliticaCardInfoProjection> cargarPoliticasCardInfo(Collection<InstanciaCardProjection> cards) {
+    private Map<String, PoliticaNegocio> cargarPoliticas(Collection<InstanciaCardProjection> cards) {
         List<String> politicaIds = cards.stream()
                 .map(InstanciaCardProjection::getPoliticaId)
                 .map(this::normalizarTexto)
@@ -749,8 +748,8 @@ public class InstanciaPoliticaService {
             return Map.of();
         }
 
-        Map<String, PoliticaCardInfoProjection> politicas = new HashMap<>();
-        for (PoliticaCardInfoProjection politica : politicaRepository.findCardInfoByIdIn(politicaIds)) {
+        Map<String, PoliticaNegocio> politicas = new HashMap<>();
+        for (PoliticaNegocio politica : politicaRepository.findAllById(politicaIds)) {
             if (politica == null) {
                 continue;
             }
@@ -797,40 +796,63 @@ public class InstanciaPoliticaService {
 
     private int calcularPorcentajeCard(
             InstanciaCardProjection card,
-            PoliticaCardInfoProjection politica,
+            PoliticaNegocio politica,
             List<TareaResumenProjection> tareas
     ) {
+        if (politica == null || politica.getNodos() == null || politica.getNodos().isEmpty()) {
+            return 0;
+        }
+
         Map<String, List<TareaResumenProjection>> tareasPorNodo = agruparResumenTareasPorNodo(tareas);
-        int totalNodosPolitica = politica != null && politica.getTotalNodos() != null
-                ? politica.getTotalNodos()
-                : 0;
-        int total = Math.max(totalNodosPolitica, tareasPorNodo.size() + 2);
-        total = Math.max(total, 1);
+        int total = 0;
+        int completados = 0;
 
-        int completados = card.getFechaCreacion() != null ? 1 : 0;
-        int actuales = 0;
-
-        for (List<TareaResumenProjection> tareasNodo : tareasPorNodo.values()) {
-            TareaResumenProjection tareaAbierta = buscarTareaResumenAbierta(tareasNodo);
-            if (tareaAbierta != null) {
-                actuales++;
+        for (Nodo nodo : politica.getNodos()) {
+            if (nodo == null) {
                 continue;
             }
-
-            TareaResumenProjection ultimaTarea = buscarUltimaTareaResumen(tareasNodo);
-            if (ultimaTarea != null) {
-                if (ultimaTarea.getEstadoTarea() == EstadoTarea.COMPLETADA) {
-                    completados++;
-                }
+            total++;
+            String nodoId = normalizarTexto(nodo.getId());
+            List<TareaResumenProjection> tareasNodo = nodoId != null
+                    ? tareasPorNodo.getOrDefault(nodoId, List.of())
+                    : List.of();
+            if ("COMPLETADO".equals(resolverEstadoNodoCard(nodo, tareasNodo, card))) {
+                completados++;
             }
         }
 
-        if (card.getEstadoInstancia() == EstadoInstancia.FINALIZADA) {
-            completados++;
+        return total > 0 ? (int) Math.round((completados * 100d) / total) : 0;
+    }
+
+    private String resolverEstadoNodoCard(
+            Nodo nodo,
+            List<TareaResumenProjection> tareasNodo,
+            InstanciaCardProjection card
+    ) {
+        TareaResumenProjection tareaAbierta = buscarTareaResumenAbierta(tareasNodo);
+        if (tareaAbierta != null) {
+            return "ACTUAL";
         }
 
-        double progreso = ((double) completados + (actuales * 0.5d)) / total;
-        return (int) Math.round(Math.max(0d, Math.min(1d, progreso)) * 100d);
+        TareaResumenProjection ultimaTarea = buscarUltimaTareaResumen(tareasNodo);
+        if (ultimaTarea != null && ultimaTarea.getEstadoTarea() != null) {
+            return switch (ultimaTarea.getEstadoTarea()) {
+                case COMPLETADA -> "COMPLETADO";
+                case CANCELADA -> "CANCELADO";
+                case RECHAZADA -> "RECHAZADO";
+                case PENDIENTE, EN_PROCESO -> "ACTUAL";
+            };
+        }
+
+        if (nodo.getTipo() == TipoNodo.INICIO && card.getFechaCreacion() != null) {
+            return "COMPLETADO";
+        }
+
+        if (nodo.getTipo() == TipoNodo.FIN && card.getEstadoInstancia() == EstadoInstancia.FINALIZADA) {
+            return "COMPLETADO";
+        }
+
+        return "PENDIENTE";
     }
 
     private Map<String, List<TareaResumenProjection>> agruparResumenTareasPorNodo(

@@ -16,7 +16,6 @@ import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
-import com.leo.politicas_de_negocio.politicas.repository.PoliticaCardInfoProjection;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNombreProjection;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
@@ -176,22 +175,15 @@ class InstanciaPoliticaServiceTest {
                 return "Solicitud de vacaciones";
             }
         };
-        PoliticaCardInfoProjection politicaCardInfoProjection = new PoliticaCardInfoProjection() {
-            @Override
-            public String getId() {
-                return "pol-1";
-            }
-
-            @Override
-            public String getNombre() {
-                return "Solicitud de vacaciones";
-            }
-
-            @Override
-            public Integer getTotalNodos() {
-                return 3;
-            }
-        };
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-1")
+                .nombre("Solicitud de vacaciones")
+                .nodos(List.of(
+                        Nodo.builder().id("inicio").tipo(TipoNodo.INICIO).nombre("Inicio").build(),
+                        Nodo.builder().id("revision").tipo(TipoNodo.ACTIVIDAD).nombre("Revision").build(),
+                        Nodo.builder().id("fin").tipo(TipoNodo.FIN).nombre("Fin").build()
+                ))
+                .build();
         TareaResumenProjection tareaActual = new TareaResumenProjection() {
             @Override
             public String getInstanciaId() {
@@ -220,8 +212,8 @@ class InstanciaPoliticaServiceTest {
                 .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
         when(politicaRepository.findNombreByIdIn(List.of("pol-1")))
                 .thenReturn(List.of(politicaNombreProjection));
-        when(politicaRepository.findCardInfoByIdIn(List.of("pol-1")))
-                .thenReturn(List.of(politicaCardInfoProjection));
+        when(politicaRepository.findAllById(List.of("pol-1")))
+                .thenReturn(List.of(politica));
         when(tareaRepository.findResumenByInstanciaIdIn(List.of("inst-1")))
                 .thenReturn(List.of(tareaActual));
 
@@ -232,9 +224,108 @@ class InstanciaPoliticaServiceTest {
         assertEquals("TRM-1", response.content().get(0).getCodigoTramite());
         assertEquals("Solicitud de vacaciones", response.content().get(0).getNombre());
         assertEquals(EstadoInstancia.EN_CURSO, response.content().get(0).getEstadoInstancia());
-        assertEquals(50, response.content().get(0).getPorcentaje());
+        assertEquals(33, response.content().get(0).getPorcentaje());
         assertEquals(fechaCreacion, response.content().get(0).getFechaCreacion());
         assertEquals(1L, response.totalElements());
+    }
+
+    @Test
+    void listarMisTramitesCards_debeCalcularPorcentajeComoSeguimiento() {
+        Usuario actor = Usuario.builder()
+                .id("user-1")
+                .rol("CLIENTE")
+                .activo(true)
+                .build();
+
+        LocalDateTime fechaCreacion = LocalDateTime.of(2026, 4, 26, 10, 15);
+        InstanciaCardProjection projection = new InstanciaCardProjection() {
+            @Override
+            public String getId() {
+                return "inst-9";
+            }
+
+            @Override
+            public String getPoliticaId() {
+                return "pol-9";
+            }
+
+            @Override
+            public String getCodigoTramite() {
+                return "TRM-9";
+            }
+
+            @Override
+            public EstadoInstancia getEstadoInstancia() {
+                return EstadoInstancia.EN_CURSO;
+            }
+
+            @Override
+            public LocalDateTime getFechaCreacion() {
+                return fechaCreacion;
+            }
+        };
+        PoliticaNombreProjection politicaNombreProjection = new PoliticaNombreProjection() {
+            @Override
+            public String getId() {
+                return "pol-9";
+            }
+
+            @Override
+            public String getNombre() {
+                return "Tramite largo";
+            }
+        };
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-9")
+                .nombre("Tramite largo")
+                .nodos(List.of(
+                        Nodo.builder().id("inicio").tipo(TipoNodo.INICIO).build(),
+                        Nodo.builder().id("n1").tipo(TipoNodo.ACTIVIDAD).build(),
+                        Nodo.builder().id("n2").tipo(TipoNodo.DECISION).build(),
+                        Nodo.builder().id("n3").tipo(TipoNodo.ACTIVIDAD).build(),
+                        Nodo.builder().id("n4").tipo(TipoNodo.FORK).build(),
+                        Nodo.builder().id("n5").tipo(TipoNodo.ACTIVIDAD).build(),
+                        Nodo.builder().id("n6").tipo(TipoNodo.JOIN).build(),
+                        Nodo.builder().id("n7").tipo(TipoNodo.ACTIVIDAD).build(),
+                        Nodo.builder().id("fin").tipo(TipoNodo.FIN).build()
+                ))
+                .build();
+        TareaResumenProjection tareaActual = new TareaResumenProjection() {
+            @Override
+            public String getInstanciaId() {
+                return "inst-9";
+            }
+
+            @Override
+            public String getNodoId() {
+                return "n1";
+            }
+
+            @Override
+            public EstadoTarea getEstadoTarea() {
+                return EstadoTarea.PENDIENTE;
+            }
+
+            @Override
+            public LocalDateTime getFechaCreacion() {
+                return fechaCreacion;
+            }
+        };
+
+        when(usuarioRepository.findByIdAndActivo("user-1", true)).thenReturn(Optional.of(actor));
+        when(instanciaRepository.findCardsByCreadaPor(eq("user-1"), eq(PageRequest.of(0, 10,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "fechaCreacion")))))
+                .thenReturn(new PageImpl<>(List.of(projection), PageRequest.of(0, 10), 1));
+        when(politicaRepository.findNombreByIdIn(List.of("pol-9")))
+                .thenReturn(List.of(politicaNombreProjection));
+        when(politicaRepository.findAllById(List.of("pol-9")))
+                .thenReturn(List.of(politica));
+        when(tareaRepository.findResumenByInstanciaIdIn(List.of("inst-9")))
+                .thenReturn(List.of(tareaActual));
+
+        PagedResponse<MisTramiteCardResponse> response = service.listarMisTramitesCards("user-1", 0, 10);
+
+        assertEquals(11, response.content().get(0).getPorcentaje());
     }
 
     @Test
