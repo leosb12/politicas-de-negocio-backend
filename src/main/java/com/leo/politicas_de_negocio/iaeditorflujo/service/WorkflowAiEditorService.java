@@ -977,7 +977,19 @@ public class WorkflowAiEditorService {
         if (source.contains("archivo") || source.contains("file") || source.contains("pdf") || source.contains("documento")) {
             return TipoCampo.ARCHIVO;
         }
-        if (source.contains("boolean") || source.contains("checkbox") || source.contains("si no") || source.contains("verdadero")) {
+        if (source.contains("checkbox") || source.contains("opcion multiple") || source.contains("casilla")) {
+            return TipoCampo.CHECKBOX;
+        }
+        if (source.contains("seleccion") || source.contains("selection") || source.contains("dropdown") || source.contains("opcion unica")) {
+            return TipoCampo.SELECCION;
+        }
+        if (source.contains("grid") || source.contains("matriz") || source.contains("tabla")) {
+            return TipoCampo.GRID;
+        }
+        if (source.contains("label") || source.contains("etiqueta") || source.contains("mensaje") || source.contains("titulo")) {
+            return TipoCampo.LABEL;
+        }
+        if (source.contains("boolean") || source.contains("si no") || source.contains("verdadero")) {
             return TipoCampo.BOOLEANO;
         }
         if (source.contains("numero") || source.contains("number") || source.contains("monto") || source.contains("cantidad")) {

@@ -5,5 +5,9 @@ public enum TipoCampo {
     NUMERO,
     BOOLEANO,
     ARCHIVO,
-    FECHA
+    FECHA,
+    CHECKBOX,
+    SELECCION,
+    GRID,
+    LABEL
 }

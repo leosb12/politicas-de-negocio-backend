@@ -453,6 +453,10 @@ public class ServicioGuiaAdministrador {
             case BOOLEANO -> "BOOLEAN";
             case ARCHIVO -> "FILE";
             case FECHA -> "DATE";
+            case CHECKBOX -> "CHECKBOX";
+            case SELECCION -> "SELECTION";
+            case GRID -> "GRID";
+            case LABEL -> "LABEL";
         };
     }
 
