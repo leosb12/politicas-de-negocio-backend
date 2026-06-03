@@ -22,6 +22,10 @@ public class TareaDetalleResponse {
     private LocalDateTime fechaFin;
     private String asignadoA;
     private String asignadoANombre;
+    /** IDs de los funcionarios del mismo departamento que también trabajaron esta tarea. */
+    private List<String> participantesIds;
+    /** Nombres resueltos de los participantes. */
+    private List<String> participantesNombres;
     private String observaciones;
     private ActividadTareaResponse actividad;
     private Map<String, Object> formularioRespuesta;

@@ -86,12 +86,9 @@ public class TareaActividadService {
                             ESTADOS_ABIERTOS
                     );
 
+            // Nueva regla: cualquier miembro del departamento puede ver todas
+            // las tareas del departamento (incluyendo las EN_PROCESO por otro).
             for (TareaActividad tarea : departamentales) {
-                if (tarea.getEstadoTarea() == EstadoTarea.EN_PROCESO
-                        && normalizarTexto(tarea.getAsignadoA()) != null
-                        && !actor.getId().equals(tarea.getAsignadoA())) {
-                    continue;
-                }
                 indice.putIfAbsent(tarea.getId(), tarea);
             }
         }
@@ -181,6 +178,14 @@ public class TareaActividadService {
             ? construirHistorialRelevante(instancia.getId(), tarea.getId())
             : List.of();
 
+        // Resolver nombres de participantes
+        List<String> participantesIds = tarea.getParticipantesIds() != null
+                ? tarea.getParticipantesIds()
+                : List.of();
+        List<String> participantesNombres = participantesIds.stream()
+                .map(this::resolverNombreUsuario)
+                .toList();
+
         return TareaDetalleResponse.builder()
                 .id(tarea.getId())
                 .estadoTarea(tarea.getEstadoTarea())
@@ -188,7 +193,9 @@ public class TareaActividadService {
                 .fechaInicio(tarea.getFechaInicio())
                 .fechaFin(tarea.getFechaFin())
                 .asignadoA(tarea.getAsignadoA())
-            .asignadoANombre(resolverNombreUsuario(tarea.getAsignadoA()))
+                .asignadoANombre(resolverNombreUsuario(tarea.getAsignadoA()))
+                .participantesIds(participantesIds)
+                .participantesNombres(participantesNombres)
                 .observaciones(tarea.getObservaciones())
                 .actividad(TareaDetalleResponse.ActividadTareaResponse.builder()
                         .nodoId(tarea.getNodoId())
@@ -214,14 +221,23 @@ public class TareaActividadService {
         TareaActividad tarea = buscarTarea(tareaId);
 
         validarPermisoEjecucion(actor, tarea);
-        validarTareaTomable(tarea, actor.getId());
+        validarTareaTomable(tarea);
 
         LocalDateTime now = LocalDateTime.now();
+        boolean yaEstaEnProceso = tarea.getEstadoTarea() == EstadoTarea.EN_PROCESO;
+
         if (tarea.getFechaInicio() == null) {
             tarea.setFechaInicio(now);
         }
         tarea.setEstadoTarea(EstadoTarea.EN_PROCESO);
-        tarea.setAsignadoA(actor.getId());
+
+        // Solo asignar como responsable principal si la tarea estaba PENDIENTE
+        if (!yaEstaEnProceso || normalizarTexto(tarea.getAsignadoA()) == null) {
+            tarea.setAsignadoA(actor.getId());
+        } else {
+            // Ya estaba en proceso por otro funcionario del departamento: registrar como participante
+            registrarParticipante(tarea, actor.getId());
+        }
 
         TareaActividad guardada = tareaRepository.save(tarea);
 
@@ -230,12 +246,16 @@ public class TareaActividadService {
             instanciaRepository.save(instancia);
         });
 
+        String eventoAccion = yaEstaEnProceso ? "TAREA_ABIERTA_POR_DEPARTAMENTO" : "TAREA_TOMADA";
+        String eventoDetalle = yaEstaEnProceso
+                ? "Tarea abierta por funcionario del mismo departamento"
+                : "Tarea tomada por el actor";
         historialService.registrar(
                 guardada.getInstanciaId(),
                 guardada.getId(),
-                "TAREA_TOMADA",
+                eventoAccion,
                 actor.getId(),
-                "Tarea tomada por el actor"
+                eventoDetalle
         );
         return guardada;
     }
@@ -245,7 +265,16 @@ public class TareaActividadService {
         TareaActividad tarea = buscarTarea(tareaId);
 
         validarPermisoEjecucion(actor, tarea);
-        validarTareaCompletables(tarea, actor.getId());
+        validarTareaCompletables(tarea);
+
+        // Registrar al actor como participante si no es el asignado original
+        if (normalizarTexto(tarea.getAsignadoA()) != null
+                && !actor.getId().equals(tarea.getAsignadoA())) {
+            registrarParticipante(tarea, actor.getId());
+        } else if (normalizarTexto(tarea.getAsignadoA()) == null) {
+            // Si nadie la tomó antes, asignar ahora
+            tarea.setAsignadoA(actor.getId());
+        }
 
         InstanciaPolitica instancia = instanciaRepository.findById(tarea.getInstanciaId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
@@ -419,33 +448,45 @@ public class TareaActividadService {
         return tarea != null && ESTADOS_CERRADOS.contains(tarea.getEstadoTarea());
     }
 
-    private void validarTareaTomable(TareaActividad tarea, String actorUserId) {
-        if (tarea.getEstadoTarea() != EstadoTarea.PENDIENTE && tarea.getEstadoTarea() != EstadoTarea.EN_PROCESO) {
+    /**
+     * Nueva lógica colaborativa: cualquier miembro del departamento puede tomar
+     * una tarea PENDIENTE o unirse a una EN_PROCESO. El bloqueo exclusivo fue eliminado.
+     */
+    private void validarTareaTomable(TareaActividad tarea) {
+        if (tarea.getEstadoTarea() != EstadoTarea.PENDIENTE
+                && tarea.getEstadoTarea() != EstadoTarea.EN_PROCESO) {
             throw new ApiException(HttpStatus.CONFLICT,
                     "Solo se puede tomar una tarea en estado PENDIENTE o EN_PROCESO");
         }
-
-        String asignadoActual = normalizarTexto(tarea.getAsignadoA());
-        if (tarea.getEstadoTarea() == EstadoTarea.EN_PROCESO
-                && asignadoActual != null
-                && !asignadoActual.equals(actorUserId)) {
-            throw new ApiException(HttpStatus.CONFLICT,
-                    "La tarea ya esta en proceso por otro usuario");
-        }
+        // No hay bloqueo por usuario: cualquier miembro del departamento puede abrir la tarea.
     }
 
-    private void validarTareaCompletables(TareaActividad tarea, String actorUserId) {
-        if (tarea.getEstadoTarea() != EstadoTarea.PENDIENTE && tarea.getEstadoTarea() != EstadoTarea.EN_PROCESO) {
+    /**
+     * Nueva lógica colaborativa: cualquier miembro del departamento puede completar
+     * la tarea. Se elimina el bloqueo exclusivo por usuario.
+     */
+    private void validarTareaCompletables(TareaActividad tarea) {
+        if (tarea.getEstadoTarea() != EstadoTarea.PENDIENTE
+                && tarea.getEstadoTarea() != EstadoTarea.EN_PROCESO) {
             throw new ApiException(HttpStatus.CONFLICT,
                     "Solo se puede completar una tarea en estado PENDIENTE o EN_PROCESO");
         }
+        // No hay bloqueo por usuario: cualquier miembro del departamento puede completarla.
+    }
 
-        String asignadoActual = normalizarTexto(tarea.getAsignadoA());
-        if (tarea.getEstadoTarea() == EstadoTarea.EN_PROCESO
-                && asignadoActual != null
-                && !asignadoActual.equals(actorUserId)) {
-            throw new ApiException(HttpStatus.CONFLICT,
-                    "La tarea esta en proceso por otro usuario");
+    /**
+     * Registra un funcionario como participante de la tarea si no está ya en la lista
+     * y no es el asignado original.
+     */
+    private void registrarParticipante(TareaActividad tarea, String usuarioId) {
+        if (usuarioId == null || usuarioId.equals(tarea.getAsignadoA())) {
+            return;
+        }
+        if (tarea.getParticipantesIds() == null) {
+            tarea.setParticipantesIds(new ArrayList<>());
+        }
+        if (!tarea.getParticipantesIds().contains(usuarioId)) {
+            tarea.getParticipantesIds().add(usuarioId);
         }
     }
 

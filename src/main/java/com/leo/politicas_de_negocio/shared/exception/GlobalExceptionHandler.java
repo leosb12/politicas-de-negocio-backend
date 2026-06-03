@@ -66,6 +66,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, "Recurso no encontrado", request.getRequestURI());
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("El archivo excede el limite de tamano permitido en {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, "El archivo excede el limite de tamano maximo permitido (Max 500MB)", request.getRequestURI());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
         log.error("Error no controlado en {} {}", request.getMethod(), request.getRequestURI(), ex);

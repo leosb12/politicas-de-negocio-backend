@@ -45,6 +45,9 @@ public class TareaActividad {
 
     private String asignadoA;
 
+    /** Todos los funcionarios del departamento que han trabajado esta tarea (excluyendo a asignadoA). */
+    private List<String> participantesIds;
+
     private List<CampoFormulario> formularioDefinicion;
     private Map<String, Object> formularioRespuesta;
     private String observaciones;
