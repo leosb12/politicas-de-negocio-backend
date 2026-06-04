@@ -67,8 +67,7 @@ public class ServicioGuiaFuncionario {
         }
         return servicioFallback.construir(
                 solicitudIa,
-                resolvedorIntencion.resolver(solicitudIa.getPregunta(), solicitudIa.getPantalla())
-        );
+                resolvedorIntencion.resolver(solicitudIa.getPregunta(), solicitudIa.getPantalla()));
     }
 
     private SolicitudGuiaFuncionario construirSolicitudIa(Usuario funcionario, SolicitudGuiaFuncionario solicitud) {
@@ -78,7 +77,8 @@ public class ServicioGuiaFuncionario {
 
         List<TareaMiaResponse> colaTareas = tareaActividadService.listarMisTareasResumen(funcionario.getId());
         TareaDetalleResponse detalleTarea = cargarDetalleTarea(funcionario.getId(), contextoEntrante.getTareaId());
-        TareaMiaResponse resumenTareaActual = buscarResumenTareaActual(colaTareas, contextoEntrante.getTareaId(), detalleTarea);
+        TareaMiaResponse resumenTareaActual = buscarResumenTareaActual(colaTareas, contextoEntrante.getTareaId(),
+                detalleTarea);
 
         String instanciaId = resolverInstanciaId(contextoEntrante.getInstanciaId(), detalleTarea, resumenTareaActual);
         SeguimientoInstanciaResponse seguimiento = cargarSeguimiento(funcionario.getId(), instanciaId);
@@ -89,7 +89,8 @@ public class ServicioGuiaFuncionario {
         ContextoGuiaFuncionario contexto = ContextoGuiaFuncionario.builder()
                 .tareaId(detalleTarea != null ? detalleTarea.getId() : normalizar(contextoEntrante.getTareaId()))
                 .instanciaId(instanciaId)
-                .politicaId(politica != null ? politica.getId() : resolverPoliticaId(detalleTarea, resumenTareaActual, seguimiento))
+                .politicaId(politica != null ? politica.getId()
+                        : resolverPoliticaId(detalleTarea, resumenTareaActual, seguimiento))
                 .nombrePolitica(resolverNombrePolitica(detalleTarea, resumenTareaActual, seguimiento, politica))
                 .nodoActual(construirNodoActual(detalleTarea, seguimiento, politica))
                 .estadoTarea(resolverEstadoTarea(detalleTarea, resumenTareaActual))
@@ -99,7 +100,8 @@ public class ServicioGuiaFuncionario {
                 .pasosPosibles(construirPasosPosibles(detalleTarea, seguimiento, politica))
                 .resumenDashboard(construirResumenDashboard(colaTareas))
                 .colaTareas(construirColaTareas(colaTareas))
-                .accionesDisponibles(construirAccionesDisponibles(solicitud, detalleTarea, resumenTareaActual, formulario))
+                .accionesDisponibles(
+                        construirAccionesDisponibles(solicitud, detalleTarea, resumenTareaActual, formulario))
                 .build();
 
         return SolicitudGuiaFuncionario.builder()
@@ -109,8 +111,7 @@ public class ServicioGuiaFuncionario {
                 .pantalla(normalizarPantalla(
                         solicitud != null ? solicitud.getPantalla() : null,
                         contextoEntrante.getTareaId(),
-                        instanciaId
-                ))
+                        instanciaId))
                 .pregunta(normalizarPregunta(solicitud != null ? solicitud.getPregunta() : null))
                 .contexto(contexto)
                 .build();
@@ -143,8 +144,7 @@ public class ServicioGuiaFuncionario {
     private TareaMiaResponse buscarResumenTareaActual(
             List<TareaMiaResponse> colaTareas,
             String tareaSolicitadaId,
-            TareaDetalleResponse detalleTarea
-    ) {
+            TareaDetalleResponse detalleTarea) {
         String objetivoId = normalizar(tareaSolicitadaId);
         if (objetivoId == null && detalleTarea != null) {
             objetivoId = normalizar(detalleTarea.getId());
@@ -164,8 +164,7 @@ public class ServicioGuiaFuncionario {
     private String resolverInstanciaId(
             String instanciaSolicitadaId,
             TareaDetalleResponse detalleTarea,
-            TareaMiaResponse resumenTareaActual
-    ) {
+            TareaMiaResponse resumenTareaActual) {
         String desdeTarea = detalleTarea != null && detalleTarea.getInstancia() != null
                 ? normalizar(detalleTarea.getInstancia().getId())
                 : null;
@@ -181,9 +180,9 @@ public class ServicioGuiaFuncionario {
     private String resolverPoliticaId(
             TareaDetalleResponse detalleTarea,
             TareaMiaResponse resumenTareaActual,
-            SeguimientoInstanciaResponse seguimiento
-    ) {
-        if (detalleTarea != null && detalleTarea.getPolitica() != null && normalizar(detalleTarea.getPolitica().getId()) != null) {
+            SeguimientoInstanciaResponse seguimiento) {
+        if (detalleTarea != null && detalleTarea.getPolitica() != null
+                && normalizar(detalleTarea.getPolitica().getId()) != null) {
             return detalleTarea.getPolitica().getId();
         }
         if (resumenTareaActual != null && normalizar(resumenTareaActual.getPoliticaId()) != null) {
@@ -199,9 +198,9 @@ public class ServicioGuiaFuncionario {
             TareaDetalleResponse detalleTarea,
             TareaMiaResponse resumenTareaActual,
             SeguimientoInstanciaResponse seguimiento,
-            PoliticaNegocio politica
-    ) {
-        if (detalleTarea != null && detalleTarea.getPolitica() != null && normalizar(detalleTarea.getPolitica().getNombre()) != null) {
+            PoliticaNegocio politica) {
+        if (detalleTarea != null && detalleTarea.getPolitica() != null
+                && normalizar(detalleTarea.getPolitica().getNombre()) != null) {
             return detalleTarea.getPolitica().getNombre();
         }
         if (resumenTareaActual != null && normalizar(resumenTareaActual.getPoliticaNombre()) != null) {
@@ -216,8 +215,7 @@ public class ServicioGuiaFuncionario {
     private NodoActualGuiaFuncionario construirNodoActual(
             TareaDetalleResponse detalleTarea,
             SeguimientoInstanciaResponse seguimiento,
-            PoliticaNegocio politica
-    ) {
+            PoliticaNegocio politica) {
         Nodo nodo = buscarNodoActualPolitica(detalleTarea, seguimiento, politica);
         if (nodo != null) {
             return NodoActualGuiaFuncionario.builder()
@@ -238,8 +236,7 @@ public class ServicioGuiaFuncionario {
                     .descripcion("Debes ejecutar esta actividad y registrar el resultado correctamente.")
                     .departamento(resolverDepartamentoResponsable(
                             detalleTarea.getActividad().getResponsableTipo(),
-                            detalleTarea.getActividad().getResponsableId()
-                    ))
+                            detalleTarea.getActividad().getResponsableId()))
                     .tiempoEstimado(null)
                     .build();
         }
@@ -250,8 +247,7 @@ public class ServicioGuiaFuncionario {
     private Nodo buscarNodoActualPolitica(
             TareaDetalleResponse detalleTarea,
             SeguimientoInstanciaResponse seguimiento,
-            PoliticaNegocio politica
-    ) {
+            PoliticaNegocio politica) {
         if (politica == null || politica.getNodos() == null || politica.getNodos().isEmpty()) {
             return null;
         }
@@ -263,7 +259,8 @@ public class ServicioGuiaFuncionario {
         String nodoId = detalleTarea != null && detalleTarea.getActividad() != null
                 ? normalizar(detalleTarea.getActividad().getNodoId())
                 : null;
-        if (nodoId == null && seguimiento != null && seguimiento.getNodosActualesIds() != null && !seguimiento.getNodosActualesIds().isEmpty()) {
+        if (nodoId == null && seguimiento != null && seguimiento.getNodosActualesIds() != null
+                && !seguimiento.getNodosActualesIds().isEmpty()) {
             nodoId = normalizar(seguimiento.getNodosActualesIds().get(0));
         }
         return nodoId != null ? nodosPorId.get(nodoId) : null;
@@ -281,7 +278,9 @@ public class ServicioGuiaFuncionario {
             return null;
         }
 
-        Map<String, Object> respuestas = detalleTarea.getFormularioRespuesta() != null ? detalleTarea.getFormularioRespuesta() : Map.of();
+        Map<String, Object> respuestas = detalleTarea.getFormularioRespuesta() != null
+                ? detalleTarea.getFormularioRespuesta()
+                : Map.of();
 
         List<CampoFormularioGuiaFuncionario> campos = new ArrayList<>();
         List<String> camposObligatoriosFaltantes = new ArrayList<>();
@@ -325,15 +324,15 @@ public class ServicioGuiaFuncionario {
 
     private ResumenHistorialGuiaFuncionario construirResumenHistorial(
             TareaDetalleResponse detalleTarea,
-            SeguimientoInstanciaResponse seguimiento
-    ) {
+            SeguimientoInstanciaResponse seguimiento) {
         if (detalleTarea == null && seguimiento == null) {
             return null;
         }
 
-        List<SeguimientoInstanciaResponse.TareaSeguimientoResponse> tareas = seguimiento != null && seguimiento.getTareas() != null
-                ? seguimiento.getTareas()
-                : List.of();
+        List<SeguimientoInstanciaResponse.TareaSeguimientoResponse> tareas = seguimiento != null
+                && seguimiento.getTareas() != null
+                        ? seguimiento.getTareas()
+                        : List.of();
 
         int pasosCompletados = (int) tareas.stream()
                 .filter(Objects::nonNull)
@@ -341,7 +340,8 @@ public class ServicioGuiaFuncionario {
                 .count();
         int pasosPendientes = (int) tareas.stream()
                 .filter(Objects::nonNull)
-                .filter(item -> item.getEstadoTarea() == EstadoTarea.PENDIENTE || item.getEstadoTarea() == EstadoTarea.EN_PROCESO)
+                .filter(item -> item.getEstadoTarea() == EstadoTarea.PENDIENTE
+                        || item.getEstadoTarea() == EstadoTarea.EN_PROCESO)
                 .count();
         String pasoActual = detalleTarea != null && detalleTarea.getActividad() != null
                 ? normalizar(detalleTarea.getActividad().getNombreActividad())
@@ -352,9 +352,9 @@ public class ServicioGuiaFuncionario {
                 .filter(item -> item.getEstadoTarea() == EstadoTarea.COMPLETADA)
                 .max(Comparator.comparing(
                         item -> item.getFechaFin() != null ? item.getFechaFin() : item.getFechaInicio(),
-                        Comparator.nullsLast(LocalDateTime::compareTo)
-                ))
-                .map(item -> normalizar(item.getAsignadoANombre()) != null ? item.getAsignadoANombre() : item.getResponsableNombre())
+                        Comparator.nullsLast(LocalDateTime::compareTo)))
+                .map(item -> normalizar(item.getAsignadoANombre()) != null ? item.getAsignadoANombre()
+                        : item.getResponsableNombre())
                 .orElse(null);
 
         return ResumenHistorialGuiaFuncionario.builder()
@@ -366,7 +366,8 @@ public class ServicioGuiaFuncionario {
     }
 
     private String resolverPasoActualDesdeSeguimiento(SeguimientoInstanciaResponse seguimiento) {
-        if (seguimiento == null || seguimiento.getDepartamentosActuales() == null || seguimiento.getDepartamentosActuales().isEmpty()) {
+        if (seguimiento == null || seguimiento.getDepartamentosActuales() == null
+                || seguimiento.getDepartamentosActuales().isEmpty()) {
             return null;
         }
         return seguimiento.getDepartamentosActuales().stream()
@@ -380,8 +381,7 @@ public class ServicioGuiaFuncionario {
     private List<PasoPosibleGuiaFuncionario> construirPasosPosibles(
             TareaDetalleResponse detalleTarea,
             SeguimientoInstanciaResponse seguimiento,
-            PoliticaNegocio politica
-    ) {
+            PoliticaNegocio politica) {
         Nodo nodoActual = buscarNodoActualPolitica(detalleTarea, seguimiento, politica);
         if (nodoActual == null || politica == null) {
             return List.of();
@@ -396,7 +396,8 @@ public class ServicioGuiaFuncionario {
         if (nodoActual.getTipo() == TipoNodo.DECISION) {
             agregarPasosDecision(pasos, nodoActual.getCondiciones(), nodosPorId);
         } else {
-            List<Nodo> nodosSiguientesDirectos = (politica.getConexiones() != null ? politica.getConexiones() : List.<Conexion>of()).stream()
+            List<Nodo> nodosSiguientesDirectos = (politica.getConexiones() != null ? politica.getConexiones()
+                    : List.<Conexion>of()).stream()
                     .filter(Objects::nonNull)
                     .filter(conexion -> Objects.equals(conexion.getOrigen(), nodoActual.getId()))
                     .map(Conexion::getDestino)
@@ -440,8 +441,7 @@ public class ServicioGuiaFuncionario {
     private void agregarPasosDecision(
             List<PasoPosibleGuiaFuncionario> pasos,
             List<CondicionDecision> condiciones,
-            Map<String, Nodo> nodosPorId
-    ) {
+            Map<String, Nodo> nodosPorId) {
         if (condiciones == null || condiciones.isEmpty()) {
             return;
         }
@@ -453,7 +453,8 @@ public class ServicioGuiaFuncionario {
             Nodo siguienteNodo = nodosPorId.get(condicion.getSiguiente());
             pasos.add(PasoPosibleGuiaFuncionario.builder()
                     .condicion(construirEtiquetaCondicion(condicion.getResultado()))
-                    .siguienteNodo(siguienteNodo != null ? normalizar(siguienteNodo.getNombre()) : normalizar(condicion.getSiguiente()))
+                    .siguienteNodo(siguienteNodo != null ? normalizar(siguienteNodo.getNombre())
+                            : normalizar(condicion.getSiguiente()))
                     .siguienteDepartamento(siguienteNodo != null ? resolverDepartamentoNodo(siguienteNodo) : null)
                     .build());
         }
@@ -517,8 +518,7 @@ public class ServicioGuiaFuncionario {
                             .horasAntiguedad(calcularHorasAntiguedad(tarea.getFechaCreacion()))
                             .atrasada(estaAtrasada(
                                     tarea.getEstadoTarea() != null ? tarea.getEstadoTarea().name() : null,
-                                    tarea.getFechaCreacion()
-                            ))
+                                    tarea.getFechaCreacion()))
                             .nombrePolitica(normalizar(tarea.getPoliticaNombre()))
                             .build();
                     return itemCola;
@@ -530,10 +530,10 @@ public class ServicioGuiaFuncionario {
             SolicitudGuiaFuncionario solicitud,
             TareaDetalleResponse detalleTarea,
             TareaMiaResponse resumenTareaActual,
-            FormularioGuiaFuncionario formulario
-    ) {
+            FormularioGuiaFuncionario formulario) {
         LinkedHashSet<String> acciones = new LinkedHashSet<>();
-        if (solicitud != null && solicitud.getContexto() != null && solicitud.getContexto().getAccionesDisponibles() != null) {
+        if (solicitud != null && solicitud.getContexto() != null
+                && solicitud.getContexto().getAccionesDisponibles() != null) {
             solicitud.getContexto().getAccionesDisponibles().stream()
                     .map(this::normalizarCodigo)
                     .filter(valor -> !valor.isBlank())
@@ -543,13 +543,13 @@ public class ServicioGuiaFuncionario {
         String pantalla = normalizarPantalla(
                 solicitud != null ? solicitud.getPantalla() : null,
                 solicitud != null && solicitud.getContexto() != null ? solicitud.getContexto().getTareaId() : null,
-                solicitud != null && solicitud.getContexto() != null ? solicitud.getContexto().getInstanciaId() : null
-        );
+                solicitud != null && solicitud.getContexto() != null ? solicitud.getContexto().getInstanciaId() : null);
         String estadoTarea = resolverEstadoTarea(detalleTarea, resumenTareaActual);
 
         acciones.add("ASK_HELP");
         if ("EMPLOYEE_DASHBOARD".equals(pantalla)) {
-            if (resumenTareaActual != null || (solicitud != null && solicitud.getContexto() != null && normalizar(solicitud.getContexto().getTareaId()) != null)) {
+            if (resumenTareaActual != null || (solicitud != null && solicitud.getContexto() != null
+                    && normalizar(solicitud.getContexto().getTareaId()) != null)) {
                 acciones.add("START_TASK");
             }
             return acciones.stream().limit(6).toList();
@@ -562,7 +562,8 @@ public class ServicioGuiaFuncionario {
             acciones.add("SAVE_FORM");
             acciones.add("COMPLETE_TASK");
             acciones.add("FILL_FORM_WITH_AI");
-        } else if ("IN_PROGRESS".equals(estadoTarea) || "PENDING".equals(estadoTarea) || "OVERDUE".equals(estadoTarea)) {
+        } else if ("IN_PROGRESS".equals(estadoTarea) || "PENDING".equals(estadoTarea)
+                || "OVERDUE".equals(estadoTarea)) {
             acciones.add("COMPLETE_TASK");
         }
 
@@ -573,8 +574,8 @@ public class ServicioGuiaFuncionario {
         String estado = detalleTarea != null && detalleTarea.getEstadoTarea() != null
                 ? detalleTarea.getEstadoTarea().name()
                 : resumenTareaActual != null && resumenTareaActual.getEstadoTarea() != null
-                ? resumenTareaActual.getEstadoTarea().name()
-                : null;
+                        ? resumenTareaActual.getEstadoTarea().name()
+                        : null;
 
         LocalDateTime fechaCreacion = detalleTarea != null
                 ? detalleTarea.getFechaCreacion()
@@ -599,8 +600,7 @@ public class ServicioGuiaFuncionario {
         }
         if (detalleTarea != null && estaAtrasada(
                 detalleTarea.getEstadoTarea() != null ? detalleTarea.getEstadoTarea().name() : null,
-                detalleTarea.getFechaCreacion()
-        )) {
+                detalleTarea.getFechaCreacion())) {
             return "HIGH";
         }
         return "LOW";
@@ -699,6 +699,7 @@ public class ServicioGuiaFuncionario {
             case SELECCION -> "SELECTION";
             case GRID -> "GRID";
             case LABEL -> "LABEL";
+            case DOCUMENTO_COLABORATIVO -> "DOCUMENTO_COLABORATIVO";
         };
     }
 
@@ -727,7 +728,8 @@ public class ServicioGuiaFuncionario {
         Usuario funcionario = usuarioRepository.findByIdAndActivo(funcionarioIdNormalizado, true)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Usuario no autorizado"));
         if (!"FUNCIONARIO".equalsIgnoreCase(funcionario.getRol())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "El bot guia de funcionario solo esta disponible para el rol FUNCIONARIO");
+            throw new ApiException(HttpStatus.FORBIDDEN,
+                    "El bot guia de funcionario solo esta disponible para el rol FUNCIONARIO");
         }
         return funcionario;
     }

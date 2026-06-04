@@ -4,10 +4,21 @@ import com.leo.politicas_de_negocio.colaboracion.repository.EventoColaboracionAp
 import com.leo.politicas_de_negocio.colaboracion.repository.SnapshotColaboracionPoliticaRepository;
 import com.leo.politicas_de_negocio.colaboracion.service.PoliticaPresenciaService;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
+import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
+import com.leo.politicas_de_negocio.documents.model.DocumentoColaborativoMetadata;
+import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
+import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.dto.CreatePoliticaRequest;
+import com.leo.politicas_de_negocio.politicas.dto.UpdateFlujoRequest;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
+import com.leo.politicas_de_negocio.politicas.model.politica.ConfiguracionDocumento;
+import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
@@ -15,6 +26,7 @@ import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -22,6 +34,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -58,6 +71,12 @@ class PoliticaNegocioServiceTest {
     @Mock
     private MongoTemplate mongoTemplate;
 
+    @Mock
+    private InstanciaPoliticaRepository instanciaPoliticaRepository;
+
+    @Mock
+    private DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
+
     private AutoCloseable mocks;
     private PoliticaNegocioService service;
 
@@ -71,7 +90,9 @@ class PoliticaNegocioServiceTest {
                 eventoRepository,
                 snapshotRepository,
                 presenciaService,
-                mongoTemplate
+                mongoTemplate,
+                instanciaPoliticaRepository,
+                documentoColaborativoMetadataService
         );
     }
 
@@ -88,6 +109,95 @@ class PoliticaNegocioServiceTest {
         service.eliminarPolitica("admin-1", "pol-1");
 
         verify(politicaRepository).delete(politica);
+    }
+
+    @Test
+    void guardarFlujo_sincronizaPermisosDeDocumentoColaborativoYaCreado() {
+        PoliticaNegocio politica = politica("pol-1", EstadoPolitica.BORRADOR);
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaRepository.save(any(PoliticaNegocio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(instanciaPoliticaRepository.findByPoliticaIdOrderByFechaCreacionDesc("pol-1"))
+                .thenReturn(List.of(InstanciaPolitica.builder()
+                        .id("tramite-1")
+                        .creadaPor("cliente-1")
+                        .politicaId("pol-1")
+                        .build()));
+
+        DocumentoColaborativoMetadata metadata = new DocumentoColaborativoMetadata();
+        metadata.setCampoFormularioId("cv");
+        DocumentoColaborativoMetadata.PermisosEdicion permisosViejos = new DocumentoColaborativoMetadata.PermisosEdicion();
+        permisosViejos.setDepartamentos(List.of("dept-1"));
+        metadata.setPermisosEdicion(permisosViejos);
+
+        when(documentoColaborativoMetadataService.listarPorTramite("cliente-1", "tramite-1"))
+                .thenReturn(List.of(metadata));
+
+        ConfiguracionDocumento config = ConfiguracionDocumento.builder()
+                .tipoDocumento("WORD")
+                .modoColaboracion("PERSONALIZADO")
+                .permisosEdicion(PermisosSeccion.builder()
+                        .departamentos(List.of())
+                        .roles(List.of())
+                        .usuarios(List.of("user-1"))
+                        .build())
+                .build();
+        Nodo nodo = Nodo.builder()
+                .id("nodo-1")
+                .tipo(TipoNodo.ACTIVIDAD)
+                .formulario(List.of(CampoFormulario.builder()
+                        .campo("cv")
+                        .tipo("DOCUMENTO_COLABORATIVO")
+                        .configuracionDocumento(config)
+                        .build()))
+                .build();
+        UpdateFlujoRequest request = new UpdateFlujoRequest();
+        request.setNodos(List.of(nodo));
+        request.setConexiones(List.of());
+
+        service.guardarFlujo("admin-1", "pol-1", request);
+
+        ArgumentCaptor<ConfiguracionDocumento> configCaptor = ArgumentCaptor.forClass(ConfiguracionDocumento.class);
+        verify(documentoColaborativoMetadataService).actualizarConfiguracionDesdeCampo(eq(metadata), configCaptor.capture());
+
+        ConfiguracionDocumento sincronizada = configCaptor.getValue();
+        assertTrue(sincronizada.getPermisosEdicion().getDepartamentos().isEmpty());
+        assertEquals(List.of("user-1"), sincronizada.getPermisosEdicion().getUsuarios());
+    }
+
+    @Test
+    void guardarFlujo_preservaDepartamentosMarcadosEnPermisosDocumentoColaborativo() {
+        PoliticaNegocio politica = politica("pol-1", EstadoPolitica.BORRADOR);
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaRepository.save(any(PoliticaNegocio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ConfiguracionDocumento config = ConfiguracionDocumento.builder()
+                .tipoDocumento("WORD")
+                .permisosEdicion(PermisosSeccion.builder()
+                        .departamentos(List.of("dept-forzado"))
+                        .roles(List.of())
+                        .usuarios(List.of("user-1"))
+                        .build())
+                .build();
+        Nodo nodo = Nodo.builder()
+                .id("nodo-1")
+                .tipo(TipoNodo.ACTIVIDAD)
+                .formulario(List.of(CampoFormulario.builder()
+                        .campo("cv")
+                        .tipo("DOCUMENTO_COLABORATIVO")
+                        .configuracionDocumento(config)
+                        .build()))
+                .build();
+        UpdateFlujoRequest request = new UpdateFlujoRequest();
+        request.setNodos(List.of(nodo));
+        request.setConexiones(List.of());
+
+        PoliticaNegocio result = service.guardarFlujo("admin-1", "pol-1", request);
+
+        ConfiguracionDocumento savedConfig = result.getNodos().get(0).getFormulario().get(0).getConfiguracionDocumento();
+        assertEquals(List.of("dept-forzado"), savedConfig.getPermisosEdicion().getDepartamentos());
+        assertEquals(List.of("user-1"), savedConfig.getPermisosEdicion().getUsuarios());
     }
 
     @Test

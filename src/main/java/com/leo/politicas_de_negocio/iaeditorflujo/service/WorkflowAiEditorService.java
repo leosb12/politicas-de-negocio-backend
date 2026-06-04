@@ -974,6 +974,9 @@ public class WorkflowAiEditorService {
         String normalized = normalizeForSearch(rawType);
         String fallback = normalizeForSearch(fieldNameFallback);
         String source = (normalized + " " + fallback).trim();
+        if (source.contains("colaborativo") || source.contains("collaborative")) {
+            return TipoCampo.DOCUMENTO_COLABORATIVO;
+        }
         if (source.contains("archivo") || source.contains("file") || source.contains("pdf") || source.contains("documento")) {
             return TipoCampo.ARCHIVO;
         }

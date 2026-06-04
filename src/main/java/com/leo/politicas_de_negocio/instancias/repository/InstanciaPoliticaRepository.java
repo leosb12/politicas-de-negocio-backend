@@ -15,6 +15,8 @@ public interface InstanciaPoliticaRepository extends MongoRepository<InstanciaPo
 
     List<InstanciaPolitica> findByCreadaPorOrderByFechaCreacionDesc(String creadaPor);
 
+    List<InstanciaPolitica> findByPoliticaIdOrderByFechaCreacionDesc(String politicaId);
+
     List<InstanciaPolitica> findByEstadoInstanciaOrderByFechaCreacionDesc(EstadoInstancia estadoInstancia);
 
     @Query(

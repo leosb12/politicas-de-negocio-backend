@@ -57,11 +57,11 @@ public class ServicioGuiaAdministrador {
         }
         return servicioFallback.construir(
                 solicitudIa,
-                resolvedorIntencion.resolver(solicitudIa.getPregunta(), solicitudIa.getPantalla())
-        );
+                resolvedorIntencion.resolver(solicitudIa.getPregunta(), solicitudIa.getPantalla()));
     }
 
-    private SolicitudGuiaAdministrador construirSolicitudIa(Usuario administrador, SolicitudGuiaAdministrador solicitud) {
+    private SolicitudGuiaAdministrador construirSolicitudIa(Usuario administrador,
+            SolicitudGuiaAdministrador solicitud) {
         ContextoGuiaAdministrador contextoEntrante = solicitud != null && solicitud.getContexto() != null
                 ? solicitud.getContexto()
                 : new ContextoGuiaAdministrador();
@@ -83,7 +83,8 @@ public class ServicioGuiaAdministrador {
                 .nodoSeleccionado(nodoSeleccionado)
                 .resumenPolitica(resumenPolitica)
                 .problemasDetectados(problemasDetectados)
-                .accionesDisponibles(construirAccionesDisponibles(solicitud, politica, nodoSeleccionado, problemasDetectados))
+                .accionesDisponibles(
+                        construirAccionesDisponibles(solicitud, politica, nodoSeleccionado, problemasDetectados))
                 .departamentosPolitica(construirDepartamentosPolitica(politica))
                 .build();
 
@@ -115,7 +116,8 @@ public class ServicioGuiaAdministrador {
 
         int conexionesInvalidas = 0;
         for (Conexion conexion : conexiones) {
-            if (conexion == null || normalizar(conexion.getOrigen()) == null || normalizar(conexion.getDestino()) == null) {
+            if (conexion == null || normalizar(conexion.getOrigen()) == null
+                    || normalizar(conexion.getDestino()) == null) {
                 conexionesInvalidas++;
                 continue;
             }
@@ -129,20 +131,23 @@ public class ServicioGuiaAdministrador {
             if (nodo == null || normalizar(nodo.getId()) == null) {
                 continue;
             }
-            boolean tieneEntradas = conexiones.stream().anyMatch(conexion -> nodo.getId().equals(conexion.getDestino()));
+            boolean tieneEntradas = conexiones.stream()
+                    .anyMatch(conexion -> nodo.getId().equals(conexion.getDestino()));
             boolean tieneSalidas = conexiones.stream().anyMatch(conexion -> nodo.getId().equals(conexion.getOrigen()));
             if (nodo.getTipo() == TipoNodo.INICIO && !tieneSalidas) {
                 nodosHuerfanos++;
             } else if (nodo.getTipo() == TipoNodo.FIN && !tieneEntradas) {
                 nodosHuerfanos++;
-            } else if (nodo.getTipo() != TipoNodo.INICIO && nodo.getTipo() != TipoNodo.FIN && (!tieneEntradas || !tieneSalidas)) {
+            } else if (nodo.getTipo() != TipoNodo.INICIO && nodo.getTipo() != TipoNodo.FIN
+                    && (!tieneEntradas || !tieneSalidas)) {
                 nodosHuerfanos++;
             }
         }
 
         int decisionesSinRutas = (int) nodos.stream()
                 .filter(nodo -> nodo != null && nodo.getTipo() == TipoNodo.DECISION)
-                .filter(nodo -> conexiones.stream().filter(conexion -> nodo.getId().equals(conexion.getOrigen())).count() < 2)
+                .filter(nodo -> conexiones.stream().filter(conexion -> nodo.getId().equals(conexion.getOrigen()))
+                        .count() < 2)
                 .count();
 
         int nodosParalelosIncompletos = (int) nodos.stream()
@@ -153,11 +158,14 @@ public class ServicioGuiaAdministrador {
         return ResumenPoliticaGuia.builder()
                 .tieneNodoInicio(nodos.stream().anyMatch(nodo -> nodo != null && nodo.getTipo() == TipoNodo.INICIO))
                 .tieneNodoFinal(nodos.stream().anyMatch(nodo -> nodo != null && nodo.getTipo() == TipoNodo.FIN))
-                .totalActividades((int) nodos.stream().filter(nodo -> nodo != null && nodo.getTipo() == TipoNodo.ACTIVIDAD).count())
-                .totalDecisiones((int) nodos.stream().filter(nodo -> nodo != null && nodo.getTipo() == TipoNodo.DECISION).count())
+                .totalActividades((int) nodos.stream()
+                        .filter(nodo -> nodo != null && nodo.getTipo() == TipoNodo.ACTIVIDAD).count())
+                .totalDecisiones((int) nodos.stream()
+                        .filter(nodo -> nodo != null && nodo.getTipo() == TipoNodo.DECISION).count())
                 .actividadesSinResponsable((int) nodos.stream()
                         .filter(nodo -> nodo != null && nodo.getTipo() == TipoNodo.ACTIVIDAD)
-                        .filter(nodo -> normalizar(nodo.getResponsableTipo()) == null || normalizar(nodo.getResponsableId()) == null)
+                        .filter(nodo -> normalizar(nodo.getResponsableTipo()) == null
+                                || normalizar(nodo.getResponsableId()) == null)
                         .count())
                 .actividadesSinFormulario((int) nodos.stream()
                         .filter(nodo -> nodo != null && nodo.getTipo() == TipoNodo.ACTIVIDAD)
@@ -184,8 +192,7 @@ public class ServicioGuiaAdministrador {
 
     private List<ProblemaDetectadoGuiaAdministrador> construirProblemasDetectados(
             PoliticaNegocio politica,
-            ResumenPoliticaGuia resumen
-    ) {
+            ResumenPoliticaGuia resumen) {
         List<ProblemaDetectadoGuiaAdministrador> problemas = new ArrayList<>();
         if (resumen == null) {
             return problemas;
@@ -199,38 +206,32 @@ public class ServicioGuiaAdministrador {
         if (resumen.getActividadesSinResponsable() > 0) {
             problemas.add(problema(
                     "ACTIVITIES_WITHOUT_RESPONSIBLE",
-                    "Hay " + resumen.getActividadesSinResponsable() + " actividad(es) sin responsable asignado."
-            ));
+                    "Hay " + resumen.getActividadesSinResponsable() + " actividad(es) sin responsable asignado."));
         }
         if (resumen.getActividadesSinFormulario() > 0) {
             problemas.add(problema(
                     "ACTIVITIES_WITHOUT_FORM",
-                    "Hay " + resumen.getActividadesSinFormulario() + " actividad(es) sin formulario configurado."
-            ));
+                    "Hay " + resumen.getActividadesSinFormulario() + " actividad(es) sin formulario configurado."));
         }
         if (resumen.getConexionesInvalidas() > 0) {
             problemas.add(problema(
                     "INVALID_CONNECTIONS",
-                    "Hay " + resumen.getConexionesInvalidas() + " conexion(es) invalidas o incompletas."
-            ));
+                    "Hay " + resumen.getConexionesInvalidas() + " conexion(es) invalidas o incompletas."));
         }
         if (resumen.getDecisionesSinRutas() > 0) {
             problemas.add(problema(
                     "DECISIONS_WITHOUT_ROUTES",
-                    "Hay " + resumen.getDecisionesSinRutas() + " decision(es) sin caminos completos."
-            ));
+                    "Hay " + resumen.getDecisionesSinRutas() + " decision(es) sin caminos completos."));
         }
         if (resumen.getNodosParalelosIncompletos() > 0) {
             problemas.add(problema(
                     "PARALLEL_FLOW_INCOMPLETE",
-                    "Hay " + resumen.getNodosParalelosIncompletos() + " nodo(s) de paralelismo incompletos."
-            ));
+                    "Hay " + resumen.getNodosParalelosIncompletos() + " nodo(s) de paralelismo incompletos."));
         }
         if (resumen.getNodosHuerfanos() > 0) {
             problemas.add(problema(
                     "ORPHAN_NODES",
-                    "Hay " + resumen.getNodosHuerfanos() + " nodo(s) desconectados del flujo principal."
-            ));
+                    "Hay " + resumen.getNodosHuerfanos() + " nodo(s) desconectados del flujo principal."));
         }
         if (politica.getNodos() == null || politica.getNodos().isEmpty()) {
             problemas.add(problema("EMPTY_POLICY", "La politica todavia no tiene nodos."));
@@ -241,8 +242,7 @@ public class ServicioGuiaAdministrador {
     private NodoSeleccionadoGuiaAdministrador construirNodoSeleccionado(
             PoliticaNegocio politica,
             String nodoSeleccionadoId,
-            List<ProblemaDetectadoGuiaAdministrador> problemasDetectados
-    ) {
+            List<ProblemaDetectadoGuiaAdministrador> problemasDetectados) {
         String nodoIdNormalizado = normalizar(nodoSeleccionadoId);
         if (nodoIdNormalizado == null) {
             return null;
@@ -258,8 +258,7 @@ public class ServicioGuiaAdministrador {
         if (nodoSeleccionado == null) {
             problemasDetectados.add(problema(
                     "SELECTED_NODE_NOT_FOUND",
-                    "El nodo seleccionado ya no existe o no pertenece a la politica actual."
-            ));
+                    "El nodo seleccionado ya no existe o no pertenece a la politica actual."));
             return null;
         }
 
@@ -298,7 +297,8 @@ public class ServicioGuiaAdministrador {
                 .tipo(mapearTipoNodo(nodoSeleccionado.getTipo()))
                 .nombre(normalizar(nodoSeleccionado.getNombre()))
                 .departamento(resolverNombreDepartamento(nodoSeleccionado.getDepartamentoId()))
-                .responsable(resolverNombreResponsable(nodoSeleccionado.getResponsableTipo(), nodoSeleccionado.getResponsableId()))
+                .responsable(resolverNombreResponsable(nodoSeleccionado.getResponsableTipo(),
+                        nodoSeleccionado.getResponsableId()))
                 .tipoResponsable(normalizarCodigo(nodoSeleccionado.getResponsableTipo()))
                 .camposFormulario(camposFormulario)
                 .nodosEntrantes(nodosEntrantes)
@@ -310,10 +310,10 @@ public class ServicioGuiaAdministrador {
             SolicitudGuiaAdministrador solicitud,
             PoliticaNegocio politica,
             NodoSeleccionadoGuiaAdministrador nodoSeleccionado,
-            List<ProblemaDetectadoGuiaAdministrador> problemasDetectados
-    ) {
+            List<ProblemaDetectadoGuiaAdministrador> problemasDetectados) {
         LinkedHashSet<String> acciones = new LinkedHashSet<>();
-        if (solicitud != null && solicitud.getContexto() != null && solicitud.getContexto().getAccionesDisponibles() != null) {
+        if (solicitud != null && solicitud.getContexto() != null
+                && solicitud.getContexto().getAccionesDisponibles() != null) {
             solicitud.getContexto().getAccionesDisponibles().stream()
                     .map(this::normalizarCodigo)
                     .filter(valor -> !valor.isBlank())
@@ -457,6 +457,7 @@ public class ServicioGuiaAdministrador {
             case SELECCION -> "SELECTION";
             case GRID -> "GRID";
             case LABEL -> "LABEL";
+            case DOCUMENTO_COLABORATIVO -> "DOCUMENTO_COLABORATIVO";
         };
     }
 

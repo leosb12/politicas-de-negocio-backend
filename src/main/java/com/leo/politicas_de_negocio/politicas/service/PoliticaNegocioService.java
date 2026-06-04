@@ -6,14 +6,23 @@ import com.leo.politicas_de_negocio.colaboracion.service.PoliticaPresenciaServic
 import com.leo.politicas_de_negocio.politicas.dto.CreatePoliticaRequest;
 import com.leo.politicas_de_negocio.politicas.dto.TramiteDisponibleResponse;
 import com.leo.politicas_de_negocio.politicas.dto.UpdateFlujoRequest;
+import com.leo.politicas_de_negocio.documents.model.DocumentoColaborativoMetadata;
+import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
+import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
+import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.ResponsableTipo;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
+import com.leo.politicas_de_negocio.politicas.model.politica.ConfiguracionDocumento;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosLecturaSeccion;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
@@ -28,8 +37,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -60,6 +71,8 @@ public class PoliticaNegocioService {
     private final SnapshotColaboracionPoliticaRepository snapshotColaboracionRepository;
     private final PoliticaPresenciaService presenciaService;
     private final MongoTemplate mongoTemplate;
+    private final InstanciaPoliticaRepository instanciaPoliticaRepository;
+    private final DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
 
     private Usuario assertAdmin(String adminUserId) {
         if (adminUserId == null || adminUserId.isBlank()) {
@@ -119,7 +132,9 @@ public class PoliticaNegocioService {
 
     public List<PoliticaNegocio> obtenerTodas(String adminUserId) {
         assertAdmin(adminUserId);
-        return repository.findAll();
+        List<PoliticaNegocio> politicas = repository.findAll();
+        politicas.forEach(this::normalizarConfiguracionesDocumento);
+        return politicas;
     }
 
     public List<TramiteDisponibleResponse> obtenerTramitesDisponibles(String actorUserId) {
@@ -134,8 +149,10 @@ public class PoliticaNegocioService {
 
     public PoliticaNegocio obtenerPorId(String adminUserId, String id) {
         assertAdmin(adminUserId);
-        return repository.findById(id)
+        PoliticaNegocio politica = repository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Política no encontrada con ID: " + id));
+        normalizarConfiguracionesDocumento(politica);
+        return politica;
     }
 
     public PoliticaNegocio guardarFlujo(String adminUserId, String id, UpdateFlujoRequest request) {
@@ -169,7 +186,9 @@ public class PoliticaNegocioService {
         }
         politica.setFechaActualizacion(LocalDateTime.now());
 
-        return repository.save(politica);
+        PoliticaNegocio persistida = repository.save(politica);
+        sincronizarDocumentosColaborativosExistentes(persistida);
+        return persistida;
     }
 
     public PoliticaNegocio cambiarEstado(String adminUserId, String id, EstadoPolitica nuevoEstado) {
@@ -442,7 +461,142 @@ public class PoliticaNegocioService {
             if (nodo.getFechaActualizacion() == null) {
                 nodo.setFechaActualizacion(now);
             }
+            normalizarConfiguracionesDocumento(nodo);
         }
+    }
+
+    private void normalizarConfiguracionesDocumento(Nodo nodo) {
+        if (nodo == null || nodo.getFormulario() == null) {
+            return;
+        }
+
+        for (CampoFormulario campo : nodo.getFormulario()) {
+            if (campo == null || campo.getConfiguracionDocumento() == null) {
+                continue;
+            }
+
+            ConfiguracionDocumento config = campo.getConfiguracionDocumento();
+            config.setPermisosEdicion(normalizarPermisosSeccion(config.getPermisosEdicion()));
+            config.setPermisosLectura(normalizarPermisosLectura(config.getPermisosLectura()));
+            config.setPermisosDescarga(normalizarPermisosSeccion(config.getPermisosDescarga()));
+            config.setPermisosComentarios(normalizarPermisosSeccion(config.getPermisosComentarios()));
+            config.setPermisosReemplazo(normalizarPermisosSeccion(config.getPermisosReemplazo()));
+            config.setPermisosEliminacion(normalizarPermisosSeccion(config.getPermisosEliminacion()));
+            config.setPermisosCompartirInternamente(normalizarPermisosSeccion(config.getPermisosCompartirInternamente()));
+        }
+    }
+
+    private void normalizarConfiguracionesDocumento(PoliticaNegocio politica) {
+        if (politica == null || politica.getNodos() == null) {
+            return;
+        }
+        politica.getNodos().forEach(this::normalizarConfiguracionesDocumento);
+    }
+
+    private void sincronizarDocumentosColaborativosExistentes(PoliticaNegocio politica) {
+        if (politica == null || politica.getId() == null || documentoColaborativoMetadataService == null
+                || instanciaPoliticaRepository == null) {
+            return;
+        }
+
+        Map<String, ConfiguracionDocumento> configuracionesPorCampo = configuracionesDocumentoPorCampo(politica.getNodos());
+        if (configuracionesPorCampo.isEmpty()) {
+            return;
+        }
+
+        List<InstanciaPolitica> instancias = instanciaPoliticaRepository.findByPoliticaIdOrderByFechaCreacionDesc(politica.getId());
+        if (instancias == null || instancias.isEmpty()) {
+            return;
+        }
+
+        for (InstanciaPolitica instancia : instancias) {
+            if (instancia == null || normalizeNullableText(instancia.getCreadaPor()) == null
+                    || normalizeNullableText(instancia.getId()) == null) {
+                continue;
+            }
+
+            List<DocumentoColaborativoMetadata> documentos = documentoColaborativoMetadataService.listarPorTramite(
+                    instancia.getCreadaPor(),
+                    instancia.getId()
+            );
+            if (documentos == null || documentos.isEmpty()) {
+                continue;
+            }
+            for (DocumentoColaborativoMetadata documento : documentos) {
+                ConfiguracionDocumento config = configuracionesPorCampo.get(normalizeNullableText(documento.getCampoFormularioId()));
+                if (config != null) {
+                    documentoColaborativoMetadataService.actualizarConfiguracionDesdeCampo(documento, config);
+                }
+            }
+        }
+    }
+
+    private Map<String, ConfiguracionDocumento> configuracionesDocumentoPorCampo(List<Nodo> nodos) {
+        Map<String, ConfiguracionDocumento> result = new HashMap<>();
+        if (nodos == null) {
+            return result;
+        }
+
+        for (Nodo nodo : nodos) {
+            if (nodo == null || nodo.getFormulario() == null) {
+                continue;
+            }
+            for (CampoFormulario campo : nodo.getFormulario()) {
+                String campoId = campo != null ? normalizeNullableText(campo.getCampo()) : null;
+                if (campoId != null
+                        && campo.getTipo() == TipoCampo.DOCUMENTO_COLABORATIVO
+                        && campo.getConfiguracionDocumento() != null) {
+                    result.put(campoId, campo.getConfiguracionDocumento());
+                }
+            }
+        }
+        return result;
+    }
+
+    private PermisosSeccion normalizarPermisosSeccion(PermisosSeccion permisos) {
+        if (permisos == null) {
+            return PermisosSeccion.builder()
+                    .departamentos(new ArrayList<>())
+                    .roles(new ArrayList<>())
+                    .usuarios(new ArrayList<>())
+                    .build();
+        }
+
+        return PermisosSeccion.builder()
+                .departamentos(normalizarListaPermisos(permisos.getDepartamentos()))
+                .roles(normalizarListaPermisos(permisos.getRoles()))
+                .usuarios(normalizarListaPermisos(permisos.getUsuarios()))
+                .build();
+    }
+
+    private PermisosLecturaSeccion normalizarPermisosLectura(PermisosLecturaSeccion permisos) {
+        if (permisos == null) {
+            return PermisosLecturaSeccion.builder()
+                    .departamentos(new ArrayList<>())
+                    .roles(new ArrayList<>())
+                    .usuarios(new ArrayList<>())
+                    .incluirClienteIniciador(false)
+                    .build();
+        }
+
+        return PermisosLecturaSeccion.builder()
+                .departamentos(normalizarListaPermisos(permisos.getDepartamentos()))
+                .roles(normalizarListaPermisos(permisos.getRoles()))
+                .usuarios(normalizarListaPermisos(permisos.getUsuarios()))
+                .incluirClienteIniciador(Boolean.TRUE.equals(permisos.getIncluirClienteIniciador()))
+                .build();
+    }
+
+    private List<String> normalizarListaPermisos(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return values.stream()
+                .map(this::normalizeNullableText)
+                .filter(value -> value != null)
+                .distinct()
+                .toList();
     }
 
     public PoliticaNegocio actualizarNombreDescripcion(String adminUserId, String id, String nombre, String descripcion) {

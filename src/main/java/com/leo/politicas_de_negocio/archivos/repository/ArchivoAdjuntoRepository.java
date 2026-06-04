@@ -17,5 +17,7 @@ public interface ArchivoAdjuntoRepository extends MongoRepository<ArchivoAdjunto
 
     List<ArchivoAdjunto> findByTareaIdAndEstadoOrderByFechaSubidaDesc(String tareaId, EstadoArchivo estado);
 
+    List<ArchivoAdjunto> findByPoliticaIdAndEstadoOrderByFechaSubidaDesc(String politicaId, EstadoArchivo estado);
+
     List<ArchivoAdjunto> findByUsuarioIdAndEstadoOrderByFechaSubidaDesc(String usuarioId, EstadoArchivo estado);
 }

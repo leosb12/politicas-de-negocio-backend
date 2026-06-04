@@ -64,6 +64,7 @@ public class InstanciaPoliticaService {
     private final WorkflowEngineService workflowEngineService;
     private final TareaActividadRepository tareaRepository;
     private final PoliticaNegocioService politicaNegocioService;
+    private final com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
 
     public InstanciaPolitica crearInstanciaDirecta(String actorUserId, CrearInstanciaRequest request) {
         Usuario actor = assertUsuarioActivo(actorUserId);
@@ -110,6 +111,13 @@ public class InstanciaPoliticaService {
                 "Instancia creada usando politica " + politica.getId()
         );
 
+        try {
+            documentoColaborativoMetadataService.crearDocumentosColaborativosIniciales(instancia, politica);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(InstanciaPoliticaService.class)
+                    .error("Error al inicializar documentos colaborativos del tramite", e);
+        }
+
         workflowEngineService.iniciarInstancia(instancia, politica, actor.getId());
 
         return instanciaRepository.findById(instancia.getId()).orElse(instancia);
@@ -120,6 +128,48 @@ public class InstanciaPoliticaService {
         InstanciaPolitica instancia = buscarInstancia(instanciaId);
         validarAccesoLectura(actor, instancia);
         return instancia;
+    }
+
+    public InstanciaPolitica obtenerInstanciaParaDocumentoColaborativo(String tramiteId, String actorUserId) {
+        Usuario actor = assertUsuarioActivo(actorUserId);
+        String instanciaId = normalizarTexto(tramiteId);
+        if (instanciaId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar el id de instancia del tramite");
+        }
+
+        InstanciaPolitica instancia = instanciaRepository.findById(instanciaId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                        "No se encontró la instancia del trámite: " + instanciaId));
+
+        if (tieneAccesoDocumentoColaborativo(actor, instancia)) {
+            return instancia;
+        }
+
+        throw new ApiException(HttpStatus.FORBIDDEN,
+                "El usuario no tiene permiso para consultar documentos colaborativos");
+    }
+
+    public void asegurarDocumentosColaborativosIniciales(InstanciaPolitica instancia) {
+        if (instancia == null) {
+            return;
+        }
+
+        String politicaId = normalizarTexto(instancia.getPoliticaId());
+        if (politicaId == null) {
+            return;
+        }
+
+        PoliticaNegocio politica = politicaRepository.findById(politicaId).orElse(null);
+        if (politica == null) {
+            return;
+        }
+
+        try {
+            documentoColaborativoMetadataService.crearDocumentosColaborativosIniciales(instancia, politica);
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(InstanciaPoliticaService.class)
+                    .error("Error al asegurar documentos colaborativos del tramite {}", instancia.getId(), e);
+        }
     }
 
     public InstanciaDetalleResponse obtenerDetallePorId(String actorUserId, String instanciaId) {
@@ -318,6 +368,25 @@ public class InstanciaPoliticaService {
 
         throw new ApiException(HttpStatus.FORBIDDEN,
                 "No tiene permisos para consultar esta instancia");
+    }
+
+    private boolean tieneAccesoDocumentoColaborativo(Usuario actor, InstanciaPolitica instancia) {
+        if (actor == null || instancia == null) {
+            return false;
+        }
+
+        String rol = normalizarTexto(actor.getRol());
+        if ("ADMIN".equalsIgnoreCase(rol)
+                || "ADMINISTRADOR".equalsIgnoreCase(rol)
+                || "JEFE_PROCESO".equalsIgnoreCase(rol)) {
+            return true;
+        }
+
+        if (actor.getId().equals(normalizarTexto(instancia.getCreadaPor()))) {
+            return true;
+        }
+
+        return actorParticipaEnInstancia(actor, instancia.getId());
     }
 
     private boolean actorParticipaEnInstancia(Usuario actor, String instanciaId) {

@@ -12,6 +12,8 @@ public interface TareaActividadRepository extends MongoRepository<TareaActividad
 
     List<TareaActividad> findByInstanciaIdOrderByFechaCreacionAsc(String instanciaId);
 
+    List<TareaActividad> findByPoliticaIdOrderByFechaCreacionDesc(String politicaId);
+
     @Query(
             value = "{ 'instanciaId': { '$in': ?0 } }",
             fields = "{ 'instanciaId': 1, 'nodoId': 1, 'estadoTarea': 1, 'fechaCreacion': 1 }"

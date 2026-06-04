@@ -8,6 +8,10 @@ import com.leo.politicas_de_negocio.notifications.application.WorkflowNotificati
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
+import com.leo.politicas_de_negocio.politicas.model.politica.ConfiguracionDocumento;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosAdicionalesDocumento;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosLecturaSeccion;
 import com.leo.politicas_de_negocio.politicas.model.politica.CondicionDecision;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.GrupoCondicionDecision;
@@ -999,6 +1003,59 @@ public class WorkflowEngineService {
             if (campo == null) {
                 continue;
             }
+
+            ConfiguracionDocumento origConfig = campo.getConfiguracionDocumento();
+            ConfiguracionDocumento cloneConfig = null;
+            if (origConfig != null) {
+                cloneConfig = ConfiguracionDocumento.builder()
+                    .tipoDocumento(origConfig.getTipoDocumento())
+                    .modoColaboracion(origConfig.getModoColaboracion())
+                    .permisosEdicion(origConfig.getPermisosEdicion() != null ? PermisosSeccion.builder()
+                        .departamentos(origConfig.getPermisosEdicion().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosEdicion().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosEdicion().getRoles() != null ? new ArrayList<>(origConfig.getPermisosEdicion().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosEdicion().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosEdicion().getUsuarios()) : null)
+                        .build() : null)
+                    .permisosLectura(origConfig.getPermisosLectura() != null ? PermisosLecturaSeccion.builder()
+                        .departamentos(origConfig.getPermisosLectura().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosLectura().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosLectura().getRoles() != null ? new ArrayList<>(origConfig.getPermisosLectura().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosLectura().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosLectura().getUsuarios()) : null)
+                        .incluirClienteIniciador(origConfig.getPermisosLectura().getIncluirClienteIniciador())
+                        .build() : null)
+                    .permisosDescarga(origConfig.getPermisosDescarga() != null ? PermisosSeccion.builder()
+                        .departamentos(origConfig.getPermisosDescarga().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosDescarga().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosDescarga().getRoles() != null ? new ArrayList<>(origConfig.getPermisosDescarga().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosDescarga().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosDescarga().getUsuarios()) : null)
+                        .build() : null)
+                    .permisosComentarios(origConfig.getPermisosComentarios() != null ? PermisosSeccion.builder()
+                        .departamentos(origConfig.getPermisosComentarios().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosComentarios().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosComentarios().getRoles() != null ? new ArrayList<>(origConfig.getPermisosComentarios().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosComentarios().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosComentarios().getUsuarios()) : null)
+                        .build() : null)
+                    .permisosReemplazo(origConfig.getPermisosReemplazo() != null ? PermisosSeccion.builder()
+                        .departamentos(origConfig.getPermisosReemplazo().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosReemplazo().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosReemplazo().getRoles() != null ? new ArrayList<>(origConfig.getPermisosReemplazo().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosReemplazo().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosReemplazo().getUsuarios()) : null)
+                        .build() : null)
+                    .permisosEliminacion(origConfig.getPermisosEliminacion() != null ? PermisosSeccion.builder()
+                        .departamentos(origConfig.getPermisosEliminacion().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosEliminacion().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosEliminacion().getRoles() != null ? new ArrayList<>(origConfig.getPermisosEliminacion().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosEliminacion().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosEliminacion().getUsuarios()) : null)
+                        .build() : null)
+                    .permisosCompartirInternamente(origConfig.getPermisosCompartirInternamente() != null ? PermisosSeccion.builder()
+                        .departamentos(origConfig.getPermisosCompartirInternamente().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosCompartirInternamente().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosCompartirInternamente().getRoles() != null ? new ArrayList<>(origConfig.getPermisosCompartirInternamente().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosCompartirInternamente().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosCompartirInternamente().getUsuarios()) : null)
+                        .build() : null)
+                    .permisosAdicionales(origConfig.getPermisosAdicionales() != null ? PermisosAdicionalesDocumento.builder()
+                        .puedeDescargar(origConfig.getPermisosAdicionales().getPuedeDescargar())
+                        .puedeComentar(origConfig.getPermisosAdicionales().getPuedeComentar())
+                        .puedeReemplazar(origConfig.getPermisosAdicionales().getPuedeReemplazar())
+                        .puedeEliminar(origConfig.getPermisosAdicionales().getPuedeEliminar())
+                        .puedeCompartirInternamente(origConfig.getPermisosAdicionales().getPuedeCompartirInternamente())
+                        .build() : null)
+                    .build();
+            }
+
             copia.add(CampoFormulario.builder()
                     .campo(campo.getCampo())
                     .tipo(campo.getTipo())
@@ -1009,6 +1066,7 @@ public class WorkflowEngineService {
                     .orden(campo.getOrden())
                     .opciones(campo.getOpciones() != null ? new ArrayList<>(campo.getOpciones()) : null)
                     .validaciones(campo.getValidaciones())
+                    .configuracionDocumento(cloneConfig)
                     .build());
         }
         return copia;

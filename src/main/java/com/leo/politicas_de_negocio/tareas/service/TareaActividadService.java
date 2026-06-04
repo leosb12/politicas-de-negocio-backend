@@ -11,6 +11,7 @@ import com.leo.politicas_de_negocio.notifications.application.WorkflowNotificati
 import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.dto.CompletarTareaRequest;
@@ -188,6 +189,7 @@ public class TareaActividadService {
 
         return TareaDetalleResponse.builder()
                 .id(tarea.getId())
+                .instanciaId(instancia.getId())
                 .estadoTarea(tarea.getEstadoTarea())
                 .fechaCreacion(tarea.getFechaCreacion())
                 .fechaInicio(tarea.getFechaInicio())
@@ -676,6 +678,9 @@ public class TareaActividadService {
 
         List<String> faltantes = new ArrayList<>();
         for (CampoFormulario campo : definicion) {
+            if (campo != null && campo.getTipo() == TipoCampo.DOCUMENTO_COLABORATIVO) {
+                continue;
+            }
             if (campo != null && Boolean.FALSE.equals(campo.getRequerido())) {
                 continue;
             }

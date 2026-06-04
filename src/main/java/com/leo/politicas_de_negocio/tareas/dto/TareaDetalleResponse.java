@@ -16,6 +16,7 @@ import java.util.Map;
 @Builder
 public class TareaDetalleResponse {
     private String id;
+    private String instanciaId;
     private EstadoTarea estadoTarea;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaInicio;

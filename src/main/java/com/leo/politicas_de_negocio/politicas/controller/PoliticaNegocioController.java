@@ -1,12 +1,14 @@
 package com.leo.politicas_de_negocio.politicas.controller;
 
 import com.leo.politicas_de_negocio.politicas.dto.CreatePoliticaRequest;
+import com.leo.politicas_de_negocio.politicas.dto.AuditoriaDocumentalPoliticaResponse;
 import com.leo.politicas_de_negocio.politicas.dto.TramiteDisponibleResponse;
 import com.leo.politicas_de_negocio.politicas.dto.UpdateFlujoRequest;
 import com.leo.politicas_de_negocio.politicas.dto.UpdatePoliticaRequest;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
+import com.leo.politicas_de_negocio.politicas.service.AuditoriaDocumentalPoliticaService;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,7 @@ import java.util.Map;
 public class PoliticaNegocioController {
 
     private final PoliticaNegocioService service;
+    private final AuditoriaDocumentalPoliticaService auditoriaDocumentalService;
 
     @PostMapping
     public ResponseEntity<PoliticaNegocio> crearPolitica(
@@ -52,6 +55,13 @@ public class PoliticaNegocioController {
             @RequestHeader("X-Admin-User-Id") String adminUserId,
             @PathVariable String id) {
         return ResponseEntity.ok(service.obtenerPorId(adminUserId, id));
+    }
+
+    @GetMapping("/{id}/auditoria/documental")
+    public ResponseEntity<AuditoriaDocumentalPoliticaResponse> obtenerAuditoriaDocumental(
+            @RequestHeader("X-Admin-User-Id") String adminUserId,
+            @PathVariable String id) {
+        return ResponseEntity.ok(auditoriaDocumentalService.obtenerAuditoriaDocumental(adminUserId, id));
     }
 
     @PutMapping("/{id}/flujo")

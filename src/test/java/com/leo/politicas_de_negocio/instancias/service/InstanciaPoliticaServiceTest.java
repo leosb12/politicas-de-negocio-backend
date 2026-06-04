@@ -2,6 +2,7 @@ package com.leo.politicas_de_negocio.instancias.service;
 
 import com.leo.politicas_de_negocio.departamentos.model.Departamento;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
+import com.leo.politicas_de_negocio.instancias.dto.CrearInstanciaRequest;
 import com.leo.politicas_de_negocio.instancias.dto.FlujoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.dto.InstanciaDetalleResponse;
 import com.leo.politicas_de_negocio.instancias.dto.MisTramiteCardResponse;
@@ -12,6 +13,7 @@ import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
+import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
@@ -29,6 +31,7 @@ import com.leo.politicas_de_negocio.workflow.service.WorkflowEngineService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.PageImpl;
@@ -41,8 +44,11 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class InstanciaPoliticaServiceTest {
@@ -71,6 +77,9 @@ class InstanciaPoliticaServiceTest {
         @Mock
         private PoliticaNegocioService politicaNegocioService;
 
+    @Mock
+    private com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
+
     private AutoCloseable mocks;
     private InstanciaPoliticaService service;
 
@@ -85,13 +94,96 @@ class InstanciaPoliticaServiceTest {
                 historialService,
                 workflowEngineService,
                 tareaRepository,
-                politicaNegocioService
+                politicaNegocioService,
+                documentoColaborativoMetadataService
         );
     }
 
     @AfterEach
     void tearDown() throws Exception {
         mocks.close();
+    }
+
+    @Test
+    void crearInstanciaDirecta_debeInicializarDocumentosColaborativosAntesDeIniciarWorkflow() {
+        Usuario actor = Usuario.builder()
+                .id("cliente-1")
+                .rol("CLIENTE")
+                .activo(true)
+                .build();
+
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-1")
+                .estado(EstadoPolitica.ACTIVA)
+                .nodos(List.of(Nodo.builder().id("inicio").tipo(TipoNodo.INICIO).build()))
+                .build();
+
+        InstanciaPolitica instanciaGuardada = InstanciaPolitica.builder()
+                .id("inst-1")
+                .politicaId("pol-1")
+                .creadaPor("cliente-1")
+                .estadoInstancia(EstadoInstancia.EN_CURSO)
+                .build();
+
+        CrearInstanciaRequest request = new CrearInstanciaRequest();
+        request.setPoliticaId("pol-1");
+
+        when(usuarioRepository.findByIdAndActivo("cliente-1", true)).thenReturn(Optional.of(actor));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(instanciaRepository.save(any(InstanciaPolitica.class))).thenReturn(instanciaGuardada);
+        when(instanciaRepository.findById("inst-1")).thenReturn(Optional.of(instanciaGuardada));
+
+        service.crearInstanciaDirecta("cliente-1", request);
+
+        InOrder orden = inOrder(
+                instanciaRepository,
+                historialService,
+                documentoColaborativoMetadataService,
+                workflowEngineService
+        );
+        orden.verify(instanciaRepository).save(any(InstanciaPolitica.class));
+        orden.verify(historialService).registrar(
+                eq("inst-1"),
+                eq(null),
+                eq("INSTANCIA_CREADA"),
+                eq("cliente-1"),
+                eq("Instancia creada usando politica pol-1")
+        );
+        orden.verify(documentoColaborativoMetadataService)
+                .crearDocumentosColaborativosIniciales(instanciaGuardada, politica);
+        orden.verify(workflowEngineService).iniciarInstancia(instanciaGuardada, politica, "cliente-1");
+        verify(documentoColaborativoMetadataService)
+                .crearDocumentosColaborativosIniciales(instanciaGuardada, politica);
+    }
+
+    @Test
+    void obtenerInstanciaParaDocumentoColaborativo_debePermitirFuncionarioDeDepartamentoAsignado() {
+        Usuario funcionario = Usuario.builder()
+                .id("func-1")
+                .rol("FUNCIONARIO")
+                .departamentoId("dep-1")
+                .activo(true)
+                .build();
+
+        InstanciaPolitica instancia = InstanciaPolitica.builder()
+                .id("inst-1")
+                .creadaPor("cliente-1")
+                .politicaId("pol-1")
+                .build();
+
+        when(usuarioRepository.findByIdAndActivo("func-1", true)).thenReturn(Optional.of(funcionario));
+        when(instanciaRepository.findById("inst-1")).thenReturn(Optional.of(instancia));
+        when(tareaRepository.existsByInstanciaIdAndAsignadoA("inst-1", "func-1")).thenReturn(false);
+        when(tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId(
+                "inst-1", "USUARIO", "func-1"
+        )).thenReturn(false);
+        when(tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId(
+                "inst-1", "DEPARTAMENTO", "dep-1"
+        )).thenReturn(true);
+
+        InstanciaPolitica result = service.obtenerInstanciaParaDocumentoColaborativo("inst-1", "func-1");
+
+        assertEquals("inst-1", result.getId());
     }
 
     @Test

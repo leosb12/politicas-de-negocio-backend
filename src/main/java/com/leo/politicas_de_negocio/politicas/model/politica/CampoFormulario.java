@@ -15,7 +15,7 @@ import java.util.Map;
 @Builder
 public class CampoFormulario {
     private String campo;
-    private TipoCampo tipo;
+    private String tipo;
     private String etiqueta;
     private Boolean requerido;
     private String placeholder;
@@ -23,4 +23,35 @@ public class CampoFormulario {
     private Integer orden;
     private List<String> opciones;
     private Map<String, Object> validaciones;
+    private ConfiguracionDocumento configuracionDocumento;
+
+    public TipoCampo getTipo() {
+        return TipoCampo.fromString(this.tipo);
+    }
+
+    public String getTipoRaw() {
+        return this.tipo;
+    }
+
+    public void setTipo(TipoCampo tipo) {
+        this.tipo = tipo != null ? tipo.name() : null;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
+
+    public static class CampoFormularioBuilder {
+        private String tipo;
+
+        public CampoFormularioBuilder tipo(TipoCampo tipo) {
+            this.tipo = tipo != null ? tipo.name() : null;
+            return this;
+        }
+
+        public CampoFormularioBuilder tipo(String tipo) {
+            this.tipo = tipo;
+            return this;
+        }
+    }
 }

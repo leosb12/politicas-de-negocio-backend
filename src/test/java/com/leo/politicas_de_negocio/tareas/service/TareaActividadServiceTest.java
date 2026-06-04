@@ -288,6 +288,37 @@ class TareaActividadServiceTest {
     }
 
     @Test
+    void completarTarea_debeIgnorarDocumentoColaborativoObligatorio() {
+        Usuario actor = usuario("u-1", "dep-1");
+        TareaActividad tarea = tarea("t-1", "inst-1", "USUARIO", "u-1", EstadoTarea.PENDIENTE);
+        tarea.setFormularioDefinicion(List.of(
+                CampoFormulario.builder()
+                        .campo("dc")
+                        .tipo(TipoCampo.DOCUMENTO_COLABORATIVO)
+                        .requerido(true)
+                        .build()
+        ));
+        InstanciaPolitica instancia = instancia("inst-1", "pol-1", 1L);
+        PoliticaNegocio politica = politica("pol-1", EstadoPolitica.ACTIVA, 1L);
+
+        when(usuarioRepository.findByIdAndActivo("u-1", true)).thenReturn(Optional.of(actor));
+        when(tareaRepository.findById("t-1")).thenReturn(Optional.of(tarea));
+        when(instanciaRepository.findById("inst-1")).thenReturn(Optional.of(instancia));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(tareaRepository.save(any(TareaActividad.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(instanciaRepository.save(any(InstanciaPolitica.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TareaActividad result = service.completarTarea("u-1", "t-1", new CompletarTareaRequest());
+
+        assertEquals(EstadoTarea.COMPLETADA, result.getEstadoTarea());
+        verify(tareaRepository).save(argThat(saved ->
+                saved != null
+                        && saved.getEstadoTarea() == EstadoTarea.COMPLETADA
+                        && saved.getFormularioRespuesta().isEmpty()
+        ));
+    }
+
+    @Test
     void completarTarea_debeBloquearSiPoliticaCambioVersion() {
         Usuario actor = usuario("u-1", "dep-1");
         TareaActividad tarea = tarea("t-1", "inst-1", "USUARIO", "u-1", EstadoTarea.PENDIENTE);

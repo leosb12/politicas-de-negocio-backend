@@ -10,8 +10,13 @@ import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.colaboracion.model.EventoColaboracionAplicado;
 import com.leo.politicas_de_negocio.colaboracion.model.SnapshotColaboracionPolitica;
 import com.leo.politicas_de_negocio.colaboracion.model.TipoEventoColaboracion;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
+import com.leo.politicas_de_negocio.politicas.model.politica.ConfiguracionDocumento;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosAdicionalesDocumento;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosLecturaSeccion;
+import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
 import com.leo.politicas_de_negocio.colaboracion.repository.EventoColaboracionAplicadoRepository;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
@@ -685,7 +690,7 @@ public class PoliticaColaboracionService {
                 .posY(nodo.getPosY())
                 .version(nodo.getVersion())
                 .fechaActualizacion(nodo.getFechaActualizacion())
-                .formulario(nodo.getFormulario() != null ? new ArrayList<>(nodo.getFormulario()) : null)
+                .formulario(clonarFormulario(nodo.getFormulario()))
                 .condiciones(nodo.getCondiciones() != null ? new ArrayList<>(nodo.getCondiciones()) : null)
                 .build();
     }
@@ -709,11 +714,105 @@ public class PoliticaColaboracionService {
                 .version(nuevaVersion)
                 .fechaActualizacion(now)
                 .formulario(patch.getFormulario() != null
-                        ? new ArrayList<>(patch.getFormulario())
-                        : (base.getFormulario() != null ? new ArrayList<>(base.getFormulario()) : null))
+                        ? clonarFormulario(patch.getFormulario())
+                        : clonarFormulario(base.getFormulario()))
                 .condiciones(patch.getCondiciones() != null
                         ? new ArrayList<>(patch.getCondiciones())
                         : (base.getCondiciones() != null ? new ArrayList<>(base.getCondiciones()) : null))
+                .build();
+    }
+
+    private List<CampoFormulario> clonarFormulario(List<CampoFormulario> formulario) {
+        if (formulario == null) {
+            return null;
+        }
+
+        List<CampoFormulario> copia = new ArrayList<>();
+        for (CampoFormulario campo : formulario) {
+            if (campo == null) {
+                continue;
+            }
+
+            copia.add(CampoFormulario.builder()
+                    .campo(campo.getCampo())
+                    .tipo(campo.getTipoRaw())
+                    .etiqueta(campo.getEtiqueta())
+                    .requerido(campo.getRequerido())
+                    .placeholder(campo.getPlaceholder())
+                    .ayuda(campo.getAyuda())
+                    .orden(campo.getOrden())
+                    .opciones(campo.getOpciones() != null ? new ArrayList<>(campo.getOpciones()) : null)
+                    .validaciones(campo.getValidaciones())
+                    .configuracionDocumento(clonarConfiguracionDocumento(campo.getConfiguracionDocumento()))
+                    .build());
+        }
+        return copia;
+    }
+
+    private ConfiguracionDocumento clonarConfiguracionDocumento(ConfiguracionDocumento config) {
+        if (config == null) {
+            return null;
+        }
+
+        return ConfiguracionDocumento.builder()
+                .tipoDocumento(config.getTipoDocumento())
+                .modoColaboracion(config.getModoColaboracion())
+                .permisosEdicion(clonarPermisosSeccion(config.getPermisosEdicion()))
+                .permisosLectura(clonarPermisosLectura(config.getPermisosLectura()))
+                .permisosDescarga(clonarPermisosSeccion(config.getPermisosDescarga()))
+                .permisosComentarios(clonarPermisosSeccion(config.getPermisosComentarios()))
+                .permisosReemplazo(clonarPermisosSeccion(config.getPermisosReemplazo()))
+                .permisosEliminacion(clonarPermisosSeccion(config.getPermisosEliminacion()))
+                .permisosCompartirInternamente(clonarPermisosSeccion(config.getPermisosCompartirInternamente()))
+                .permisosAdicionales(clonarPermisosAdicionales(config.getPermisosAdicionales()))
+                .build();
+    }
+
+    private PermisosSeccion clonarPermisosSeccion(PermisosSeccion permisos) {
+        if (permisos == null) {
+            return PermisosSeccion.builder()
+                    .departamentos(new ArrayList<>())
+                    .roles(new ArrayList<>())
+                    .usuarios(new ArrayList<>())
+                    .build();
+        }
+
+        return PermisosSeccion.builder()
+                .departamentos(permisos.getDepartamentos() != null ? new ArrayList<>(permisos.getDepartamentos()) : new ArrayList<>())
+                .roles(permisos.getRoles() != null ? new ArrayList<>(permisos.getRoles()) : new ArrayList<>())
+                .usuarios(permisos.getUsuarios() != null ? new ArrayList<>(permisos.getUsuarios()) : new ArrayList<>())
+                .build();
+    }
+
+    private PermisosLecturaSeccion clonarPermisosLectura(PermisosLecturaSeccion permisos) {
+        if (permisos == null) {
+            return PermisosLecturaSeccion.builder()
+                    .departamentos(new ArrayList<>())
+                    .roles(new ArrayList<>())
+                    .usuarios(new ArrayList<>())
+                    .incluirClienteIniciador(false)
+                    .build();
+        }
+
+        return PermisosLecturaSeccion.builder()
+                .departamentos(permisos.getDepartamentos() != null ? new ArrayList<>(permisos.getDepartamentos()) : new ArrayList<>())
+                .roles(permisos.getRoles() != null ? new ArrayList<>(permisos.getRoles()) : new ArrayList<>())
+                .usuarios(permisos.getUsuarios() != null ? new ArrayList<>(permisos.getUsuarios()) : new ArrayList<>())
+                .incluirClienteIniciador(Boolean.TRUE.equals(permisos.getIncluirClienteIniciador()))
+                .build();
+    }
+
+    private PermisosAdicionalesDocumento clonarPermisosAdicionales(PermisosAdicionalesDocumento permisos) {
+        if (permisos == null) {
+            return null;
+        }
+
+        return PermisosAdicionalesDocumento.builder()
+                .puedeDescargar(permisos.getPuedeDescargar())
+                .puedeComentar(permisos.getPuedeComentar())
+                .puedeReemplazar(permisos.getPuedeReemplazar())
+                .puedeEliminar(permisos.getPuedeEliminar())
+                .puedeCompartirInternamente(permisos.getPuedeCompartirInternamente())
                 .build();
     }
 
