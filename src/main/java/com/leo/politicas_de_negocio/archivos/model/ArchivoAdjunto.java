@@ -34,6 +34,11 @@ public class ArchivoAdjunto {
     private String actividadId;
     private String tareaId;
     private String usuarioId;
+    private String campoId;
+    private String tramiteId;
+    private String clienteId;
+    private String politicaId;
+    private String nodoId;
 
     private EstadoArchivo estado;
     private String descripcion;

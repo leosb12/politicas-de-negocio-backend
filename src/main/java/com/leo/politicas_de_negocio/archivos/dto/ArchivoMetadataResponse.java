@@ -19,12 +19,23 @@ public class ArchivoMetadataResponse {
     private Long tamanoBytes;
     private LocalDateTime fechaSubida;
     private String subidoPor;
+    private String subidoPorNombre;
     private String instanciaId;
     private String actividadId;
     private String tareaId;
     private String usuarioId;
+    private String campoId;
+    private String tramiteId;
+    private String clienteId;
+    private String politicaId;
+    private String nodoId;
     private EstadoArchivo estado;
     private String descripcion;
     private String urlAcceso;
     private String bucket;
+    private Boolean puedeVer;
+    private Boolean puedeDescargar;
+    private Boolean puedeEditar;
+    private Boolean puedeReemplazar;
+    private Boolean puedeEliminar;
 }

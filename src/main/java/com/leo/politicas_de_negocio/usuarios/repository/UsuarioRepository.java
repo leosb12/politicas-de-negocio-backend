@@ -22,5 +22,7 @@ public interface UsuarioRepository extends MongoRepository<Usuario, String> {
 
     List<Usuario> findAllByDepartamentoId(String departamentoId);
 
+    List<Usuario> findAllByActivoOrderByNombreAsc(Boolean activo);
+
     List<Usuario> findAllByRolIgnoreCaseAndActivo(String rol, Boolean activo);
 }

@@ -13,4 +13,6 @@ public interface DepartamentoRepository extends MongoRepository<Departamento, St
 	boolean existsByNombreIgnoreCase(String nombre);
 
 	List<Departamento> findAllByOrderByNombreAsc();
+
+	List<Departamento> findAllByActivoTrueOrderByNombreAsc();
 }

@@ -13,4 +13,6 @@ public interface RolRepository extends MongoRepository<Rol, String> {
     boolean existsByNombreIgnoreCase(String nombre);
 
     List<Rol> findAllByOrderByNombreAsc();
+
+    List<Rol> findAllByActivoTrueOrderByNombreAsc();
 }
