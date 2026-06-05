@@ -2,6 +2,10 @@ package com.leo.politicas_de_negocio.documents.controller;
 
 import com.leo.politicas_de_negocio.documents.dto.DocumentoColaborativoPermisosDto;
 import com.leo.politicas_de_negocio.documents.model.DocumentoColaborativoMetadata;
+import com.leo.politicas_de_negocio.documents.permissions.dto.DocumentAuditEventRequest;
+import com.leo.politicas_de_negocio.documents.permissions.model.enums.DocumentAuditAction;
+import com.leo.politicas_de_negocio.documents.permissions.model.enums.DocumentAuditResult;
+import com.leo.politicas_de_negocio.documents.permissions.service.DocumentAuditService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoPermisoService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoS3Service;
@@ -12,6 +16,7 @@ import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +59,7 @@ public class DocumentoColaborativoEditorController {
     private final DocumentoColaborativoMetadataService metadataService;
     private final DocumentoColaborativoPermisoService permisoService;
     private final DocumentoColaborativoS3Service s3Service;
+    private final DocumentAuditService auditService;
     private final UsuarioRepository usuarioRepository;
     private final InstanciaPoliticaRepository instanciaPoliticaRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -78,7 +84,9 @@ public class DocumentoColaborativoEditorController {
     public ResponseEntity<String> obtenerMobileViewer(
             @PathVariable String documentoId,
             @RequestHeader(value = "X-User-Id", required = false) String userId,
-            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId) {
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
+            HttpServletRequest servletRequest) {
 
         String actorUserId = resolverActorUserId(userId, adminUserId);
         Usuario usuario = usuarioRepository.findById(actorUserId)
@@ -91,12 +99,13 @@ public class DocumentoColaborativoEditorController {
         if (!permisos.isPuedeLeer()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para abrir este documento colaborativo");
         }
+        registrarVisualizacion(metadata, instancia, usuario, userAgent, servletRequest, "Documento abierto desde visor movil OnlyOffice");
 
         String fileType = resolverFileType(metadata.getTipoDocumento());
         String documentType = resolverDocumentType(metadata.getTipoDocumento());
         String documentKey = resolverDocumentKey(metadata);
         String titulo = resolverTitulo(metadata.getNombreDocumento(), fileType);
-        String sourceUrl = construirSourceUrl(metadata);
+        String sourceUrl = construirSourceUrl(metadata, usuario.getId());
         String callbackUrl = construirCallbackUrl(metadata.getDocumentoId());
         String serverUrl = limpiarUrlBase(documentServerUrl);
 
@@ -202,7 +211,9 @@ public class DocumentoColaborativoEditorController {
     public ResponseEntity<Map<String, Object>> obtenerEditorConfig(
             @PathVariable String documentoId,
             @RequestHeader(value = "X-User-Id", required = false) String userId,
-            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId) {
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
+            HttpServletRequest servletRequest) {
 
         String actorUserId = resolverActorUserId(userId, adminUserId);
         Usuario usuario = usuarioRepository.findById(actorUserId)
@@ -220,12 +231,13 @@ public class DocumentoColaborativoEditorController {
         if (!permisos.isPuedeLeer()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para abrir este documento colaborativo");
         }
+        registrarVisualizacion(metadata, instancia, usuario, userAgent, servletRequest, "Documento abierto desde editor OnlyOffice");
 
         String fileType = resolverFileType(metadata.getTipoDocumento());
         String documentType = resolverDocumentType(metadata.getTipoDocumento());
         String documentKey = resolverDocumentKey(metadata);
         String titulo = resolverTitulo(metadata.getNombreDocumento(), fileType);
-        String sourceUrl = construirSourceUrl(metadata);
+        String sourceUrl = construirSourceUrl(metadata, usuario.getId());
         String callbackUrl = construirCallbackUrl(metadata.getDocumentoId());
 
         log.info("GENERANDO ONLYOFFICE CONFIG");
@@ -298,23 +310,17 @@ public class DocumentoColaborativoEditorController {
             @PathVariable String documentoId,
             @RequestHeader(value = "X-User-Id", required = false) String userIdHeader,
             @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserIdHeader,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
             @RequestParam(value = "userId", required = false) String userIdParam,
-            @RequestParam(value = "accessToken", required = false) String accessToken) {
+            @RequestParam(value = "accessToken", required = false) String accessToken,
+            HttpServletRequest servletRequest) {
 
         log.info("GET DOCUMENTO COLABORATIVO SOURCE documentoId={}", documentoId);
         DocumentoColaborativoMetadata metadata = obtenerMetadataValida(documentoId);
         log.info("Documento source encontrado=true documentoId={}, s3Key={}", documentoId, metadata.getS3Key());
 
-        if (sourcePublicAccessEnabled) {
-            log.info("Acceso source autorizado por onlyoffice.source-public-access-enabled=true");
-        } else if (accessToken != null && !accessToken.isBlank()) {
-            if (!validarSourceToken(metadata, accessToken)) {
-                log.warn("Source accessToken invalido para documentoId={}", documentoId);
-                throw new ApiException(HttpStatus.FORBIDDEN, "Token interno de descarga invalido");
-            }
-            log.info("Acceso source autorizado por accessToken interno");
-        } else {
-            String actorUserId = resolverActorUserIdParaSource(userIdHeader, adminUserIdHeader, userIdParam);
+        String actorUserId = primerValor(userIdHeader, adminUserIdHeader, userIdParam);
+        if (actorUserId != null) {
             Usuario usuario = usuarioRepository.findById(actorUserId)
                     .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
             InstanciaPolitica instancia = obtenerInstancia(metadata);
@@ -329,7 +335,18 @@ public class DocumentoColaborativoEditorController {
             if (!permisos.isPuedeLeer()) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso de lectura para este documento colaborativo");
             }
-            log.info("Acceso source autorizado por permisos de usuario: usuarioId={}", usuario.getId());
+            registrarVisualizacion(metadata, instancia, usuario, userAgent, servletRequest, "Archivo fuente cargado por OnlyOffice");
+            log.info("Acceso source autorizado y auditado por usuario: usuarioId={}", usuario.getId());
+        } else if (sourcePublicAccessEnabled) {
+            log.info("Acceso source autorizado por onlyoffice.source-public-access-enabled=true sin usuario auditable");
+        } else if (accessToken != null && !accessToken.isBlank()) {
+            if (!validarSourceToken(metadata, accessToken)) {
+                log.warn("Source accessToken invalido para documentoId={}", documentoId);
+                throw new ApiException(HttpStatus.FORBIDDEN, "Token interno de descarga invalido");
+            }
+            log.info("Acceso source autorizado por accessToken interno");
+        } else {
+            resolverActorUserIdParaSource(userIdHeader, adminUserIdHeader, userIdParam);
         }
 
         byte[] content;
@@ -440,15 +457,18 @@ public class DocumentoColaborativoEditorController {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No se encontro la instancia del tramite"));
     }
 
-    private String construirSourceUrl(DocumentoColaborativoMetadata metadata) {
+    private String construirSourceUrl(DocumentoColaborativoMetadata metadata, String userId) {
         String baseUrl = limpiarUrlBase(callbackBaseUrl)
                 + "/api/documentos-colaborativos/"
                 + metadata.getDocumentoId()
                 + "/source";
-        if (sourcePublicAccessEnabled) {
-            return baseUrl;
+        String userQueryParam = userId != null && !userId.isBlank()
+                ? "userId=" + encode(userId.trim())
+                : null;
+        if (sourcePublicAccessEnabled || userQueryParam == null) {
+            return userQueryParam == null ? baseUrl : baseUrl + "?" + userQueryParam;
         }
-        return baseUrl + "?accessToken=" + encode(generarSourceToken(metadata));
+        return baseUrl + "?" + userQueryParam + "&accessToken=" + encode(generarSourceToken(metadata));
     }
 
     private String construirCallbackUrl(String documentoId) {
@@ -692,6 +712,45 @@ public class DocumentoColaborativoEditorController {
         response.put("message", message);
         log.error("ONLYOFFICE CALLBACK ERROR status={}, message={}", status, message);
         return ResponseEntity.ok(response);
+    }
+
+    private void registrarVisualizacion(
+            DocumentoColaborativoMetadata metadata,
+            InstanciaPolitica instancia,
+            Usuario usuario,
+            String userAgent,
+            HttpServletRequest servletRequest,
+            String detalle
+    ) {
+        DocumentAuditEventRequest request = new DocumentAuditEventRequest();
+        request.setDocumentoId(metadata.getDocumentoId());
+        request.setCampoId(metadata.getCampoFormularioId());
+        request.setTramiteId(metadata.getTramiteId());
+        request.setClienteId(metadata.getClienteId());
+        request.setPoliticaId(instancia.getPoliticaId());
+        request.setNodoId(metadata.getNodoId());
+        request.setAccion(DocumentAuditAction.VISUALIZAR);
+        request.setUsuarioId(usuario.getId());
+        request.setUsuarioNombre(resolverNombreUsuario(usuario));
+        request.setRol(usuario.getRol());
+        request.setDepartamentoId(usuario.getDepartamentoId());
+        request.setIp(resolverIp(servletRequest));
+        request.setUserAgent(userAgent);
+        request.setDetalle(detalle);
+        request.setResultado(DocumentAuditResult.PERMITIDO);
+        auditService.registrarEventoAuditoria(request);
+    }
+
+    private String resolverIp(HttpServletRequest request) {
+        if (request == null) {
+            return null;
+        }
+        String forwarded = primerValor(request.getHeader("X-Forwarded-For"));
+        if (forwarded != null) {
+            int comma = forwarded.indexOf(',');
+            return comma >= 0 ? forwarded.substring(0, comma).trim() : forwarded;
+        }
+        return primerValor(request.getRemoteAddr());
     }
 
     private String limpiarUrlBase(String value) {
