@@ -760,11 +760,14 @@ public class PoliticaColaboracionService {
                 .permisosEdicion(clonarPermisosSeccion(config.getPermisosEdicion()))
                 .permisosLectura(clonarPermisosLectura(config.getPermisosLectura()))
                 .permisosDescarga(clonarPermisosSeccion(config.getPermisosDescarga()))
+                .permisosImpresion(clonarPermisosSeccion(config.getPermisosImpresion()))
                 .permisosComentarios(clonarPermisosSeccion(config.getPermisosComentarios()))
                 .permisosReemplazo(clonarPermisosSeccion(config.getPermisosReemplazo()))
                 .permisosEliminacion(clonarPermisosSeccion(config.getPermisosEliminacion()))
                 .permisosCompartirInternamente(clonarPermisosSeccion(config.getPermisosCompartirInternamente()))
                 .permisosAdicionales(clonarPermisosAdicionales(config.getPermisosAdicionales()))
+                .auditarCambios(config.getAuditarCambios())
+                .controlVersionesHabilitado(config.getControlVersionesHabilitado())
                 .build();
     }
 

@@ -2,6 +2,7 @@ package com.leo.politicas_de_negocio.documents.controller;
 
 import com.leo.politicas_de_negocio.documents.dto.DocumentoColaborativoPermisosDto;
 import com.leo.politicas_de_negocio.documents.model.DocumentoColaborativoMetadata;
+import com.leo.politicas_de_negocio.documents.model.DocumentoVersion;
 import com.leo.politicas_de_negocio.documents.permissions.dto.DocumentAuditEventRequest;
 import com.leo.politicas_de_negocio.documents.permissions.model.enums.DocumentAuditAction;
 import com.leo.politicas_de_negocio.documents.permissions.model.enums.DocumentAuditResult;
@@ -9,6 +10,7 @@ import com.leo.politicas_de_negocio.documents.permissions.service.DocumentAuditS
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoPermisoService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoS3Service;
+import com.leo.politicas_de_negocio.documents.service.DocumentoVersionService;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
@@ -22,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -59,6 +62,7 @@ public class DocumentoColaborativoEditorController {
     private final DocumentoColaborativoMetadataService metadataService;
     private final DocumentoColaborativoPermisoService permisoService;
     private final DocumentoColaborativoS3Service s3Service;
+    private final DocumentoVersionService versionService;
     private final DocumentAuditService auditService;
     private final UsuarioRepository usuarioRepository;
     private final InstanciaPoliticaRepository instanciaPoliticaRepository;
@@ -99,14 +103,16 @@ public class DocumentoColaborativoEditorController {
         if (!permisos.isPuedeLeer()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para abrir este documento colaborativo");
         }
-        registrarVisualizacion(metadata, instancia, usuario, userAgent, servletRequest, "Documento abierto desde visor movil OnlyOffice");
+        registrarEventoDocumento(metadata, instancia, usuario, null, DocumentAuditAction.VISUALIZAR,
+                DocumentAuditResult.PERMITIDO, userAgent, servletRequest, "Documento abierto desde visor movil OnlyOffice");
 
         String fileType = resolverFileType(metadata.getTipoDocumento());
         String documentType = resolverDocumentType(metadata.getTipoDocumento());
         String documentKey = resolverDocumentKey(metadata);
         String titulo = resolverTitulo(metadata.getNombreDocumento(), fileType);
         String sourceUrl = construirSourceUrl(metadata, usuario.getId());
-        String callbackUrl = construirCallbackUrl(metadata.getDocumentoId());
+        String callbackUrl = construirCallbackUrl(metadata.getDocumentoId(), usuario.getId());
+        String auditEventUrl = construirAuditEventUrl(metadata.getDocumentoId());
         String serverUrl = limpiarUrlBase(documentServerUrl);
 
         boolean puedeEditar = permisos.isPuedeEditar();
@@ -133,6 +139,14 @@ public class DocumentoColaborativoEditorController {
             "<script src=\"" + serverUrl + "/web-apps/apps/api/documents/api.js\"></script>" +
             "<script>" +
             "var docEditor;" +
+            "var auditEditPending=false;" +
+            "function auditOnlyOffice(action,detail){" +
+            "  try{fetch('" + auditEventUrl + "',{" +
+            "    method:'POST'," +
+            "    headers:{'Content-Type':'application/json','X-User-Id':'" + usuario.getId() + "'}," +
+            "    body:JSON.stringify({accion:action,detalle:detail})" +
+            "  }).catch(function(){});}catch(e){}" +
+            "}" +
             "function initEditor(){" +
             "  document.getElementById('placeholder').style.display='none';" +
             "  var config={" +
@@ -146,7 +160,8 @@ public class DocumentoColaborativoEditorController {
             "        download:" + permisos.isPuedeDescargar() + "," +
             "        print:" + permisos.isPuedeImprimir() + "," +
             "        copy:" + permisos.isPuedeDescargar() + "," +
-            "        comment:" + permisos.isPuedeComentar() +
+            "        comment:" + permisos.isPuedeComentar() + "," +
+            "        review:" + Boolean.TRUE.equals(metadata.getAuditarCambios()) +
             "      }" +
             "    }," +
             "    documentType:'" + documentType + "'," +
@@ -155,10 +170,19 @@ public class DocumentoColaborativoEditorController {
             "      callbackUrl:'" + callbackUrl + "'," +
             "      user:{id:'" + usuario.getId() + "',name:'" + resolverNombreUsuario(usuario).replace("'", "\\'") + "'}," +
             "      coEditing:{mode:'fast',change:true}," +
-            "      customization:{autosave:true,forcesave:false,mobile:true,uiTheme:'theme-dark'}" +
+            "      customization:{autosave:true,forcesave:true,mobile:true,uiTheme:'theme-dark'" +
+            (Boolean.TRUE.equals(metadata.getAuditarCambios())
+                    ? ",review:{trackChanges:true,reviewDisplay:'markup',showReviewChanges:false},trackChanges:true"
+                    : "") +
+            "}" +
+            "    }," +
+            "    events:{" +
+            "      onDocumentStateChange:function(e){if(e&&e.data&&!auditEditPending){auditEditPending=true;auditOnlyOffice('EDITAR','Documento modificado en OnlyOffice');setTimeout(function(){auditEditPending=false;},3000);}}," +
+            "      onDownloadAs:function(){auditOnlyOffice('DESCARGAR','Documento descargado desde OnlyOffice');}," +
+            "      onRequestPrint:function(){auditOnlyOffice('IMPRIMIR','Documento enviado a impresion desde OnlyOffice');}" +
             "    }" +
             "  };" +
-            (jwtEnabled ? "  config.token='" + generarJwtOnlyOffice(buildConfigMap(fileType, documentKey, titulo, sourceUrl, permisos, documentType, editorMode, callbackUrl, usuario)) + "';" : "") +
+            (jwtEnabled ? "  config.token='" + generarJwtOnlyOffice(buildConfigMap(fileType, documentKey, titulo, sourceUrl, permisos, documentType, editorMode, callbackUrl, usuario, Boolean.TRUE.equals(metadata.getAuditarCambios()))) + "';" : "") +
             "  docEditor=new DocsAPI.DocEditor('editor',config);" +
             "}" +
             "if(typeof DocsAPI!=='undefined'){initEditor();}else{" +
@@ -178,7 +202,7 @@ public class DocumentoColaborativoEditorController {
     private Map<String, Object> buildConfigMap(
             String fileType, String documentKey, String titulo, String sourceUrl,
             DocumentoColaborativoPermisosDto permisos, String documentType,
-            String editorMode, String callbackUrl, Usuario usuario) {
+            String editorMode, String callbackUrl, Usuario usuario, boolean auditarCambios) {
         Map<String, Object> documentMap = new LinkedHashMap<>();
         documentMap.put("fileType", fileType);
         documentMap.put("key", documentKey);
@@ -190,6 +214,7 @@ public class DocumentoColaborativoEditorController {
         docPerms.put("print", permisos.isPuedeImprimir());
         docPerms.put("copy", permisos.isPuedeDescargar());
         docPerms.put("comment", permisos.isPuedeComentar());
+        docPerms.put("review", auditarCambios);
         documentMap.put("permissions", docPerms);
 
         Map<String, Object> editorConfig = new LinkedHashMap<>();
@@ -199,6 +224,16 @@ public class DocumentoColaborativoEditorController {
         userMap.put("id", usuario.getId());
         userMap.put("name", resolverNombreUsuario(usuario));
         editorConfig.put("user", userMap);
+        if (auditarCambios) {
+            Map<String, Object> customization = new LinkedHashMap<>();
+            Map<String, Object> review = new LinkedHashMap<>();
+            review.put("trackChanges", true);
+            review.put("reviewDisplay", "markup");
+            review.put("showReviewChanges", false);
+            customization.put("review", review);
+            customization.put("trackChanges", true);
+            editorConfig.put("customization", customization);
+        }
 
         Map<String, Object> config = new LinkedHashMap<>();
         config.put("document", documentMap);
@@ -231,14 +266,15 @@ public class DocumentoColaborativoEditorController {
         if (!permisos.isPuedeLeer()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para abrir este documento colaborativo");
         }
-        registrarVisualizacion(metadata, instancia, usuario, userAgent, servletRequest, "Documento abierto desde editor OnlyOffice");
+        registrarEventoDocumento(metadata, instancia, usuario, null, DocumentAuditAction.VISUALIZAR,
+                DocumentAuditResult.PERMITIDO, userAgent, servletRequest, "Documento abierto desde editor OnlyOffice");
 
         String fileType = resolverFileType(metadata.getTipoDocumento());
         String documentType = resolverDocumentType(metadata.getTipoDocumento());
         String documentKey = resolverDocumentKey(metadata);
         String titulo = resolverTitulo(metadata.getNombreDocumento(), fileType);
         String sourceUrl = construirSourceUrl(metadata, usuario.getId());
-        String callbackUrl = construirCallbackUrl(metadata.getDocumentoId());
+        String callbackUrl = construirCallbackUrl(metadata.getDocumentoId(), usuario.getId());
 
         log.info("GENERANDO ONLYOFFICE CONFIG");
         log.info("documentoId={}", documentoId);
@@ -268,6 +304,7 @@ public class DocumentoColaborativoEditorController {
         documentPermissions.put("print", permisos.isPuedeImprimir());
         documentPermissions.put("copy", permisos.isPuedeDescargar());
         documentPermissions.put("comment", permisos.isPuedeComentar());
+        documentPermissions.put("review", Boolean.TRUE.equals(metadata.getAuditarCambios()));
         documentMap.put("permissions", documentPermissions);
 
         Map<String, Object> editorConfig = new LinkedHashMap<>();
@@ -286,6 +323,15 @@ public class DocumentoColaborativoEditorController {
 
         Map<String, Object> customization = new LinkedHashMap<>();
         customization.put("autosave", true);
+        customization.put("forcesave", true);
+        if (Boolean.TRUE.equals(metadata.getAuditarCambios())) {
+            Map<String, Object> review = new LinkedHashMap<>();
+            review.put("trackChanges", true);
+            review.put("reviewDisplay", "markup");
+            review.put("showReviewChanges", false);
+            customization.put("review", review);
+            customization.put("trackChanges", true);
+        }
         editorConfig.put("customization", customization);
 
         Map<String, Object> config = new LinkedHashMap<>();
@@ -302,7 +348,185 @@ public class DocumentoColaborativoEditorController {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("documentServerUrl", limpiarUrlBase(documentServerUrl));
         response.put("config", config);
+        response.put("auditEventUrl", construirAuditEventUrl(metadata.getDocumentoId()));
+        response.put("audit", construirAuditInstructions(metadata.getDocumentoId(), usuario.getId()));
+        response.put("controlVersionesHabilitado", Boolean.TRUE.equals(metadata.getControlVersionesHabilitado()));
+        response.put("versionActual", metadata.getVersionActual() != null ? metadata.getVersionActual() : 0);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{documentoId}/audit-event")
+    public ResponseEntity<Map<String, Object>> registrarEventoOnlyOffice(
+            @PathVariable String documentoId,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
+            @RequestBody Map<String, Object> body,
+            HttpServletRequest servletRequest) {
+
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        Usuario usuario = usuarioRepository.findById(actorUserId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        DocumentoColaborativoMetadata metadata = obtenerMetadataValida(documentoId);
+        InstanciaPolitica instancia = obtenerInstancia(metadata);
+        DocumentAuditAction accion = resolverAuditAction(body != null ? body.get("accion") : null);
+        String detalle = body != null && body.get("detalle") instanceof String value ? value : detallePorDefecto(accion);
+
+        DocumentoColaborativoPermisosDto permisos = permisoService.evaluarPermisos(
+                metadata, usuario, usuario.getRol(), usuario.getDepartamentoId(), instancia);
+        if (!permisoSatisfecho(permisos, accion)) {
+            registrarEventoDocumento(metadata, instancia, usuario, null, accion, DocumentAuditResult.DENEGADO,
+                    userAgent, servletRequest, "Accion documental denegada desde OnlyOffice: " + accion);
+            throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para " + accion.name() + " este documento colaborativo");
+        }
+
+        registrarEventoDocumento(metadata, instancia, usuario, null, accion, DocumentAuditResult.PERMITIDO,
+                userAgent, servletRequest, detalle);
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @GetMapping("/{documentoId}/download")
+    public ResponseEntity<byte[]> descargarDocumentoAuditado(
+            @PathVariable String documentoId,
+            @RequestParam(value = "format", required = false, defaultValue = "original") String format,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
+            HttpServletRequest servletRequest) {
+
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        Usuario usuario = usuarioRepository.findById(actorUserId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        DocumentoColaborativoMetadata metadata = obtenerMetadataValida(documentoId);
+        InstanciaPolitica instancia = obtenerInstancia(metadata);
+
+        DocumentoColaborativoPermisosDto permisos = permisoService.evaluarPermisos(
+                metadata, usuario, usuario.getRol(), usuario.getDepartamentoId(), instancia);
+        if (!permisos.isPuedeDescargar()) {
+            registrarEventoDocumento(metadata, instancia, usuario, null, DocumentAuditAction.DESCARGAR,
+                    DocumentAuditResult.DENEGADO, userAgent, servletRequest, "Descarga documental denegada");
+            throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para descargar este documento colaborativo");
+        }
+
+        String normalizedFormat = normalizarFormatoDescarga(format);
+        String originalFileType = resolverFileType(metadata.getTipoDocumento());
+        byte[] content;
+        String outputFileType;
+        if ("pdf".equals(normalizedFormat)) {
+            content = convertirDocumento(metadata, originalFileType, "pdf");
+            outputFileType = "pdf";
+        } else {
+            try {
+                content = s3Service.descargarArchivo(metadata.getS3Key());
+            } catch (Exception ex) {
+                log.error("Error leyendo archivo colaborativo para descarga: documentoId={}, s3Key={}", documentoId, metadata.getS3Key(), ex);
+                throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Error leyendo archivo para descarga");
+            }
+            outputFileType = originalFileType;
+        }
+
+        registrarEventoDocumento(metadata, instancia, usuario, null, DocumentAuditAction.DESCARGAR,
+                DocumentAuditResult.PERMITIDO, userAgent, servletRequest,
+                "Documento descargado en formato " + outputFileType.toUpperCase(Locale.ROOT));
+
+        String filename = resolverTitulo(metadata.getNombreDocumento(), outputFileType).replace("\"", "");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .contentType(MediaType.parseMediaType(resolverContentTypeDescarga(outputFileType)))
+                .contentLength(content.length)
+                .body(content);
+    }
+
+    @GetMapping("/{documentoId}/versiones")
+    public ResponseEntity<List<DocumentoVersion>> listarVersiones(
+            @PathVariable String documentoId,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId) {
+
+        PermisoContext context = validarPermisoDocumento(documentoId, userId, adminUserId);
+        if (!context.permisos().isPuedeLeer()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para consultar versiones de este documento");
+        }
+        if (!Boolean.TRUE.equals(context.metadata().getControlVersionesHabilitado())) {
+            return ResponseEntity.ok(List.of());
+        }
+        return ResponseEntity.ok(versionService.listarVersiones(context.metadata()));
+    }
+
+    @GetMapping("/{documentoId}/versiones/{numeroVersion}/download")
+    public ResponseEntity<byte[]> descargarVersion(
+            @PathVariable String documentoId,
+            @PathVariable Integer numeroVersion,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent,
+            HttpServletRequest servletRequest) {
+
+        PermisoContext context = validarPermisoDocumento(documentoId, userId, adminUserId);
+        if (!context.permisos().isPuedeDescargar()) {
+            registrarEventoDocumento(context.metadata(), context.instancia(), context.usuario(), null, DocumentAuditAction.DESCARGAR,
+                    DocumentAuditResult.DENEGADO, userAgent, servletRequest, "Descarga de version documental denegada");
+            throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para descargar versiones de este documento");
+        }
+
+        DocumentoVersion version = versionService.buscarVersion(context.metadata(), numeroVersion)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Version del documento no encontrada"));
+        byte[] content = s3Service.descargarArchivo(version.getS3KeyVersion());
+        String fileType = resolverFileTypeDesdeS3Key(version.getS3KeyVersion(), resolverFileType(context.metadata().getTipoDocumento()));
+        String filename = (version.getNombreArchivo() == null || version.getNombreArchivo().isBlank())
+                ? resolverTitulo(context.metadata().getNombreDocumento(), fileType)
+                : version.getNombreArchivo();
+
+        registrarEventoDocumento(context.metadata(), context.instancia(), context.usuario(), null, DocumentAuditAction.DESCARGAR,
+                DocumentAuditResult.PERMITIDO, userAgent, servletRequest,
+                "Version " + numeroVersion + " descargada");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename.replace("\"", "") + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate, max-age=0")
+                .contentType(MediaType.parseMediaType(resolverContentTypeDescarga(fileType)))
+                .contentLength(content.length)
+                .body(content);
+    }
+
+    @PostMapping("/{documentoId}/versiones/{numeroVersion}/restaurar")
+    public ResponseEntity<DocumentoVersion> restaurarVersion(
+            @PathVariable String documentoId,
+            @PathVariable Integer numeroVersion,
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId) {
+
+        PermisoContext context = validarPermisoDocumento(documentoId, userId, adminUserId);
+        if (!context.permisos().isPuedeEditar() && !context.permisos().isPuedeReemplazar()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso para restaurar versiones de este documento");
+        }
+        if (!Boolean.TRUE.equals(context.metadata().getControlVersionesHabilitado())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "El control de versiones no esta habilitado para este documento");
+        }
+
+        DocumentoVersion version = versionService.buscarVersion(context.metadata(), numeroVersion)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Version del documento no encontrada"));
+        byte[] content = s3Service.descargarArchivo(version.getS3KeyVersion());
+        String fileType = resolverFileTypeDesdeS3Key(version.getS3KeyVersion(), resolverFileType(context.metadata().getTipoDocumento()));
+        s3Service.subirArchivo(context.metadata().getS3Key(), content, resolverContentTypeDescarga(fileType));
+
+        DocumentoVersion nuevaVersion = versionService.crearVersion(
+                context.metadata(),
+                content,
+                fileType,
+                context.usuario(),
+                context.usuario().getId(),
+                "RESTAURACION",
+                "RESTAURACION"
+        );
+        context.metadata().setEstado("CREADO");
+        context.metadata().setFechaUltimaModificacion(LocalDateTime.now().toString());
+        context.metadata().setModificadoPor(context.usuario().getId());
+        context.metadata().setUltimoEventoOnlyOffice("RESTAURACION");
+        context.metadata().setVersionActual(nuevaVersion.getNumeroVersion());
+        metadataService.guardarMetadata(context.metadata());
+        return ResponseEntity.ok(nuevaVersion);
     }
 
     @GetMapping("/{documentoId}/source")
@@ -335,7 +559,8 @@ public class DocumentoColaborativoEditorController {
             if (!permisos.isPuedeLeer()) {
                 throw new ApiException(HttpStatus.FORBIDDEN, "El usuario no tiene permiso de lectura para este documento colaborativo");
             }
-            registrarVisualizacion(metadata, instancia, usuario, userAgent, servletRequest, "Archivo fuente cargado por OnlyOffice");
+            registrarEventoDocumento(metadata, instancia, usuario, null, DocumentAuditAction.VISUALIZAR,
+                    DocumentAuditResult.PERMITIDO, userAgent, servletRequest, "Archivo fuente cargado por OnlyOffice");
             log.info("Acceso source autorizado y auditado por usuario: usuarioId={}", usuario.getId());
         } else if (sourcePublicAccessEnabled) {
             log.info("Acceso source autorizado por onlyoffice.source-public-access-enabled=true sin usuario auditable");
@@ -407,9 +632,10 @@ public class DocumentoColaborativoEditorController {
 
         // TODO: Validar JWT de OnlyOffice cuando onlyoffice.jwt-secret se active en ambientes productivos.
         log.info("guardando en s3Key={}", metadata.getS3Key());
+        byte[] contenidoActualizado;
+        String fileType = resolverFileType(metadata.getTipoDocumento());
         try {
-            byte[] contenidoActualizado = descargarDesdeOnlyOffice(downloadUrl);
-            String fileType = resolverFileType(metadata.getTipoDocumento());
+            contenidoActualizado = descargarDesdeOnlyOffice(downloadUrl);
             s3Service.subirArchivo(metadata.getS3Key(), contenidoActualizado, resolverContentType(fileType));
             log.info("resultado upload S3=OK documentoId={}, s3Key={}, bytes={}", documentoId, metadata.getS3Key(), contenidoActualizado.length);
         } catch (Exception ex) {
@@ -420,9 +646,26 @@ public class DocumentoColaborativoEditorController {
         try {
             metadata.setEstado("CREADO");
             metadata.setFechaUltimaModificacion(LocalDateTime.now().toString());
-            metadata.setModificadoPor(resolverModificadoPor(userIdParam, body));
+            String modificadoPor = resolverModificadoPor(userIdParam, body);
+            metadata.setModificadoPor(modificadoPor);
             metadata.setUltimoEventoOnlyOffice(String.valueOf(status));
+            if (Boolean.TRUE.equals(metadata.getControlVersionesHabilitado())) {
+                Usuario usuarioVersion = modificadoPor != null ? usuarioRepository.findById(modificadoPor).orElse(null) : null;
+                DocumentoVersion version = versionService.crearVersion(
+                        metadata,
+                        contenidoActualizado,
+                        fileType,
+                        usuarioVersion,
+                        modificadoPor,
+                        "ONLYOFFICE_CALLBACK",
+                        "GUARDADO"
+                );
+                metadata.setVersionActual(version.getNumeroVersion());
+                log.info("version creada documentoId={}, version={}, s3Key={}",
+                        documentoId, version.getNumeroVersion(), version.getS3KeyVersion());
+            }
             metadataService.guardarMetadata(metadata);
+            registrarEdicionDesdeCallback(metadata, modificadoPor, body);
             log.info("resultado update DynamoDB=OK documentoId={}", documentoId);
         } catch (Exception ex) {
             log.error("resultado update DynamoDB=ERROR documentoId={}", documentoId, ex);
@@ -457,6 +700,25 @@ public class DocumentoColaborativoEditorController {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No se encontro la instancia del tramite"));
     }
 
+    private PermisoContext validarPermisoDocumento(String documentoId, String userId, String adminUserId) {
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        Usuario usuario = usuarioRepository.findById(actorUserId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+        DocumentoColaborativoMetadata metadata = obtenerMetadataValida(documentoId);
+        InstanciaPolitica instancia = obtenerInstancia(metadata);
+        DocumentoColaborativoPermisosDto permisos = permisoService.evaluarPermisos(
+                metadata, usuario, usuario.getRol(), usuario.getDepartamentoId(), instancia);
+        return new PermisoContext(metadata, instancia, usuario, permisos);
+    }
+
+    private record PermisoContext(
+            DocumentoColaborativoMetadata metadata,
+            InstanciaPolitica instancia,
+            Usuario usuario,
+            DocumentoColaborativoPermisosDto permisos
+    ) {
+    }
+
     private String construirSourceUrl(DocumentoColaborativoMetadata metadata, String userId) {
         String baseUrl = limpiarUrlBase(callbackBaseUrl)
                 + "/api/documentos-colaborativos/"
@@ -471,10 +733,44 @@ public class DocumentoColaborativoEditorController {
         return baseUrl + "?" + userQueryParam + "&accessToken=" + encode(generarSourceToken(metadata));
     }
 
-    private String construirCallbackUrl(String documentoId) {
-        return limpiarUrlBase(callbackBaseUrl)
+    private String construirCallbackUrl(String documentoId, String userId) {
+        String url = limpiarUrlBase(callbackBaseUrl)
                 + "/api/documentos-colaborativos/onlyoffice/callback/"
                 + documentoId;
+        if (userId == null || userId.isBlank()) {
+            return url;
+        }
+        return url + "?userId=" + encode(userId.trim());
+    }
+
+    private String construirAuditEventUrl(String documentoId) {
+        return limpiarUrlBase(callbackBaseUrl)
+                + "/api/documentos-colaborativos/"
+                + documentoId
+                + "/audit-event";
+    }
+
+    private String construirSourceUrlInterna(DocumentoColaborativoMetadata metadata) {
+        return limpiarUrlBase(callbackBaseUrl)
+                + "/api/documentos-colaborativos/"
+                + metadata.getDocumentoId()
+                + "/source?accessToken="
+                + encode(generarSourceToken(metadata));
+    }
+
+    private Map<String, Object> construirAuditInstructions(String documentoId, String userId) {
+        Map<String, Object> audit = new LinkedHashMap<>();
+        audit.put("enabled", true);
+        audit.put("url", construirAuditEventUrl(documentoId));
+        audit.put("userId", userId);
+        audit.put("headerName", "X-User-Id");
+        audit.put("editAction", DocumentAuditAction.EDITAR.name());
+        audit.put("downloadAction", DocumentAuditAction.DESCARGAR.name());
+        audit.put("printAction", DocumentAuditAction.IMPRIMIR.name());
+        audit.put("editEvent", "onDocumentStateChange");
+        audit.put("downloadEvent", "onDownloadAs");
+        audit.put("printEvent", "onRequestPrint");
+        return audit;
     }
 
     private String generarJwtOnlyOffice(Map<String, Object> config) {
@@ -632,6 +928,35 @@ public class DocumentoColaborativoEditorController {
         };
     }
 
+    private String resolverContentTypeDescarga(String fileType) {
+        if ("pdf".equalsIgnoreCase(fileType)) {
+            return "application/pdf";
+        }
+        return resolverContentType(fileType.toLowerCase(Locale.ROOT));
+    }
+
+    private String resolverFileTypeDesdeS3Key(String s3Key, String fallback) {
+        if (s3Key == null) {
+            return fallback;
+        }
+        int dot = s3Key.lastIndexOf('.');
+        if (dot < 0 || dot == s3Key.length() - 1) {
+            return fallback;
+        }
+        return s3Key.substring(dot + 1).toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizarFormatoDescarga(String format) {
+        if (format == null || format.isBlank()) {
+            return "original";
+        }
+        String normalized = format.trim().toLowerCase(Locale.ROOT);
+        if ("pdf".equals(normalized)) {
+            return "pdf";
+        }
+        return "original";
+    }
+
     private Integer resolverStatus(Object rawStatus) {
         if (rawStatus instanceof Number number) {
             return number.intValue();
@@ -667,6 +992,79 @@ public class DocumentoColaborativoEditorController {
         return null;
     }
 
+    private DocumentAuditAction resolverAuditAction(Object rawAction) {
+        if (rawAction == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar accion de auditoria");
+        }
+        String value = rawAction.toString().trim();
+        if (value.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar accion de auditoria");
+        }
+        try {
+            return DocumentAuditAction.valueOf(value.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Accion de auditoria no soportada: " + value);
+        }
+    }
+
+    private boolean permisoSatisfecho(DocumentoColaborativoPermisosDto permisos, DocumentAuditAction accion) {
+        if (permisos == null || accion == null) {
+            return false;
+        }
+        return switch (accion) {
+            case VISUALIZAR -> permisos.isPuedeLeer();
+            case EDITAR -> permisos.isPuedeEditar();
+            case DESCARGAR -> permisos.isPuedeDescargar();
+            case IMPRIMIR -> permisos.isPuedeImprimir();
+            case SUBIR, REEMPLAZAR -> permisos.isPuedeReemplazar();
+            case ELIMINAR -> permisos.isPuedeEliminar();
+            case CAMBIAR_PERMISOS, INICIAR_COLABORACION, SALIR_COLABORACION -> false;
+        };
+    }
+
+    private String detallePorDefecto(DocumentAuditAction accion) {
+        return switch (accion) {
+            case EDITAR -> "Documento modificado en OnlyOffice";
+            case DESCARGAR -> "Documento descargado desde OnlyOffice";
+            case IMPRIMIR -> "Documento enviado a impresion desde OnlyOffice";
+            case VISUALIZAR -> "Documento visualizado en OnlyOffice";
+            default -> "Evento documental registrado desde OnlyOffice";
+        };
+    }
+
+    private void registrarEdicionDesdeCallback(
+            DocumentoColaborativoMetadata metadata,
+            String modificadoPor,
+            Map<String, Object> body
+    ) {
+        String editorUserId = primerValor(modificadoPor, resolverUsuarioDesdeAcciones(body));
+        Usuario usuario = null;
+        if (editorUserId != null) {
+            usuario = usuarioRepository.findById(editorUserId).orElse(null);
+        }
+        InstanciaPolitica instancia = obtenerInstancia(metadata);
+        registrarEventoDocumento(metadata, instancia, usuario, editorUserId, DocumentAuditAction.EDITAR,
+                DocumentAuditResult.PERMITIDO, null, null, "Documento guardado por callback de OnlyOffice");
+    }
+
+    private String resolverUsuarioDesdeAcciones(Map<String, Object> body) {
+        if (body == null) {
+            return null;
+        }
+        Object actionsRaw = body.get("actions");
+        if (actionsRaw instanceof List<?> actions) {
+            for (Object actionRaw : actions) {
+                if (actionRaw instanceof Map<?, ?> action) {
+                    Object userId = action.get("userid");
+                    if (userId != null && !userId.toString().isBlank()) {
+                        return userId.toString().trim();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     private byte[] descargarDesdeOnlyOffice(String url) {
         RestTemplate restTemplate = new RestTemplate();
         try {
@@ -687,6 +1085,48 @@ public class DocumentoColaborativoEditorController {
             }
             return content;
         }
+    }
+
+    private byte[] convertirDocumento(DocumentoColaborativoMetadata metadata, String inputType, String outputType) {
+        String key = hashCorto(metadata.getDocumentoId() + "|" + metadata.getS3Key() + "|" + outputType + "|" + LocalDateTime.now());
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("async", false);
+        body.put("filetype", inputType);
+        body.put("key", key);
+        body.put("outputtype", outputType);
+        body.put("title", resolverTitulo(metadata.getNombreDocumento(), outputType));
+        body.put("url", construirSourceUrlInterna(metadata));
+        if (jwtEnabled) {
+            body.put("token", generarJwtOnlyOffice(body));
+        }
+
+        String converterUrl = limpiarUrlBase(documentServerUrl) + "/converter?shardkey=" + encode(key);
+        RestTemplate restTemplate = new RestTemplate();
+        Map<?, ?> response;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            response = restTemplate.postForObject(converterUrl, new HttpEntity<>(body, headers), Map.class);
+        } catch (Exception ex) {
+            String fallbackUrl = limpiarUrlBase(documentServerUrl) + "/ConvertService.ashx";
+            log.warn("No se pudo convertir usando /converter. Reintentando con ConvertService.ashx: {}", converterUrl, ex);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            response = restTemplate.postForObject(fallbackUrl, new HttpEntity<>(body, headers), Map.class);
+        }
+
+        if (response == null) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "OnlyOffice no devolvio respuesta de conversion");
+        }
+        Object error = response.get("error");
+        if (error instanceof Number number && number.intValue() != 0) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "OnlyOffice no pudo convertir el documento. Codigo: " + number.intValue());
+        }
+        Object fileUrl = response.get("fileUrl");
+        if (!(fileUrl instanceof String url) || url.isBlank()) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "OnlyOffice no devolvio URL del archivo convertido");
+        }
+        return descargarDesdeOnlyOffice(url);
     }
 
     private String construirOnlyOfficeDownloadFallbackUrl(String originalUrl) {
@@ -714,10 +1154,13 @@ public class DocumentoColaborativoEditorController {
         return ResponseEntity.ok(response);
     }
 
-    private void registrarVisualizacion(
+    private void registrarEventoDocumento(
             DocumentoColaborativoMetadata metadata,
             InstanciaPolitica instancia,
             Usuario usuario,
+            String usuarioIdFallback,
+            DocumentAuditAction accion,
+            DocumentAuditResult resultado,
             String userAgent,
             HttpServletRequest servletRequest,
             String detalle
@@ -729,15 +1172,15 @@ public class DocumentoColaborativoEditorController {
         request.setClienteId(metadata.getClienteId());
         request.setPoliticaId(instancia.getPoliticaId());
         request.setNodoId(metadata.getNodoId());
-        request.setAccion(DocumentAuditAction.VISUALIZAR);
-        request.setUsuarioId(usuario.getId());
-        request.setUsuarioNombre(resolverNombreUsuario(usuario));
-        request.setRol(usuario.getRol());
-        request.setDepartamentoId(usuario.getDepartamentoId());
+        request.setAccion(accion);
+        request.setUsuarioId(usuario != null ? usuario.getId() : usuarioIdFallback);
+        request.setUsuarioNombre(usuario != null ? resolverNombreUsuario(usuario) : null);
+        request.setRol(usuario != null ? usuario.getRol() : null);
+        request.setDepartamentoId(usuario != null ? usuario.getDepartamentoId() : null);
         request.setIp(resolverIp(servletRequest));
         request.setUserAgent(userAgent);
         request.setDetalle(detalle);
-        request.setResultado(DocumentAuditResult.PERMITIDO);
+        request.setResultado(resultado);
         auditService.registrarEventoAuditoria(request);
     }
 

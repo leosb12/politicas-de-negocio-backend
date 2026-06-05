@@ -4,7 +4,9 @@ import com.leo.politicas_de_negocio.archivos.model.ArchivoAdjunto;
 import com.leo.politicas_de_negocio.archivos.model.enums.EstadoArchivo;
 import com.leo.politicas_de_negocio.archivos.repository.ArchivoAdjuntoRepository;
 import com.leo.politicas_de_negocio.documents.model.DocumentoColaborativoMetadata;
+import com.leo.politicas_de_negocio.documents.model.DocumentoVersion;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
+import com.leo.politicas_de_negocio.documents.service.DocumentoVersionService;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.dto.AuditoriaDocumentalPoliticaResponse;
@@ -41,6 +43,7 @@ public class AuditoriaDocumentalPoliticaService {
     private final TareaActividadRepository tareaRepository;
     private final ArchivoAdjuntoRepository archivoRepository;
     private final DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
+    private final DocumentoVersionService documentoVersionService;
     private final UsuarioRepository usuarioRepository;
 
     public AuditoriaDocumentalPoliticaResponse obtenerAuditoriaDocumental(String adminUserId, String politicaId) {
@@ -95,6 +98,31 @@ public class AuditoriaDocumentalPoliticaService {
                 .totalDocumentos(totalDocumentos)
                 .tareas(tareasResponse)
                 .build();
+    }
+
+    public List<DocumentoVersion> listarVersionesDocumento(String adminUserId, String politicaId, String documentoId) {
+        assertAdmin(adminUserId);
+        String idPolitica = normalizar(politicaId);
+        String idDocumento = normalizar(documentoId);
+        if (idPolitica == null || idDocumento == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar politica y documento");
+        }
+        if (!politicaRepository.existsById(idPolitica)) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Politica no encontrada con ID: " + idPolitica);
+        }
+
+        DocumentoColaborativoMetadata metadata = documentoColaborativoMetadataService.buscarPorDocumentoId(idDocumento);
+        if (metadata == null) {
+            throw new ApiException(HttpStatus.NOT_FOUND, "Documento colaborativo no encontrado");
+        }
+
+        InstanciaPolitica instancia = instanciaRepository.findById(metadata.getTramiteId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "No se encontro la instancia del tramite"));
+        if (!idPolitica.equals(instancia.getPoliticaId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "El documento no pertenece a esta politica");
+        }
+
+        return documentoVersionService.listarVersiones(metadata);
     }
 
     private void agregarArchivosAdjuntos(

@@ -27,6 +27,8 @@ import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoReposit
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -46,6 +48,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class PoliticaNegocioService {
+
+    private static final Logger log = LoggerFactory.getLogger(PoliticaNegocioService.class);
 
     private static final String DEFAULT_LANE_ORIENTATION = "VERTICAL";
     private static final double DEFAULT_LANE_WIDTH = 320d;
@@ -187,7 +191,12 @@ public class PoliticaNegocioService {
         politica.setFechaActualizacion(LocalDateTime.now());
 
         PoliticaNegocio persistida = repository.save(politica);
-        sincronizarDocumentosColaborativosExistentes(persistida);
+        try {
+            sincronizarDocumentosColaborativosExistentes(persistida);
+        } catch (Exception ex) {
+            log.warn("No se pudo sincronizar documentos colaborativos existentes para politicaId={}. "
+                    + "El flujo ya fue guardado y no se bloqueara el borrador.", persistida.getId(), ex);
+        }
         return persistida;
     }
 
@@ -479,6 +488,7 @@ public class PoliticaNegocioService {
             config.setPermisosEdicion(normalizarPermisosSeccion(config.getPermisosEdicion()));
             config.setPermisosLectura(normalizarPermisosLectura(config.getPermisosLectura()));
             config.setPermisosDescarga(normalizarPermisosSeccion(config.getPermisosDescarga()));
+            config.setPermisosImpresion(normalizarPermisosSeccion(config.getPermisosImpresion()));
             config.setPermisosComentarios(normalizarPermisosSeccion(config.getPermisosComentarios()));
             config.setPermisosReemplazo(normalizarPermisosSeccion(config.getPermisosReemplazo()));
             config.setPermisosEliminacion(normalizarPermisosSeccion(config.getPermisosEliminacion()));
@@ -515,18 +525,23 @@ public class PoliticaNegocioService {
                 continue;
             }
 
-            List<DocumentoColaborativoMetadata> documentos = documentoColaborativoMetadataService.listarPorTramite(
-                    instancia.getCreadaPor(),
-                    instancia.getId()
-            );
-            if (documentos == null || documentos.isEmpty()) {
-                continue;
-            }
-            for (DocumentoColaborativoMetadata documento : documentos) {
-                ConfiguracionDocumento config = configuracionesPorCampo.get(normalizeNullableText(documento.getCampoFormularioId()));
-                if (config != null) {
-                    documentoColaborativoMetadataService.actualizarConfiguracionDesdeCampo(documento, config);
+            try {
+                List<DocumentoColaborativoMetadata> documentos = documentoColaborativoMetadataService.listarPorTramite(
+                        instancia.getCreadaPor(),
+                        instancia.getId()
+                );
+                if (documentos == null || documentos.isEmpty()) {
+                    continue;
                 }
+                for (DocumentoColaborativoMetadata documento : documentos) {
+                    ConfiguracionDocumento config = configuracionesPorCampo.get(normalizeNullableText(documento.getCampoFormularioId()));
+                    if (config != null) {
+                        documentoColaborativoMetadataService.actualizarConfiguracionDesdeCampo(documento, config);
+                    }
+                }
+            } catch (Exception ex) {
+                log.warn("No se pudo sincronizar documentos colaborativos para tramiteId={} politicaId={}. "
+                        + "Se continua sin bloquear el guardado del flujo.", instancia.getId(), politica.getId(), ex);
             }
         }
     }

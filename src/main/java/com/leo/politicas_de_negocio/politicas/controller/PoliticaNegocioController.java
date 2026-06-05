@@ -1,5 +1,6 @@
 package com.leo.politicas_de_negocio.politicas.controller;
 
+import com.leo.politicas_de_negocio.documents.model.DocumentoVersion;
 import com.leo.politicas_de_negocio.politicas.dto.CreatePoliticaRequest;
 import com.leo.politicas_de_negocio.politicas.dto.AuditoriaDocumentalPoliticaResponse;
 import com.leo.politicas_de_negocio.politicas.dto.TramiteDisponibleResponse;
@@ -62,6 +63,14 @@ public class PoliticaNegocioController {
             @RequestHeader("X-Admin-User-Id") String adminUserId,
             @PathVariable String id) {
         return ResponseEntity.ok(auditoriaDocumentalService.obtenerAuditoriaDocumental(adminUserId, id));
+    }
+
+    @GetMapping("/{id}/auditoria/documental/documentos/{documentoId}/versiones")
+    public ResponseEntity<List<DocumentoVersion>> obtenerVersionesDocumentoAuditoria(
+            @RequestHeader("X-Admin-User-Id") String adminUserId,
+            @PathVariable String id,
+            @PathVariable String documentoId) {
+        return ResponseEntity.ok(auditoriaDocumentalService.listarVersionesDocumento(adminUserId, id, documentoId));
     }
 
     @PutMapping("/{id}/flujo")

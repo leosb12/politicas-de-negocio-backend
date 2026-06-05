@@ -206,6 +206,7 @@ public class DocumentPermissionService {
         return switch (accion) {
             case VISUALIZAR -> Boolean.TRUE.equals(audit.getAuditarVisualizacion());
             case DESCARGAR -> Boolean.TRUE.equals(audit.getAuditarDescarga());
+            case IMPRIMIR -> audit.getAuditarImpresion() == null || Boolean.TRUE.equals(audit.getAuditarImpresion());
             case SUBIR -> Boolean.TRUE.equals(audit.getAuditarSubida());
             case EDITAR, REEMPLAZAR -> Boolean.TRUE.equals(audit.getAuditarEdicion());
             case ELIMINAR -> Boolean.TRUE.equals(audit.getAuditarEliminacion());
@@ -361,6 +362,7 @@ public class DocumentPermissionService {
         return DocumentAuditConfig.builder()
                 .auditarVisualizacion(audit.getAuditarVisualizacion() == null || Boolean.TRUE.equals(audit.getAuditarVisualizacion()))
                 .auditarDescarga(audit.getAuditarDescarga() == null || Boolean.TRUE.equals(audit.getAuditarDescarga()))
+                .auditarImpresion(audit.getAuditarImpresion() == null || Boolean.TRUE.equals(audit.getAuditarImpresion()))
                 .auditarSubida(audit.getAuditarSubida() == null || Boolean.TRUE.equals(audit.getAuditarSubida()))
                 .auditarEdicion(audit.getAuditarEdicion() == null || Boolean.TRUE.equals(audit.getAuditarEdicion()))
                 .auditarEliminacion(audit.getAuditarEliminacion() == null || Boolean.TRUE.equals(audit.getAuditarEliminacion()))
@@ -464,6 +466,7 @@ public class DocumentPermissionService {
         return DocumentAuditConfig.builder()
                 .auditarVisualizacion(true)
                 .auditarDescarga(true)
+                .auditarImpresion(true)
                 .auditarSubida(true)
                 .auditarEdicion(true)
                 .auditarEliminacion(true)

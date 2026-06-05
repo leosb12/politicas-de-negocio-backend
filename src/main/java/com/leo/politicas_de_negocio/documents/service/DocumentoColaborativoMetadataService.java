@@ -157,6 +157,8 @@ public class DocumentoColaborativoMetadataService {
             permAdic.setPuedeCompartirInternamente(config.getPermisosAdicionales().getPuedeCompartirInternamente());
         }
         metadata.setPermisosAdicionales(permAdic);
+        metadata.setAuditarCambios(Boolean.TRUE.equals(config.getAuditarCambios()));
+        metadata.setControlVersionesHabilitado(Boolean.TRUE.equals(config.getControlVersionesHabilitado()));
         guardarMetadata(metadata);
     }
 
@@ -310,6 +312,9 @@ public class DocumentoColaborativoMetadataService {
                         permAdic.setPuedeCompartirInternamente(config.getPermisosAdicionales().getPuedeCompartirInternamente());
                     }
                     metadata.setPermisosAdicionales(permAdic);
+                    metadata.setAuditarCambios(config != null && Boolean.TRUE.equals(config.getAuditarCambios()));
+                    metadata.setControlVersionesHabilitado(config != null && Boolean.TRUE.equals(config.getControlVersionesHabilitado()));
+                    metadata.setVersionActual(metadata.getVersionActual() != null ? metadata.getVersionActual() : 0);
 
                     System.out.println("        >> Guardando metadatos en DynamoDB...");
                     guardarMetadata(metadata);
@@ -411,6 +416,11 @@ public class DocumentoColaborativoMetadataService {
     private void normalizarPermisos(DocumentoColaborativoMetadata metadata) {
         if (metadata == null) {
             return;
+        }
+
+        metadata.setControlVersionesHabilitado(Boolean.TRUE.equals(metadata.getControlVersionesHabilitado()));
+        if (metadata.getVersionActual() == null) {
+            metadata.setVersionActual(0);
         }
 
         DocumentoColaborativoMetadata.PermisosEdicion permisosEdicion = metadata.getPermisosEdicion();

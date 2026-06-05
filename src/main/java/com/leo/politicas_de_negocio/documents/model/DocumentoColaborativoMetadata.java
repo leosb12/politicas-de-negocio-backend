@@ -40,6 +40,9 @@ public class DocumentoColaborativoMetadata {
     private PermisosAccion permisosCompartirInternamente;
     private PermisosAccion permisosImpresion;
     private PermisosAdicionales permisosAdicionales;
+    private Boolean auditarCambios;
+    private Boolean controlVersionesHabilitado = false;
+    private Integer versionActual = 0;
     private DocumentoColaborativoPermisosDto permisosUsuario;
 
     private String tareaId;
@@ -255,6 +258,30 @@ public class DocumentoColaborativoMetadata {
 
     public void setPermisosAdicionales(PermisosAdicionales permisosAdicionales) {
         this.permisosAdicionales = permisosAdicionales;
+    }
+
+    public Boolean getAuditarCambios() {
+        return auditarCambios;
+    }
+
+    public void setAuditarCambios(Boolean auditarCambios) {
+        this.auditarCambios = auditarCambios;
+    }
+
+    public Boolean getControlVersionesHabilitado() {
+        return controlVersionesHabilitado;
+    }
+
+    public void setControlVersionesHabilitado(Boolean controlVersionesHabilitado) {
+        this.controlVersionesHabilitado = controlVersionesHabilitado;
+    }
+
+    public Integer getVersionActual() {
+        return versionActual;
+    }
+
+    public void setVersionActual(Integer versionActual) {
+        this.versionActual = versionActual;
     }
 
     @DynamoDbIgnore

@@ -9,6 +9,7 @@ import com.leo.politicas_de_negocio.documents.permissions.service.DocumentAuditS
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoPermisoService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoS3Service;
+import com.leo.politicas_de_negocio.documents.service.DocumentoVersionService;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
@@ -21,10 +22,12 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.ResponseEntity;
 
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +41,9 @@ class DocumentoColaborativoEditorControllerTest {
 
     @Mock
     private DocumentoColaborativoS3Service s3Service;
+
+    @Mock
+    private DocumentoVersionService versionService;
 
     @Mock
     private DocumentAuditService auditService;
@@ -57,6 +63,7 @@ class DocumentoColaborativoEditorControllerTest {
                 metadataService,
                 permisoService,
                 s3Service,
+                versionService,
                 auditService,
                 usuarioRepository,
                 instanciaPoliticaRepository
@@ -72,6 +79,7 @@ class DocumentoColaborativoEditorControllerTest {
                 .departamentoId("dep-1")
                 .build();
         DocumentoColaborativoMetadata metadata = documento();
+        metadata.setAuditarCambios(true);
         InstanciaPolitica instancia = InstanciaPolitica.builder()
                 .id("tramite-1")
                 .politicaId("politica-1")
@@ -88,7 +96,8 @@ class DocumentoColaborativoEditorControllerTest {
                         .build());
         when(servletRequest.getHeader("X-Forwarded-For")).thenReturn("10.0.0.1, 10.0.0.2");
 
-        controller.obtenerEditorConfig("doc-1", "user-1", null, "JUnit", servletRequest);
+        ResponseEntity<Map<String, Object>> response =
+                controller.obtenerEditorConfig("doc-1", "user-1", null, "JUnit", servletRequest);
 
         ArgumentCaptor<DocumentAuditEventRequest> captor = ArgumentCaptor.forClass(DocumentAuditEventRequest.class);
         verify(auditService).registrarEventoAuditoria(captor.capture());
@@ -106,6 +115,21 @@ class DocumentoColaborativoEditorControllerTest {
         assertEquals("10.0.0.1", request.getIp());
         assertEquals("JUnit", request.getUserAgent());
         assertEquals(DocumentAuditResult.PERMITIDO, request.getResultado());
+
+        Map<String, Object> body = response.getBody();
+        Map<String, Object> config = (Map<String, Object>) body.get("config");
+        Map<String, Object> editorConfig = (Map<String, Object>) config.get("editorConfig");
+        Map<String, Object> document = (Map<String, Object>) config.get("document");
+        Map<String, Object> permissions = (Map<String, Object>) document.get("permissions");
+        Map<String, Object> customization = (Map<String, Object>) editorConfig.get("customization");
+        Map<String, Object> review = (Map<String, Object>) customization.get("review");
+        Map<String, Object> audit = (Map<String, Object>) body.get("audit");
+        assertEquals(Boolean.TRUE, permissions.get("review"));
+        assertEquals(Boolean.TRUE, customization.get("forcesave"));
+        assertEquals(Boolean.TRUE, review.get("trackChanges"));
+        assertEquals("markup", review.get("reviewDisplay"));
+        assertEquals("EDITAR", audit.get("editAction"));
+        assertEquals("onDocumentStateChange", audit.get("editEvent"));
     }
 
     @Test
@@ -147,6 +171,50 @@ class DocumentoColaborativoEditorControllerTest {
         assertEquals("127.0.0.1", request.getIp());
         assertEquals("OnlyOffice", request.getUserAgent());
         assertEquals(DocumentAuditResult.PERMITIDO, request.getResultado());
+    }
+
+    @Test
+    void registrarEventoOnlyOffice_registraEdicionDescargaEImpresionConPermisos() {
+        Usuario usuario = Usuario.builder()
+                .id("user-1")
+                .nombre("Ana")
+                .rol("FUNCIONARIO")
+                .departamentoId("dep-1")
+                .build();
+        DocumentoColaborativoMetadata metadata = documento();
+        InstanciaPolitica instancia = InstanciaPolitica.builder()
+                .id("tramite-1")
+                .politicaId("politica-1")
+                .build();
+        HttpServletRequest servletRequest = mock(HttpServletRequest.class);
+
+        when(usuarioRepository.findById("user-1")).thenReturn(Optional.of(usuario));
+        when(metadataService.buscarPorDocumentoId("doc-1")).thenReturn(metadata);
+        when(instanciaPoliticaRepository.findById("tramite-1")).thenReturn(Optional.of(instancia));
+        when(permisoService.evaluarPermisos(metadata, usuario, "FUNCIONARIO", "dep-1", instancia))
+                .thenReturn(DocumentoColaborativoPermisosDto.builder()
+                        .puedeLeer(true)
+                        .puedeEditar(true)
+                        .puedeDescargar(true)
+                        .puedeImprimir(true)
+                        .build());
+
+        controller.registrarEventoOnlyOffice(
+                "doc-1", "user-1", null, "JUnit", Map.of("accion", "EDITAR"), servletRequest);
+        controller.registrarEventoOnlyOffice(
+                "doc-1", "user-1", null, "JUnit", Map.of("accion", "DESCARGAR"), servletRequest);
+        controller.registrarEventoOnlyOffice(
+                "doc-1", "user-1", null, "JUnit", Map.of("accion", "IMPRIMIR"), servletRequest);
+
+        ArgumentCaptor<DocumentAuditEventRequest> captor = ArgumentCaptor.forClass(DocumentAuditEventRequest.class);
+        verify(auditService, times(3)).registrarEventoAuditoria(captor.capture());
+
+        assertEquals(DocumentAuditAction.EDITAR, captor.getAllValues().get(0).getAccion());
+        assertEquals(DocumentAuditAction.DESCARGAR, captor.getAllValues().get(1).getAccion());
+        assertEquals(DocumentAuditAction.IMPRIMIR, captor.getAllValues().get(2).getAccion());
+        assertEquals(DocumentAuditResult.PERMITIDO, captor.getAllValues().get(0).getResultado());
+        assertEquals(DocumentAuditResult.PERMITIDO, captor.getAllValues().get(1).getResultado());
+        assertEquals(DocumentAuditResult.PERMITIDO, captor.getAllValues().get(2).getResultado());
     }
 
     private DocumentoColaborativoMetadata documento() {

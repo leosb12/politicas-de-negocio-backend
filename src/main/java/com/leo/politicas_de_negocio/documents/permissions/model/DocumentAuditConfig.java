@@ -13,6 +13,7 @@ public class DocumentAuditConfig {
 
     private Boolean auditarVisualizacion;
     private Boolean auditarDescarga;
+    private Boolean auditarImpresion;
     private Boolean auditarSubida;
     private Boolean auditarEdicion;
     private Boolean auditarEliminacion;

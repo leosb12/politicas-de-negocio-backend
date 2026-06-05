@@ -1026,6 +1026,11 @@ public class WorkflowEngineService {
                         .roles(origConfig.getPermisosDescarga().getRoles() != null ? new ArrayList<>(origConfig.getPermisosDescarga().getRoles()) : null)
                         .usuarios(origConfig.getPermisosDescarga().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosDescarga().getUsuarios()) : null)
                         .build() : null)
+                    .permisosImpresion(origConfig.getPermisosImpresion() != null ? PermisosSeccion.builder()
+                        .departamentos(origConfig.getPermisosImpresion().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosImpresion().getDepartamentos()) : null)
+                        .roles(origConfig.getPermisosImpresion().getRoles() != null ? new ArrayList<>(origConfig.getPermisosImpresion().getRoles()) : null)
+                        .usuarios(origConfig.getPermisosImpresion().getUsuarios() != null ? new ArrayList<>(origConfig.getPermisosImpresion().getUsuarios()) : null)
+                        .build() : null)
                     .permisosComentarios(origConfig.getPermisosComentarios() != null ? PermisosSeccion.builder()
                         .departamentos(origConfig.getPermisosComentarios().getDepartamentos() != null ? new ArrayList<>(origConfig.getPermisosComentarios().getDepartamentos()) : null)
                         .roles(origConfig.getPermisosComentarios().getRoles() != null ? new ArrayList<>(origConfig.getPermisosComentarios().getRoles()) : null)
@@ -1048,11 +1053,14 @@ public class WorkflowEngineService {
                         .build() : null)
                     .permisosAdicionales(origConfig.getPermisosAdicionales() != null ? PermisosAdicionalesDocumento.builder()
                         .puedeDescargar(origConfig.getPermisosAdicionales().getPuedeDescargar())
+                        .puedeImprimir(origConfig.getPermisosAdicionales().getPuedeImprimir())
                         .puedeComentar(origConfig.getPermisosAdicionales().getPuedeComentar())
                         .puedeReemplazar(origConfig.getPermisosAdicionales().getPuedeReemplazar())
                         .puedeEliminar(origConfig.getPermisosAdicionales().getPuedeEliminar())
                         .puedeCompartirInternamente(origConfig.getPermisosAdicionales().getPuedeCompartirInternamente())
                         .build() : null)
+                    .auditarCambios(origConfig.getAuditarCambios())
+                    .controlVersionesHabilitado(origConfig.getControlVersionesHabilitado())
                     .build();
             }
 

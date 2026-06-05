@@ -3,6 +3,7 @@ package com.leo.politicas_de_negocio.politicas.service;
 import com.leo.politicas_de_negocio.colaboracion.repository.EventoColaboracionAplicadoRepository;
 import com.leo.politicas_de_negocio.colaboracion.repository.SnapshotColaboracionPoliticaRepository;
 import com.leo.politicas_de_negocio.colaboracion.service.PoliticaPresenciaService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
 import com.leo.politicas_de_negocio.documents.model.DocumentoColaborativoMetadata;
@@ -198,6 +199,156 @@ class PoliticaNegocioServiceTest {
         ConfiguracionDocumento savedConfig = result.getNodos().get(0).getFormulario().get(0).getConfiguracionDocumento();
         assertEquals(List.of("dept-forzado"), savedConfig.getPermisosEdicion().getDepartamentos());
         assertEquals(List.of("user-1"), savedConfig.getPermisosEdicion().getUsuarios());
+    }
+
+    @Test
+    void guardarFlujo_preservaPermisosImpresionDocumentoColaborativo() {
+        PoliticaNegocio politica = politica("pol-1", EstadoPolitica.BORRADOR);
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaRepository.save(any(PoliticaNegocio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(instanciaPoliticaRepository.findByPoliticaIdOrderByFechaCreacionDesc("pol-1"))
+                .thenReturn(List.of(InstanciaPolitica.builder()
+                        .id("tramite-1")
+                        .creadaPor("cliente-1")
+                        .politicaId("pol-1")
+                        .build()));
+
+        DocumentoColaborativoMetadata metadata = new DocumentoColaborativoMetadata();
+        metadata.setCampoFormularioId("doc");
+        when(documentoColaborativoMetadataService.listarPorTramite("cliente-1", "tramite-1"))
+                .thenReturn(List.of(metadata));
+
+        ConfiguracionDocumento config = ConfiguracionDocumento.builder()
+                .tipoDocumento("WORD")
+                .permisosImpresion(PermisosSeccion.builder()
+                        .departamentos(List.of("dep-1"))
+                        .roles(List.of("FUNCIONARIO"))
+                        .usuarios(List.of("user-1"))
+                        .build())
+                .build();
+        Nodo nodo = Nodo.builder()
+                .id("nodo-1")
+                .tipo(TipoNodo.ACTIVIDAD)
+                .formulario(List.of(CampoFormulario.builder()
+                        .campo("doc")
+                        .tipo("DOCUMENTO_COLABORATIVO")
+                        .configuracionDocumento(config)
+                        .build()))
+                .build();
+        UpdateFlujoRequest request = new UpdateFlujoRequest();
+        request.setNodos(List.of(nodo));
+        request.setConexiones(List.of());
+
+        PoliticaNegocio result = service.guardarFlujo("admin-1", "pol-1", request);
+
+        ConfiguracionDocumento savedConfig = result.getNodos().get(0).getFormulario().get(0).getConfiguracionDocumento();
+        assertEquals(List.of("dep-1"), savedConfig.getPermisosImpresion().getDepartamentos());
+        assertEquals(List.of("FUNCIONARIO"), savedConfig.getPermisosImpresion().getRoles());
+        assertEquals(List.of("user-1"), savedConfig.getPermisosImpresion().getUsuarios());
+
+        ArgumentCaptor<ConfiguracionDocumento> configCaptor = ArgumentCaptor.forClass(ConfiguracionDocumento.class);
+        verify(documentoColaborativoMetadataService).actualizarConfiguracionDesdeCampo(eq(metadata), configCaptor.capture());
+        assertEquals(List.of("user-1"), configCaptor.getValue().getPermisosImpresion().getUsuarios());
+    }
+
+    @Test
+    void updateFlujoRequest_debeAceptarAliasYCamposCompatiblesDePermisosImpresion() throws Exception {
+        String json = """
+                {
+                  "nodos": [
+                    {
+                      "id": "nodo-1",
+                      "tipo": "ACTIVIDAD",
+                      "formulario": [
+                        {
+                          "campo": "doc",
+                          "tipo": "DOCUMENTO_COLABORATIVO",
+                          "configuracionDocumento": {
+                            "tipoDocumento": "WORD",
+                            "permisosImpresionUsuarios": ["user-1"],
+                            "permisosImpresionRoles": ["FUNCIONARIO"],
+                            "permisosImpresionDepartamentos": ["dep-1"]
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "id": "nodo-2",
+                      "tipo": "ACTIVIDAD",
+                      "formulario": [
+                        {
+                          "campo": "doc2",
+                          "tipo": "DOCUMENTO_COLABORATIVO",
+                          "configuracionDocumento": {
+                            "tipoDocumento": "WORD",
+                            "permisosImprimir": {
+                              "usuarios": ["user-2"],
+                              "roles": ["ADMIN"],
+                              "departamentos": ["dep-2"]
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "conexiones": []
+                }
+                """;
+
+        UpdateFlujoRequest request = new ObjectMapper().readValue(json, UpdateFlujoRequest.class);
+
+        ConfiguracionDocumento config1 = request.getNodos().get(0).getFormulario().get(0).getConfiguracionDocumento();
+        assertEquals(List.of("user-1"), config1.getPermisosImpresion().getUsuarios());
+        assertEquals(List.of("FUNCIONARIO"), config1.getPermisosImpresion().getRoles());
+        assertEquals(List.of("dep-1"), config1.getPermisosImpresion().getDepartamentos());
+
+        ConfiguracionDocumento config2 = request.getNodos().get(1).getFormulario().get(0).getConfiguracionDocumento();
+        assertEquals(List.of("user-2"), config2.getPermisosImpresion().getUsuarios());
+        assertEquals(List.of("ADMIN"), config2.getPermisosImpresion().getRoles());
+        assertEquals(List.of("dep-2"), config2.getPermisosImpresion().getDepartamentos());
+    }
+
+    @Test
+    void guardarFlujo_noDebeFallarSiSincronizacionDocumentalFalla() {
+        PoliticaNegocio politica = politica("pol-1", EstadoPolitica.PAUSADA);
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaRepository.save(any(PoliticaNegocio.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(instanciaPoliticaRepository.findByPoliticaIdOrderByFechaCreacionDesc("pol-1"))
+                .thenReturn(List.of(InstanciaPolitica.builder()
+                        .id("tramite-1")
+                        .creadaPor("cliente-1")
+                        .politicaId("pol-1")
+                        .build()));
+        when(documentoColaborativoMetadataService.listarPorTramite("cliente-1", "tramite-1"))
+                .thenThrow(new RuntimeException("DynamoDB no disponible"));
+
+        ConfiguracionDocumento config = ConfiguracionDocumento.builder()
+                .tipoDocumento("WORD")
+                .permisosEdicion(PermisosSeccion.builder()
+                        .departamentos(List.of("dept-1"))
+                        .roles(List.of())
+                        .usuarios(List.of())
+                        .build())
+                .build();
+        Nodo nodo = Nodo.builder()
+                .id("nodo-1")
+                .tipo(TipoNodo.ACTIVIDAD)
+                .formulario(List.of(CampoFormulario.builder()
+                        .campo("doc")
+                        .tipo("DOCUMENTO_COLABORATIVO")
+                        .configuracionDocumento(config)
+                        .build()))
+                .build();
+        UpdateFlujoRequest request = new UpdateFlujoRequest();
+        request.setNodos(List.of(nodo));
+        request.setConexiones(List.of());
+
+        PoliticaNegocio result = service.guardarFlujo("admin-1", "pol-1", request);
+
+        assertEquals(List.of(nodo), result.getNodos());
+        verify(politicaRepository).save(any(PoliticaNegocio.class));
     }
 
     @Test
