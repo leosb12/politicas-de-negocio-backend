@@ -1,8 +1,10 @@
 package com.leo.politicas_de_negocio.instancias.dto;
 
+import com.leo.politicas_de_negocio.documents.model.DocumentoMetadata;
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
 import lombok.Builder;
 import lombok.Data;
@@ -38,11 +40,21 @@ public class SeguimientoInstanciaResponse {
     private String laneOrientation;
     private Double laneWidth;
     private Double laneHeight;
+    private RequisitosInicialesSeguimientoResponse requisitosIniciales;
     private List<NodoSeguimientoResponse> nodos;
     private List<ConexionSeguimientoResponse> conexiones;
     private List<TareaSeguimientoResponse> tareas;
     private List<DepartamentoActualResponse> departamentosActuales;
     private List<String> nodosActualesIds;
+
+    @Data
+    @Builder
+    public static class RequisitosInicialesSeguimientoResponse {
+        private String titulo;
+        private List<CampoFormulario> definicion;
+        private Map<String, Object> respuestas;
+        private List<DocumentoMetadata> documentos;
+    }
 
     @Data
     @Builder

@@ -1,6 +1,7 @@
 package com.leo.politicas_de_negocio.instancias.model;
 
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -42,6 +43,8 @@ public class InstanciaPolitica {
     private String finalizadaPor;
 
     private Map<String, Object> datosContexto;
+    private List<CampoFormulario> requisitosInicialesDefinicion;
+    private Map<String, Object> respuestasRequisitosIniciales;
 
     // Para sincronizar nodos JOIN: guarda que ramas ya llegaron por join.
     private Map<String, List<String>> tokensJoin;

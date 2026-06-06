@@ -1,5 +1,6 @@
 package com.leo.politicas_de_negocio.iaeditorflujo.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leo.politicas_de_negocio.departamentos.model.Departamento;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
 import com.leo.politicas_de_negocio.iaeditorflujo.client.WorkflowAiEditorClient;
@@ -17,6 +18,7 @@ import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
+import com.leo.politicas_de_negocio.politicas.model.politica.ConfiguracionDocumento;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.CondicionDecision;
 import com.leo.politicas_de_negocio.politicas.model.politica.GrupoCondicionDecision;
@@ -61,6 +63,7 @@ public class WorkflowAiEditorService {
     private final UsuarioRepository usuarioRepository;
     private final DepartamentoRepository departamentoRepository;
     private final WorkflowAiEditValidator workflowAiEditValidator;
+    private final ObjectMapper objectMapper;
 
     private record ResponsibleResolution(String type, String id) {
     }
@@ -150,6 +153,7 @@ public class WorkflowAiEditorService {
 
         politica.setNodos(context.nodes);
         politica.setConexiones(context.connections);
+        politica.setRequisitosIniciales(context.requisitosIniciales);
         politica.setFechaActualizacion(LocalDateTime.now());
         PoliticaNegocio saved = politicaNegocioRepository.save(politica);
 
@@ -238,6 +242,12 @@ public class WorkflowAiEditorService {
                 applied += applyUpdateDecisionCondition(context, operation, prompt);
             } else if ("REORDER_FLOW".equals(type)) {
                 applied += applyReorderFlow(context, operation);
+            } else if ("ADD_INITIAL_REQUIREMENT".equals(type)) {
+                applied += applyAddInitialRequirement(context, operation, prompt);
+            } else if ("DELETE_INITIAL_REQUIREMENT".equals(type)) {
+                applied += applyDeleteInitialRequirement(context, operation, prompt);
+            } else if ("UPDATE_INITIAL_REQUIREMENT".equals(type)) {
+                applied += applyUpdateInitialRequirement(context, operation, prompt);
             } else {
                 context.warn("Operacion IA no soportada y omitida: " + operation.getType());
             }
@@ -503,6 +513,16 @@ public class WorkflowAiEditorService {
         if (field.getRequerido() == null) {
             field.setRequerido(true);
         }
+
+        Map<String, Object> configDocMap = firstMap(operation, "configuracionDocumento");
+        if (configDocMap != null && objectMapper != null) {
+            try {
+                field.setConfiguracionDocumento(objectMapper.convertValue(configDocMap, ConfiguracionDocumento.class));
+            } catch (IllegalArgumentException e) {
+                log.warn("No se pudo mapear configuracionDocumento en ADD_FORM_FIELD", e);
+            }
+        }
+
         form.add(field);
         touchNode(node);
         return 1;
@@ -639,6 +659,104 @@ public class WorkflowAiEditorService {
                 applied++;
             }
         }
+        return applied;
+    }
+
+    private int applyAddInitialRequirement(ApplyContext context, WorkflowAiEditOperationDto operation, String prompt) {
+        String fieldName = firstText(operation, "fieldLabel", "fieldName", "campo", "label");
+        if (fieldName == null) {
+            context.warn("ADD_INITIAL_REQUIREMENT omitido: falta el nombre del requisito.");
+            return 0;
+        }
+
+        if (findFieldIndex(context.requisitosIniciales, fieldName) >= 0) {
+            context.warn("ADD_INITIAL_REQUIREMENT omitido: el requisito " + fieldName + " ya existe.");
+            return 0;
+        }
+
+        TipoCampo fieldType = parseFieldType(firstText(operation, "fieldType", "tipoCampo", "type", "tipo"), fieldName);
+        CampoFormulario field = CampoFormulario.builder()
+                .campo(fieldName)
+                .tipo(fieldType)
+                .etiqueta(firstText(operation, "label", "etiqueta", "fieldLabel"))
+                .requerido(firstNullableBoolean(operation, "required", "requerido", "obligatorio"))
+                .placeholder(firstText(operation, "placeholder"))
+                .ayuda(firstText(operation, "help", "ayuda", "description", "descripcion"))
+                .opciones(firstStringList(operation, "options", "opciones"))
+                .validaciones(firstMap(operation, "validations", "validaciones"))
+                .build();
+        if (field.getRequerido() == null) {
+            field.setRequerido(true);
+        }
+
+        Map<String, Object> configDocMap = firstMap(operation, "configuracionDocumento");
+        if (configDocMap != null && objectMapper != null) {
+            try {
+                field.setConfiguracionDocumento(objectMapper.convertValue(configDocMap, ConfiguracionDocumento.class));
+            } catch (IllegalArgumentException e) {
+                log.warn("No se pudo mapear configuracionDocumento en ADD_INITIAL_REQUIREMENT", e);
+            }
+        }
+
+        context.requisitosIniciales.add(field);
+        return 1;
+    }
+
+    private int applyDeleteInitialRequirement(ApplyContext context, WorkflowAiEditOperationDto operation, String prompt) {
+        String fieldName = firstText(operation, "fieldLabel", "fieldName", "campo", "label");
+        if (fieldName == null) {
+            context.warn("DELETE_INITIAL_REQUIREMENT omitido: falta el requisito a eliminar.");
+            return 0;
+        }
+
+        int index = findFieldIndex(context.requisitosIniciales, fieldName);
+        if (index < 0) {
+            context.warn("DELETE_INITIAL_REQUIREMENT omitido: no existe el requisito " + fieldName + ".");
+            return 0;
+        }
+
+        context.requisitosIniciales.remove(index);
+        return 1;
+    }
+
+    private int applyUpdateInitialRequirement(ApplyContext context, WorkflowAiEditOperationDto operation, String prompt) {
+        String fieldName = firstText(operation, "fieldLabel", "fieldName", "campo", "label");
+        if (fieldName == null) {
+            context.warn("UPDATE_INITIAL_REQUIREMENT omitido: falta el requisito a modificar.");
+            return 0;
+        }
+
+        int index = findFieldIndex(context.requisitosIniciales, fieldName);
+        if (index < 0) {
+            context.warn("UPDATE_INITIAL_REQUIREMENT omitido: no existe el requisito " + fieldName + ".");
+            return 0;
+        }
+
+        CampoFormulario field = context.requisitosIniciales.get(index);
+        int applied = 0;
+        String newName = firstText(operation, "newName", "newFieldName", "newLabel", "label");
+        if (newName != null && !sameText(newName, field.getCampo())) {
+            if (findFieldIndex(context.requisitosIniciales, newName) >= 0) {
+                context.warn("UPDATE_INITIAL_REQUIREMENT no renombro el requisito porque ya existe " + newName + ".");
+            } else {
+                field.setCampo(newName);
+                applied++;
+            }
+        }
+
+        String rawType = firstText(operation, "fieldType", "newFieldType", "tipoCampo", "type", "tipo");
+        if (rawType != null) {
+            TipoCampo nextType = parseFieldType(rawType, field.getCampo());
+            if (nextType != field.getTipo()) {
+                field.setTipo(nextType);
+                applied++;
+            }
+        }
+
+        if (applyFieldMetadata(field, operation)) {
+            applied++;
+        }
+
         return applied;
     }
 
@@ -1041,6 +1159,17 @@ public class WorkflowAiEditorService {
         if (validations != null && !Objects.equals(field.getValidaciones(), validations)) {
             field.setValidaciones(validations);
             changed = true;
+        }
+
+        Map<String, Object> configDocMap = firstMap(operation, "configuracionDocumento");
+        if (configDocMap != null && objectMapper != null) {
+            try {
+                ConfiguracionDocumento configDoc = objectMapper.convertValue(configDocMap, ConfiguracionDocumento.class);
+                field.setConfiguracionDocumento(configDoc);
+                changed = true;
+            } catch (IllegalArgumentException e) {
+                log.warn("No se pudo mapear configuracionDocumento en UPDATE_FORM", e);
+            }
         }
 
         return changed;
@@ -1735,6 +1864,7 @@ public class WorkflowAiEditorService {
         private final String policyId;
         private final List<Nodo> nodes;
         private final List<Conexion> connections;
+        private final List<CampoFormulario> requisitosIniciales;
         private final List<String> warnings = new ArrayList<>();
         private final List<String> errors = new ArrayList<>();
 
@@ -1742,6 +1872,7 @@ public class WorkflowAiEditorService {
             this.policyId = politica.getId();
             this.nodes = new ArrayList<>(optionalList(politica.getNodos()));
             this.connections = new ArrayList<>(optionalList(politica.getConexiones()));
+            this.requisitosIniciales = new ArrayList<>(optionalList(politica.getRequisitosIniciales()));
         }
 
         private void warn(String message) {

@@ -1,5 +1,6 @@
 package com.leo.politicas_de_negocio.iaeditorflujo.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.leo.politicas_de_negocio.departamentos.model.Departamento;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
 import com.leo.politicas_de_negocio.iaeditorflujo.client.WorkflowAiEditorClient;
@@ -60,7 +61,8 @@ class WorkflowAiEditorServiceTest {
                 politicaNegocioRepository,
                 usuarioRepository,
                 departamentoRepository,
-                new WorkflowAiEditValidator()
+                new WorkflowAiEditValidator(),
+                new ObjectMapper()
         );
     }
 
@@ -326,4 +328,81 @@ class WorkflowAiEditorServiceTest {
                 .rol("ADMIN")
                 .build();
     }
+
+    @Test
+    void applyEdition_debeAgregarRequisitoInicial() {
+        PoliticaNegocio politica = policy();
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaNegocioRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaNegocioRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowAiEditOperationDto operation = operationWithType("ADD_INITIAL_REQUIREMENT");
+        operation.addProperty("fieldLabel", "Código de cliente");
+        operation.addProperty("fieldType", "TEXTO");
+        operation.addProperty("required", true);
+
+        WorkflowAiEditApplyRequest request = new WorkflowAiEditApplyRequest();
+        request.setPrompt("Agrega el codigo de cliente como requisito inicial");
+        request.setOperations(List.of(operation));
+
+        WorkflowAiEditApplyResponse response = service.applyEdition("admin-1", "pol-1", request);
+
+        assertTrue(response.isSuccess());
+        assertTrue(politica.getRequisitosIniciales().stream().anyMatch(req ->
+                "Código de cliente".equals(req.getCampo())
+                        && req.getTipo() == TipoCampo.TEXTO
+                        && Boolean.TRUE.equals(req.getRequerido())));
+    }
+
+    @Test
+    void applyEdition_debeEliminarRequisitoInicial() {
+        PoliticaNegocio politica = policy();
+        politica.setRequisitosIniciales(List.of(CampoFormulario.builder()
+                .campo("Código de cliente")
+                .tipo(TipoCampo.TEXTO)
+                .build()));
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaNegocioRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaNegocioRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowAiEditOperationDto operation = operationWithType("DELETE_INITIAL_REQUIREMENT");
+        operation.addProperty("fieldLabel", "Código de cliente");
+
+        WorkflowAiEditApplyRequest request = new WorkflowAiEditApplyRequest();
+        request.setPrompt("Elimina el codigo de cliente de los requisitos iniciales");
+        request.setOperations(List.of(operation));
+
+        WorkflowAiEditApplyResponse response = service.applyEdition("admin-1", "pol-1", request);
+
+        assertTrue(response.isSuccess());
+        assertTrue(politica.getRequisitosIniciales().isEmpty());
+    }
+
+    @Test
+    void applyEdition_debeEditarRequisitoInicial() {
+        PoliticaNegocio politica = policy();
+        politica.setRequisitosIniciales(List.of(CampoFormulario.builder()
+                .campo("Código de cliente")
+                .tipo(TipoCampo.TEXTO)
+                .build()));
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaNegocioRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaNegocioRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        WorkflowAiEditOperationDto operation = operationWithType("UPDATE_INITIAL_REQUIREMENT");
+        operation.addProperty("fieldLabel", "Código de cliente");
+        operation.addProperty("newName", "Código de usuario");
+        operation.addProperty("fieldType", "NUMERO");
+
+        WorkflowAiEditApplyRequest request = new WorkflowAiEditApplyRequest();
+        request.setPrompt("Cambia el requisito inicial Código de cliente a Código de usuario y que sea numero");
+        request.setOperations(List.of(operation));
+
+        WorkflowAiEditApplyResponse response = service.applyEdition("admin-1", "pol-1", request);
+
+        assertTrue(response.isSuccess());
+        assertEquals("Código de usuario", politica.getRequisitosIniciales().get(0).getCampo());
+        assertEquals(TipoCampo.NUMERO, politica.getRequisitosIniciales().get(0).getTipo());
+    }
 }
+

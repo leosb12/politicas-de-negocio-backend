@@ -13,6 +13,7 @@ public class StripeCheckoutRequest {
     private String descripcion;
     private String codigoTramite;
     private Map<String, Object> datosContexto;
+    private Map<String, Object> respuestasRequisitosIniciales;
     private String successUrl;
     private String cancelUrl;
 }

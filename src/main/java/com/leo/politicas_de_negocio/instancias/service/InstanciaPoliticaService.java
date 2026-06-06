@@ -2,6 +2,9 @@ package com.leo.politicas_de_negocio.instancias.service;
 
 import com.leo.politicas_de_negocio.departamentos.model.Departamento;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
+import com.leo.politicas_de_negocio.archivos.model.ArchivoAdjunto;
+import com.leo.politicas_de_negocio.archivos.model.enums.EstadoArchivo;
+import com.leo.politicas_de_negocio.archivos.repository.ArchivoAdjuntoRepository;
 import com.leo.politicas_de_negocio.instancias.dto.CrearInstanciaRequest;
 import com.leo.politicas_de_negocio.instancias.dto.FlujoInstanciaResponse;
 import com.leo.politicas_de_negocio.instancias.model.HistorialInstancia;
@@ -11,11 +14,15 @@ import com.leo.politicas_de_negocio.instancias.dto.InstanciaDetalleResponse;
 import com.leo.politicas_de_negocio.instancias.dto.MisTramiteCardResponse;
 import com.leo.politicas_de_negocio.instancias.dto.PagedResponse;
 import com.leo.politicas_de_negocio.instancias.dto.SeguimientoInstanciaResponse;
+import com.leo.politicas_de_negocio.documents.model.DocumentoMetadata;
+import com.leo.politicas_de_negocio.documents.service.DocumentoMetadataService;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaCardProjection;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
@@ -65,6 +72,8 @@ public class InstanciaPoliticaService {
     private final TareaActividadRepository tareaRepository;
     private final PoliticaNegocioService politicaNegocioService;
     private final com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
+    private final ArchivoAdjuntoRepository archivoRepository;
+    private final DocumentoMetadataService documentoMetadataService;
 
     public InstanciaPolitica crearInstanciaDirecta(String actorUserId, CrearInstanciaRequest request) {
         Usuario actor = assertUsuarioActivo(actorUserId);
@@ -87,6 +96,10 @@ public class InstanciaPoliticaService {
         }
 
         politicaNegocioService.validarInicioPoliticaPorActor(actor, politica);
+        Map<String, Object> respuestasRequisitosIniciales = validarRespuestasRequisitosInicialesParaPolitica(
+                politica,
+                request.getRespuestasRequisitosIniciales()
+        );
 
         LocalDateTime now = LocalDateTime.now();
         InstanciaPolitica instancia = InstanciaPolitica.builder()
@@ -98,10 +111,13 @@ public class InstanciaPoliticaService {
                 .fechaActualizacion(now)
                 .creadaPor(actor.getId())
                 .datosContexto(copiarMapa(request.getDatosContexto()))
+                .requisitosInicialesDefinicion(politicaNegocioService.clonarCampos(politica.getRequisitosIniciales()))
+                .respuestasRequisitosIniciales(respuestasRequisitosIniciales)
                 .tokensJoin(new HashMap<>())
                 .build();
 
         instancia = instanciaRepository.save(instancia);
+        vincularArchivosDeRequisitosIniciales(instancia, actor, respuestasRequisitosIniciales);
 
         historialService.registrar(
                 instancia.getId(),
@@ -248,6 +264,7 @@ public class InstanciaPoliticaService {
                 .laneOrientation(politica.getLaneOrientation())
                 .laneWidth(politica.getLaneWidth())
                 .laneHeight(politica.getLaneHeight())
+                .requisitosIniciales(construirRequisitosInicialesSeguimiento(instancia))
                 .nodos(nodos)
                 .conexiones(construirConexionesSeguimiento(politica.getConexiones()))
                 .tareas(tareasResponse)
@@ -342,6 +359,139 @@ public class InstanciaPoliticaService {
         return historialService.listarPorInstancia(instanciaId);
     }
 
+    public Map<String, Object> validarRespuestasRequisitosInicialesParaPolitica(
+            PoliticaNegocio politica,
+            Map<String, Object> respuestas
+    ) {
+        List<CampoFormulario> requisitos = politica != null ? politica.getRequisitosIniciales() : null;
+        if (requisitos == null || requisitos.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        Map<String, Object> respuestasNormalizadas = copiarMapa(respuestas);
+        List<String> faltantes = new ArrayList<>();
+
+        for (CampoFormulario requisito : requisitos) {
+            if (requisito == null || requisito.getTipo() == TipoCampo.LABEL) {
+                continue;
+            }
+
+            String campo = normalizarTexto(requisito.getCampo());
+            if (campo == null) {
+                continue;
+            }
+
+            if (Boolean.TRUE.equals(requisito.getRequerido())
+                    && !tieneValorRequisito(respuestasNormalizadas.get(campo))) {
+                faltantes.add(resolveEtiquetaRequisito(requisito));
+            }
+        }
+
+        if (!faltantes.isEmpty()) {
+            throw new ApiException(
+                    HttpStatus.BAD_REQUEST,
+                    "Faltan requisitos iniciales obligatorios: " + String.join(", ", faltantes)
+            );
+        }
+
+        return respuestasNormalizadas;
+    }
+
+    private void vincularArchivosDeRequisitosIniciales(
+            InstanciaPolitica instancia,
+            Usuario actor,
+            Map<String, Object> respuestas
+    ) {
+        if (instancia == null || actor == null || respuestas == null || respuestas.isEmpty()) {
+            return;
+        }
+
+        List<String> archivoIds = new ArrayList<>();
+        recolectarArchivoIdsRequisito(respuestas, archivoIds);
+        for (String archivoId : archivoIds) {
+            archivoRepository.findByIdAndEstado(archivoId, EstadoArchivo.ACTIVO)
+                    .ifPresent(archivo -> vincularArchivoInicial(instancia, actor, archivo));
+        }
+    }
+
+    private void vincularArchivoInicial(
+            InstanciaPolitica instancia,
+            Usuario actor,
+            ArchivoAdjunto archivo
+    ) {
+        if (archivo == null) {
+            return;
+        }
+
+        String subidoPor = normalizarTexto(archivo.getSubidoPor());
+        String usuarioId = normalizarTexto(archivo.getUsuarioId());
+        if (!actor.getId().equals(subidoPor) && !actor.getId().equals(usuarioId)) {
+            return;
+        }
+
+        archivo.setInstanciaId(instancia.getId());
+        archivo.setTramiteId(instancia.getId());
+        if (normalizarTexto(archivo.getUsuarioId()) == null) {
+            archivo.setUsuarioId(actor.getId());
+        }
+        if (normalizarTexto(archivo.getClienteId()) == null) {
+            archivo.setClienteId(actor.getId());
+        }
+        if (normalizarTexto(archivo.getPoliticaId()) == null) {
+            archivo.setPoliticaId(instancia.getPoliticaId());
+        }
+        archivoRepository.save(archivo);
+    }
+
+    private void recolectarArchivoIdsRequisito(Object value, List<String> archivoIds) {
+        if (value instanceof Map<?, ?> map) {
+            agregarArchivoId(map.get("archivoId"), archivoIds);
+            agregarArchivoId(map.get("id"), archivoIds);
+            for (Object child : map.values()) {
+                recolectarArchivoIdsRequisito(child, archivoIds);
+            }
+            return;
+        }
+
+        if (value instanceof Collection<?> collection) {
+            for (Object child : collection) {
+                recolectarArchivoIdsRequisito(child, archivoIds);
+            }
+        }
+    }
+
+    private void agregarArchivoId(Object rawValue, List<String> archivoIds) {
+        String archivoId = normalizarTexto(rawValue != null ? rawValue.toString() : null);
+        if (archivoId != null && !archivoIds.contains(archivoId)) {
+            archivoIds.add(archivoId);
+        }
+    }
+
+    private boolean tieneValorRequisito(Object value) {
+        if (value == null) {
+            return false;
+        }
+        if (value instanceof String text) {
+            return normalizarTexto(text) != null;
+        }
+        if (value instanceof Collection<?> collection) {
+            return collection.stream().anyMatch(this::tieneValorRequisito);
+        }
+        if (value instanceof Map<?, ?> map) {
+            return !map.isEmpty() && map.values().stream().anyMatch(this::tieneValorRequisito);
+        }
+        return true;
+    }
+
+    private String resolveEtiquetaRequisito(CampoFormulario requisito) {
+        String etiqueta = normalizarTexto(requisito.getEtiqueta());
+        if (etiqueta != null) {
+            return etiqueta;
+        }
+        String campo = normalizarTexto(requisito.getCampo());
+        return campo != null ? campo : "requisito";
+    }
+
     private InstanciaPolitica buscarInstancia(String instanciaId) {
         String id = normalizarTexto(instanciaId);
         if (id == null) {
@@ -366,6 +516,11 @@ public class InstanciaPoliticaService {
             return;
         }
 
+        PoliticaNegocio politica = politicaRepository.findById(instancia.getPoliticaId()).orElse(null);
+        if (actorParticipaEnPolitica(actor, politica)) {
+            return;
+        }
+
         throw new ApiException(HttpStatus.FORBIDDEN,
                 "No tiene permisos para consultar esta instancia");
     }
@@ -387,6 +542,34 @@ public class InstanciaPoliticaService {
         }
 
         return actorParticipaEnInstancia(actor, instancia.getId());
+    }
+
+    private boolean actorParticipaEnPolitica(Usuario actor, PoliticaNegocio politica) {
+        if (actor == null || politica == null || politica.getNodos() == null) {
+            return false;
+        }
+
+        String actorId = normalizarTexto(actor.getId());
+        String departamentoId = normalizarTexto(actor.getDepartamentoId());
+        for (Nodo nodo : politica.getNodos()) {
+            if (nodo == null) {
+                continue;
+            }
+
+            if (actorId != null
+                    && "USUARIO".equalsIgnoreCase(normalizarTexto(nodo.getResponsableTipo()))
+                    && actorId.equals(normalizarTexto(nodo.getResponsableId()))) {
+                return true;
+            }
+
+            if (departamentoId != null
+                    && (departamentoId.equals(normalizarTexto(nodo.getDepartamentoId()))
+                    || ("DEPARTAMENTO".equalsIgnoreCase(normalizarTexto(nodo.getResponsableTipo()))
+                    && departamentoId.equals(normalizarTexto(nodo.getResponsableId()))))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean actorParticipaEnInstancia(Usuario actor, String instanciaId) {
@@ -735,6 +918,31 @@ public class InstanciaPoliticaService {
         return departamento != null ? normalizarTexto(departamento.getNombre()) : null;
     }
 
+    private SeguimientoInstanciaResponse.RequisitosInicialesSeguimientoResponse construirRequisitosInicialesSeguimiento(
+            InstanciaPolitica instancia
+    ) {
+        List<DocumentoMetadata> documentos = List.of();
+        String clienteId = normalizarTexto(instancia.getCreadaPor());
+        String tramiteId = normalizarTexto(instancia.getId());
+        if (clienteId != null && tramiteId != null) {
+            documentos = documentoMetadataService.listarRequisitosInicialesPorTramite(clienteId, tramiteId);
+            if (documentos == null) {
+                documentos = List.of();
+            }
+        }
+
+        return SeguimientoInstanciaResponse.RequisitosInicialesSeguimientoResponse.builder()
+                .titulo("Requisitos iniciales")
+                .definicion(instancia.getRequisitosInicialesDefinicion() != null
+                        ? instancia.getRequisitosInicialesDefinicion()
+                        : List.of())
+                .respuestas(instancia.getRespuestasRequisitosIniciales() != null
+                        ? instancia.getRespuestasRequisitosIniciales()
+                        : Map.of())
+                .documentos(documentos)
+                .build();
+    }
+
     private Departamento resolverDepartamento(Map<String, Departamento> departamentosCache, String departamentoId) {
         String id = normalizarTexto(departamentoId);
         if (id == null) {
@@ -771,6 +979,8 @@ public class InstanciaPoliticaService {
                 .finalizadaPor(instancia.getFinalizadaPor())
                 .finalizadaPorNombre(resolverNombreUsuario(instancia.getFinalizadaPor()))
                 .datosContexto(instancia.getDatosContexto())
+                .requisitosInicialesDefinicion(instancia.getRequisitosInicialesDefinicion())
+                .respuestasRequisitosIniciales(instancia.getRespuestasRequisitosIniciales())
                 .tokensJoin(instancia.getTokensJoin())
                 .totalTareas(totalTareas)
                 .tareasAbiertas(tareasAbiertas)

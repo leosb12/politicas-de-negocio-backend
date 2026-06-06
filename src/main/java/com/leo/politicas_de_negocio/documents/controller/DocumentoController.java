@@ -28,10 +28,17 @@ public class DocumentoController {
             @RequestHeader(value = "X-User-Id", required = false) String userId,
             @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "origenCarga", required = false) String origenCarga) {
+            @RequestParam(value = "origenCarga", required = false) String origenCarga,
+            @RequestParam(value = "campoFormularioId", required = false) String campoFormularioId) {
 
         String actorUserId = resolverActorUserId(userId, adminUserId);
-        DocumentoMetadata metadata = documentalService.subirDocumento(actorUserId, tramiteId, file, origenCarga);
+        DocumentoMetadata metadata = documentalService.subirDocumento(
+                actorUserId,
+                tramiteId,
+                file,
+                origenCarga,
+                campoFormularioId
+        );
         return new ResponseEntity<>(metadata, HttpStatus.CREATED);
     }
 

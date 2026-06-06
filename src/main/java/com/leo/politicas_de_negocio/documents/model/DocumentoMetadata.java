@@ -18,6 +18,8 @@ public class DocumentoMetadata {
     private String tramiteNombre;
     private String tramiteCodigo;
     private String archivoId;
+    private String campoFormularioId;
+    private String categoriaDocumento;
     private String nombreArchivoOriginal;
     private String nombreArchivoSanitizado;
     private String tipoArchivo;
@@ -78,6 +80,12 @@ public class DocumentoMetadata {
 
     public String getArchivoId() { return archivoId; }
     public void setArchivoId(String archivoId) { this.archivoId = archivoId; }
+
+    public String getCampoFormularioId() { return campoFormularioId; }
+    public void setCampoFormularioId(String campoFormularioId) { this.campoFormularioId = campoFormularioId; }
+
+    public String getCategoriaDocumento() { return categoriaDocumento; }
+    public void setCategoriaDocumento(String categoriaDocumento) { this.categoriaDocumento = categoriaDocumento; }
 
     public String getNombreArchivoOriginal() { return nombreArchivoOriginal; }
     public void setNombreArchivoOriginal(String nombreArchivoOriginal) { this.nombreArchivoOriginal = nombreArchivoOriginal; }

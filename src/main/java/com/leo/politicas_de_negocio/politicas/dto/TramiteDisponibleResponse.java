@@ -15,6 +15,7 @@ public class TramiteDisponibleResponse {
     private String departamentoInicioId;
     private String departamentoInicioNombre;
     private Boolean requierePago;
+    private Boolean tieneRequisitosIniciales;
     private BigDecimal montoPago;
     private String monedaPago;
     private String descripcionPago;

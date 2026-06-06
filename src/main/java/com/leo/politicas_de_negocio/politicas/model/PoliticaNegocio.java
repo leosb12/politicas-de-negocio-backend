@@ -3,6 +3,7 @@ package com.leo.politicas_de_negocio.politicas.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import lombok.AllArgsConstructor;
@@ -30,6 +31,11 @@ public class PoliticaNegocio {
     
     private String nombre;
     private String descripcion;
+    private String categoria;
+    private String descripcionClasificacion;
+    private List<String> palabrasClave;
+    private List<String> intencionesEjemplo;
+    private List<String> requisitosSugeridos;
     private EstadoPolitica estado;
     private TipoPolitica tipoPolitica;
     private String departamentoInicioId;
@@ -43,6 +49,7 @@ public class PoliticaNegocio {
     
     private List<Nodo> nodos;
     private List<Conexion> conexiones;
+    private List<CampoFormulario> requisitosIniciales;
 
     // Configuracion visual compartida del canvas de diseño.
     private String laneOrientation;

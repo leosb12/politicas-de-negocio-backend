@@ -34,7 +34,10 @@ public class WorkflowAiEditValidator {
             "MOVE_NODE",
             "REORDER_FLOW",
             "ADD_BUSINESS_RULE",
-            "DELETE_BUSINESS_RULE"
+            "DELETE_BUSINESS_RULE",
+            "ADD_INITIAL_REQUIREMENT",
+            "UPDATE_INITIAL_REQUIREMENT",
+            "DELETE_INITIAL_REQUIREMENT"
     );
 
     public WorkflowAiEditValidationResult validate(PoliticaNegocio politica, WorkflowAiEditProposalResponse proposal) {
@@ -213,9 +216,13 @@ public class WorkflowAiEditValidator {
             case "DELETE_FIELD", "ELIMINAR_CAMPO_FORMULARIO" -> "DELETE_FORM_FIELD";
             case "EDIT_FIELD", "EDITAR_CAMPO_FORMULARIO" -> "UPDATE_FORM";
             case "REORDER_SEQUENCE", "REORDENAR_FLUJO" -> "REORDER_FLOW";
+            case "ADD_INITIAL_REQUIREMENT", "ADD_REQUIREMENT", "AGREGAR_REQUISITO", "AGREGAR_REQUISITO_INICIAL" -> "ADD_INITIAL_REQUIREMENT";
+            case "DELETE_INITIAL_REQUIREMENT", "DELETE_REQUIREMENT", "ELIMINAR_REQUISITO", "ELIMINAR_REQUISITO_INICIAL" -> "DELETE_INITIAL_REQUIREMENT";
+            case "UPDATE_INITIAL_REQUIREMENT", "UPDATE_REQUIREMENT", "EDITAR_REQUISITO", "EDITAR_REQUISITO_INICIAL" -> "UPDATE_INITIAL_REQUIREMENT";
             default -> upper;
         };
     }
+
 
     private Set<String> extractNodeNames(List<Nodo> nodos) {
         Set<String> nodeNames = new LinkedHashSet<>();

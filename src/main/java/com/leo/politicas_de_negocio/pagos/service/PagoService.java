@@ -69,6 +69,10 @@ public class PagoService {
         Usuario actor = assertUsuarioActivo(actorUserId);
         PoliticaNegocio politica = cargarPoliticaActiva(request != null ? request.getPoliticaId() : null);
         politicaNegocioService.validarInicioPoliticaPorActor(actor, politica);
+        instanciaPoliticaService.validarRespuestasRequisitosInicialesParaPolitica(
+                politica,
+                request != null ? request.getRespuestasRequisitosIniciales() : null
+        );
 
         if (!Boolean.TRUE.equals(politica.getRequierePago())) {
             InstanciaPolitica instancia = instanciaPoliticaService.crearInstanciaDirecta(actor.getId(), request);
@@ -97,6 +101,11 @@ public class PagoService {
         validarUsuarioRequest(actor.getId(), request.getUsuarioId());
         PoliticaNegocio politica = cargarPoliticaPagada(request.getPoliticaId(), actor);
         validarMontoYDescripcionCliente(request.getMonto(), request.getDescripcion(), politica);
+        Map<String, Object> respuestasRequisitosIniciales =
+                instanciaPoliticaService.validarRespuestasRequisitosInicialesParaPolitica(
+                        politica,
+                        request.getRespuestasRequisitosIniciales()
+                );
 
         Pago pagoExistente = pagoRepository.findFirstByUsuarioIdAndPoliticaIdAndProveedorAndEstadoInOrderByFechaCreacionDesc(
                 actor.getId(),
@@ -105,6 +114,10 @@ public class PagoService {
                 ESTADOS_NO_FINALES
         ).orElse(null);
         if (pagoExistente != null && normalizar(pagoExistente.getStripeSessionId()) != null) {
+            pagoExistente.setRespuestasRequisitosIniciales(respuestasRequisitosIniciales);
+            pagoExistente.setDatosContexto(copiarMapa(request.getDatosContexto()));
+            pagoExistente.setCodigoTramite(normalizar(request.getCodigoTramite()));
+            pagoRepository.save(pagoExistente);
             String checkoutUrl = resolveStripeCheckoutUrlFromSession(pagoExistente.getStripeSessionId());
             if (checkoutUrl != null) {
                 return toResponse(pagoExistente, checkoutUrl);
@@ -127,6 +140,7 @@ public class PagoService {
                 .fechaCreacion(LocalDateTime.now())
                 .codigoTramite(normalizar(request.getCodigoTramite()))
                 .datosContexto(copiarMapa(request.getDatosContexto()))
+                .respuestasRequisitosIniciales(respuestasRequisitosIniciales)
                 .build();
         pago = pagoRepository.save(pago);
 
@@ -208,6 +222,11 @@ public class PagoService {
         validarUsuarioRequest(actor.getId(), request.getUsuarioId());
         PoliticaNegocio politica = cargarPoliticaPagada(request.getPoliticaId(), actor);
         validarMontoYDescripcionCliente(request.getMonto(), request.getDescripcion(), politica);
+        Map<String, Object> respuestasRequisitosIniciales =
+                instanciaPoliticaService.validarRespuestasRequisitosInicialesParaPolitica(
+                        politica,
+                        request.getRespuestasRequisitosIniciales()
+                );
 
         Optional<Pago> pagoExistente = pagoRepository.findFirstByUsuarioIdAndPoliticaIdAndProveedorAndEstadoInOrderByFechaCreacionDesc(
                 actor.getId(),
@@ -217,6 +236,9 @@ public class PagoService {
         );
         if (pagoExistente.isPresent()) {
             Pago existing = pagoExistente.get();
+            existing.setRespuestasRequisitosIniciales(respuestasRequisitosIniciales);
+            existing.setDatosContexto(copiarMapa(request.getDatosContexto()));
+            existing.setCodigoTramite(normalizar(request.getCodigoTramite()));
             // Regenerar la URL con la logica corregida (charset + sanitizacion)
             existing.setPaypalUrl(buildPaypalUrl(existing));
             pagoRepository.save(existing);
@@ -234,6 +256,7 @@ public class PagoService {
                 .fechaCreacion(LocalDateTime.now())
                 .codigoTramite(normalizar(request.getCodigoTramite()))
                 .datosContexto(copiarMapa(request.getDatosContexto()))
+                .respuestasRequisitosIniciales(respuestasRequisitosIniciales)
                 .build();
         pago.setPaypalUrl(buildPaypalUrl(pago));
         pago = pagoRepository.save(pago);
@@ -323,6 +346,7 @@ public class PagoService {
         request.setPoliticaId(pago.getPoliticaId());
         request.setCodigoTramite(pago.getCodigoTramite());
         request.setDatosContexto(copiarMapa(pago.getDatosContexto()));
+        request.setRespuestasRequisitosIniciales(copiarMapa(pago.getRespuestasRequisitosIniciales()));
 
         InstanciaPolitica instancia = instanciaPoliticaService.crearInstanciaDirecta(pago.getUsuarioId(), request);
         pago.setInstanciaId(instancia.getId());

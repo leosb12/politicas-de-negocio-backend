@@ -120,9 +120,10 @@ public class PoliticaNegocioService {
                 .montoPago(paymentConfig.montoPago())
                 .monedaPago(paymentConfig.monedaPago())
                 .descripcionPago(paymentConfig.descripcionPago())
-            .fueActivada(false)
+                .fueActivada(false)
                 .nodos(new ArrayList<>())
                 .conexiones(new ArrayList<>())
+                .requisitosIniciales(new ArrayList<>())
                 .laneOrientation(DEFAULT_LANE_ORIENTATION)
                 .laneWidth(DEFAULT_LANE_WIDTH)
                 .laneHeight(DEFAULT_LANE_HEIGHT)
@@ -157,6 +158,37 @@ public class PoliticaNegocioService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Política no encontrada con ID: " + id));
         normalizarConfiguracionesDocumento(politica);
         return politica;
+    }
+
+    public List<CampoFormulario> obtenerRequisitosIniciales(String actorUserId, String politicaId) {
+        Usuario actor = assertUsuarioActivo(actorUserId);
+        String id = normalizeNullableText(politicaId);
+        if (id == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar politicaId");
+        }
+
+        PoliticaNegocio politica = repository.findById(id)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Politica no encontrada"));
+        validarInicioPoliticaPorActor(actor, politica);
+        return clonarCampos(politica.getRequisitosIniciales());
+    }
+
+    public PoliticaNegocio guardarRequisitosIniciales(
+            String adminUserId,
+            String id,
+            List<CampoFormulario> requisitosIniciales
+    ) {
+        assertAdmin(adminUserId);
+        String politicaId = normalizeNullableText(id);
+        if (politicaId == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar politicaId");
+        }
+
+        PoliticaNegocio politica = repository.findById(politicaId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Politica no encontrada con ID: " + politicaId));
+        politica.setRequisitosIniciales(normalizarCamposFormulario(requisitosIniciales));
+        politica.setFechaActualizacion(LocalDateTime.now());
+        return repository.save(politica);
     }
 
     public PoliticaNegocio guardarFlujo(String adminUserId, String id, UpdateFlujoRequest request) {
@@ -415,6 +447,72 @@ public class PoliticaNegocioService {
         return normalized.isEmpty() ? null : normalized;
     }
 
+    private List<CampoFormulario> normalizarCamposFormulario(List<CampoFormulario> campos) {
+        if (campos == null || campos.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<CampoFormulario> normalizados = new ArrayList<>();
+        int index = 0;
+        for (CampoFormulario campo : campos) {
+            if (campo == null) {
+                continue;
+            }
+
+            String nombre = normalizeNullableText(campo.getCampo());
+            if (nombre == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Cada requisito inicial debe tener campo");
+            }
+
+            TipoCampo tipo = campo.getTipo();
+            if (tipo == null) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "Tipo de campo invalido para requisito: " + nombre);
+            }
+
+            CampoFormulario normalizado = CampoFormulario.builder()
+                    .campo(nombre)
+                    .tipo(tipo)
+                    .etiqueta(normalizeNullableText(campo.getEtiqueta()))
+                    .requerido(tipo == TipoCampo.LABEL ? false : Boolean.TRUE.equals(campo.getRequerido()))
+                    .placeholder(normalizeNullableText(campo.getPlaceholder()))
+                    .ayuda(normalizeNullableText(campo.getAyuda()))
+                    .orden(campo.getOrden() != null ? campo.getOrden() : index)
+                    .opciones(campo.getOpciones() != null ? new ArrayList<>(campo.getOpciones()) : null)
+                    .validaciones(campo.getValidaciones() != null ? new HashMap<>(campo.getValidaciones()) : null)
+                    .configuracionDocumento(campo.getConfiguracionDocumento())
+                    .build();
+            normalizados.add(normalizado);
+            index++;
+        }
+        return normalizados;
+    }
+
+    public List<CampoFormulario> clonarCampos(List<CampoFormulario> campos) {
+        if (campos == null || campos.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<CampoFormulario> copia = new ArrayList<>();
+        for (CampoFormulario campo : campos) {
+            if (campo == null) {
+                continue;
+            }
+            copia.add(CampoFormulario.builder()
+                    .campo(campo.getCampo())
+                    .tipo(campo.getTipoRaw())
+                    .etiqueta(campo.getEtiqueta())
+                    .requerido(campo.getRequerido())
+                    .placeholder(campo.getPlaceholder())
+                    .ayuda(campo.getAyuda())
+                    .orden(campo.getOrden())
+                    .opciones(campo.getOpciones() != null ? new ArrayList<>(campo.getOpciones()) : null)
+                    .validaciones(campo.getValidaciones() != null ? new HashMap<>(campo.getValidaciones()) : null)
+                    .configuracionDocumento(campo.getConfiguracionDocumento())
+                    .build());
+        }
+        return copia;
+    }
+
     private String safeNodeName(Nodo nodo, int index) {
         String nombre = normalizeNullableText(nodo.getNombre());
         if (nombre != null) {
@@ -447,6 +545,7 @@ public class PoliticaNegocioService {
                 .departamentoInicioId(departamentoInicioId)
                 .departamentoInicioNombre(resolveDepartamentoNombre(departamentoInicioId))
                 .requierePago(Boolean.TRUE.equals(politica.getRequierePago()))
+                .tieneRequisitosIniciales(politica.getRequisitosIniciales() != null && !politica.getRequisitosIniciales().isEmpty())
                 .montoPago(politica.getMontoPago())
                 .monedaPago(resolveMonedaPago(politica))
                 .descripcionPago(resolveDescripcionPago(politica))

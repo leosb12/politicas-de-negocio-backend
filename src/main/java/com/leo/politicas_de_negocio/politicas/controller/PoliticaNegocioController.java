@@ -6,6 +6,8 @@ import com.leo.politicas_de_negocio.politicas.dto.AuditoriaDocumentalPoliticaRes
 import com.leo.politicas_de_negocio.politicas.dto.TramiteDisponibleResponse;
 import com.leo.politicas_de_negocio.politicas.dto.UpdateFlujoRequest;
 import com.leo.politicas_de_negocio.politicas.dto.UpdatePoliticaRequest;
+import com.leo.politicas_de_negocio.politicas.dto.UpdateRequisitosInicialesRequest;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
@@ -63,6 +65,29 @@ public class PoliticaNegocioController {
             @RequestHeader("X-Admin-User-Id") String adminUserId,
             @PathVariable String id) {
         return ResponseEntity.ok(auditoriaDocumentalService.obtenerAuditoriaDocumental(adminUserId, id));
+    }
+
+    @GetMapping("/{id}/requisitos-iniciales")
+    public ResponseEntity<List<CampoFormulario>> obtenerRequisitosIniciales(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @PathVariable String id
+    ) {
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        return ResponseEntity.ok(service.obtenerRequisitosIniciales(actorUserId, id));
+    }
+
+    @PutMapping("/{id}/requisitos-iniciales")
+    public ResponseEntity<PoliticaNegocio> guardarRequisitosIniciales(
+            @RequestHeader("X-Admin-User-Id") String adminUserId,
+            @PathVariable String id,
+            @RequestBody UpdateRequisitosInicialesRequest request
+    ) {
+        return ResponseEntity.ok(service.guardarRequisitosIniciales(
+                adminUserId,
+                id,
+                request != null ? request.getRequisitosIniciales() : null
+        ));
     }
 
     @GetMapping("/{id}/auditoria/documental/documentos/{documentoId}/versiones")

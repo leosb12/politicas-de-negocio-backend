@@ -1,6 +1,7 @@
 package com.leo.politicas_de_negocio.instancias.dto;
 
 import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import lombok.Builder;
 import lombok.Data;
@@ -28,6 +29,8 @@ public class InstanciaDetalleResponse {
     private String finalizadaPor;
     private String finalizadaPorNombre;
     private Map<String, Object> datosContexto;
+    private List<CampoFormulario> requisitosInicialesDefinicion;
+    private Map<String, Object> respuestasRequisitosIniciales;
     private Map<String, List<String>> tokensJoin;
     private Long totalTareas;
     private Long tareasAbiertas;

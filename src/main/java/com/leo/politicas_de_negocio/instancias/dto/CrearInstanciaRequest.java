@@ -9,4 +9,5 @@ public class CrearInstanciaRequest {
     private String politicaId;
     private String codigoTramite;
     private Map<String, Object> datosContexto;
+    private Map<String, Object> respuestasRequisitosIniciales;
 }

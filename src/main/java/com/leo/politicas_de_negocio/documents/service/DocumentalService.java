@@ -5,6 +5,8 @@ import com.leo.politicas_de_negocio.documents.model.DocumentoMetadata;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
@@ -24,6 +26,7 @@ import java.util.UUID;
 public class DocumentalService {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentalService.class);
+    private static final String ORIGEN_CARGA_DEFAULT = "WEB";
 
     private final InstanciaPoliticaRepository instanciaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -33,6 +36,16 @@ public class DocumentalService {
     private final DocumentRepositoryService repositoryService;
 
     public DocumentoMetadata subirDocumento(String actorUserId, String tramiteId, MultipartFile file, String origenCarga) {
+        return subirDocumento(actorUserId, tramiteId, file, origenCarga, null);
+    }
+
+    public DocumentoMetadata subirDocumento(
+            String actorUserId,
+            String tramiteId,
+            MultipartFile file,
+            String origenCarga,
+            String campoFormularioId
+    ) {
         log.info("Iniciando flujo documental: actorUserId={}, tramiteId={}", actorUserId, tramiteId);
 
         if (file == null || file.isEmpty()) {
@@ -65,12 +78,15 @@ public class DocumentalService {
         // 4. Obtener nombre del tramite / politica
         String tramiteNombre = "Trámite de política";
         String tramiteCodigo = tramite.getCodigoTramite();
+        PoliticaNegocio politica = null;
         if (tramite.getPoliticaId() != null) {
-            PoliticaNegocio politica = politicaRepository.findById(tramite.getPoliticaId()).orElse(null);
+            politica = politicaRepository.findById(tramite.getPoliticaId()).orElse(null);
             if (politica != null) {
                 tramiteNombre = politica.getNombre();
             }
         }
+        String campoNormalizado = normalizarTexto(campoFormularioId);
+        boolean esRequisitoInicial = esCampoArchivoRequisitoInicial(politica, campoNormalizado);
 
         // 5. Obtener o crear RepositoryId para el cliente
         String repositoryId = repositoryService.obtenerORegistrarRepositoryId(clienteId, tramite.getId(), tramite.getPoliticaId());
@@ -92,6 +108,10 @@ public class DocumentalService {
         metadata.setTramiteNombre(tramiteNombre);
         metadata.setTramiteCodigo(tramiteCodigo);
         metadata.setArchivoId(archivoId);
+        metadata.setCampoFormularioId(campoNormalizado);
+        metadata.setCategoriaDocumento(esRequisitoInicial
+                ? DocumentoMetadataService.CATEGORIA_REQUISITO_INICIAL
+                : "TRAMITE");
         metadata.setNombreArchivoOriginal(file.getOriginalFilename());
         metadata.setNombreArchivoSanitizado(s3Result.getNombreArchivoSanitizado());
         metadata.setTipoArchivo(file.getContentType());
@@ -107,7 +127,7 @@ public class DocumentalService {
         metadata.setFechaSubida(Instant.now().toString());
         metadata.setEstadoDocumento("ACTIVO");
         metadata.setVersion(1);
-        metadata.setOrigenCarga(origenCarga != null ? origenCarga.toUpperCase() : "WEB");
+        metadata.setOrigenCarga(normalizarOrigenCarga(origenCarga));
         metadata.setChecksum(s3Result.getETag());
 
         try {
@@ -126,5 +146,32 @@ public class DocumentalService {
             return "";
         }
         return filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
+    }
+
+    private boolean esCampoArchivoRequisitoInicial(PoliticaNegocio politica, String campoFormularioId) {
+        if (politica == null || campoFormularioId == null || politica.getRequisitosIniciales() == null) {
+            return false;
+        }
+
+        for (CampoFormulario campo : politica.getRequisitosIniciales()) {
+            if (campo == null || !campoFormularioId.equals(normalizarTexto(campo.getCampo()))) {
+                continue;
+            }
+            return campo.getTipo() == TipoCampo.ARCHIVO;
+        }
+        return false;
+    }
+
+    private String normalizarOrigenCarga(String origenCarga) {
+        String normalized = normalizarTexto(origenCarga);
+        return normalized != null ? normalized.toUpperCase() : ORIGEN_CARGA_DEFAULT;
+    }
+
+    private String normalizarTexto(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

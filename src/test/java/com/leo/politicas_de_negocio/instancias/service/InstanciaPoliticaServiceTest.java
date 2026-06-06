@@ -14,7 +14,9 @@ import com.leo.politicas_de_negocio.instancias.model.enums.EstadoInstancia;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
 import com.leo.politicas_de_negocio.politicas.model.enums.TipoNodo;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.model.politica.Conexion;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
@@ -80,6 +82,12 @@ class InstanciaPoliticaServiceTest {
     @Mock
     private com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
 
+    @Mock
+    private com.leo.politicas_de_negocio.archivos.repository.ArchivoAdjuntoRepository archivoRepository;
+
+    @Mock
+    private com.leo.politicas_de_negocio.documents.service.DocumentoMetadataService documentoMetadataService;
+
     private AutoCloseable mocks;
     private InstanciaPoliticaService service;
 
@@ -95,7 +103,9 @@ class InstanciaPoliticaServiceTest {
                 workflowEngineService,
                 tareaRepository,
                 politicaNegocioService,
-                documentoColaborativoMetadataService
+                documentoColaborativoMetadataService,
+                archivoRepository,
+                documentoMetadataService
         );
     }
 
@@ -437,6 +447,14 @@ class InstanciaPoliticaServiceTest {
                 .codigoTramite("TRM-1")
                 .estadoInstancia(EstadoInstancia.EN_CURSO)
                 .fechaCreacion(java.time.LocalDateTime.now())
+                .requisitosInicialesDefinicion(List.of(
+                        CampoFormulario.builder()
+                                .campo("ci")
+                                .tipo(TipoCampo.TEXTO)
+                                .etiqueta("CI")
+                                .build()
+                ))
+                .respuestasRequisitosIniciales(java.util.Map.of("ci", "123"))
                 .build();
 
         PoliticaNegocio politica = PoliticaNegocio.builder()
@@ -491,6 +509,9 @@ class InstanciaPoliticaServiceTest {
         SeguimientoInstanciaResponse response = service.obtenerSeguimientoPorId("cliente-1", "inst-1");
 
         assertEquals("pol-1", response.getPoliticaId());
+        assertEquals("Requisitos iniciales", response.getRequisitosIniciales().getTitulo());
+        assertEquals(1, response.getRequisitosIniciales().getDefinicion().size());
+        assertEquals("123", response.getRequisitosIniciales().getRespuestas().get("ci"));
         assertEquals(3, response.getNodos().size());
         assertEquals(2, response.getConexiones().size());
         assertEquals(List.of("firma"), response.getNodosActualesIds());
@@ -605,6 +626,53 @@ class InstanciaPoliticaServiceTest {
         assertEquals("inst-1", response.getId());
         assertEquals(2L, response.getTotalTareas());
         assertEquals(1L, response.getTareasAbiertas());
+    }
+
+    @Test
+    void obtenerDetallePorId_debePermitirFuncionarioDeDepartamentoParticipanteEnPolitica() {
+        Usuario actor = Usuario.builder()
+                .id("func-1")
+                .rol("FUNCIONARIO")
+                .departamentoId("dep-1")
+                .activo(true)
+                .build();
+
+        InstanciaPolitica instancia = InstanciaPolitica.builder()
+                .id("inst-1")
+                .creadaPor("otro")
+                .politicaId("pol-1")
+                .build();
+
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-1")
+                .nodos(List.of(
+                        Nodo.builder()
+                                .id("revision")
+                                .tipo(TipoNodo.ACTIVIDAD)
+                                .departamentoId("dep-1")
+                                .responsableTipo("DEPARTAMENTO")
+                                .responsableId("dep-1")
+                                .build()
+                ))
+                .build();
+
+        when(usuarioRepository.findByIdAndActivo("func-1", true)).thenReturn(Optional.of(actor));
+        when(instanciaRepository.findById("inst-1")).thenReturn(Optional.of(instancia));
+        when(tareaRepository.existsByInstanciaIdAndAsignadoA("inst-1", "func-1")).thenReturn(false);
+        when(tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId("inst-1", "USUARIO", "func-1"))
+                .thenReturn(false);
+        when(tareaRepository.existsByInstanciaIdAndResponsableTipoIgnoreCaseAndResponsableId("inst-1", "DEPARTAMENTO", "dep-1"))
+                .thenReturn(false);
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(tareaRepository.countByInstanciaId("inst-1")).thenReturn(0L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTareaIn(eq("inst-1"), anyList())).thenReturn(0L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTarea("inst-1", EstadoTarea.COMPLETADA)).thenReturn(0L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTarea("inst-1", EstadoTarea.CANCELADA)).thenReturn(0L);
+        when(tareaRepository.countByInstanciaIdAndEstadoTarea("inst-1", EstadoTarea.RECHAZADA)).thenReturn(0L);
+
+        InstanciaDetalleResponse response = service.obtenerDetallePorId("func-1", "inst-1");
+
+        assertEquals("inst-1", response.getId());
     }
 
     @Test

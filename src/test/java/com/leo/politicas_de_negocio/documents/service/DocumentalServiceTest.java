@@ -5,6 +5,8 @@ import com.leo.politicas_de_negocio.documents.model.DocumentoMetadata;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
+import com.leo.politicas_de_negocio.politicas.model.enums.TipoCampo;
+import com.leo.politicas_de_negocio.politicas.model.politica.CampoFormulario;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
@@ -16,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -196,5 +200,69 @@ class DocumentalServiceTest {
 
         // Verify rollback was performed
         verify(s3Service, times(1)).eliminarArchivo("document-repositories/cliente-1/tramite-1/doc_unique_test.pdf");
+    }
+
+    @Test
+    void subirDocumento_deRequisitoInicialMarcaCategoriaYCampoFormulario() {
+        String actorUserId = "cliente-1";
+        String tramiteId = "tramite-1";
+        String clienteId = "cliente-1";
+        MockMultipartFile file = new MockMultipartFile("file", "ci.pdf", "application/pdf", "contenido".getBytes());
+
+        InstanciaPolitica tramite = InstanciaPolitica.builder()
+                .id(tramiteId)
+                .creadaPor(clienteId)
+                .codigoTramite("TRM-100")
+                .politicaId("pol-1")
+                .build();
+
+        Usuario cliente = Usuario.builder()
+                .id(clienteId)
+                .nombre("Cliente Demo")
+                .rol("CLIENTE")
+                .build();
+
+        PoliticaNegocio politica = PoliticaNegocio.builder()
+                .id("pol-1")
+                .nombre("Politica de Prueba")
+                .requisitosIniciales(List.of(
+                        CampoFormulario.builder()
+                                .campo("documento_ci")
+                                .tipo(TipoCampo.ARCHIVO)
+                                .etiqueta("Documento CI")
+                                .build()
+                ))
+                .build();
+
+        S3UploadResult s3Result = S3UploadResult.builder()
+                .bucket("politicas-document-repositories-leonardo")
+                .s3Key("document-repositories/cliente-1/tramite-1/doc_unique_ci.pdf")
+                .s3Uri("s3://politicas-document-repositories-leonardo/key")
+                .s3Url("https://politicas-document-repositories-leonardo.s3.sa-east-1.amazonaws.com/key")
+                .eTag("etag-123")
+                .nombreArchivoSanitizado("ci.pdf")
+                .build();
+
+        when(instanciaRepository.findById(tramiteId)).thenReturn(Optional.of(tramite));
+        when(usuarioRepository.findById(clienteId)).thenReturn(Optional.of(cliente));
+        when(politicaRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(repositoryService.obtenerORegistrarRepositoryId(clienteId, tramiteId, "pol-1")).thenReturn("repo-123");
+        when(s3Service.subirArchivo(eq(clienteId), eq(tramiteId), anyString(), eq(file))).thenReturn(s3Result);
+
+        DocumentoMetadata metadata = service.subirDocumento(
+                actorUserId,
+                tramiteId,
+                file,
+                "MOVIL",
+                "documento_ci"
+        );
+
+        assertEquals("documento_ci", metadata.getCampoFormularioId());
+        assertEquals(DocumentoMetadataService.CATEGORIA_REQUISITO_INICIAL, metadata.getCategoriaDocumento());
+        assertEquals("MOVIL", metadata.getOrigenCarga());
+        var captor = forClass(DocumentoMetadata.class);
+        verify(metadataService).guardarMetadata(captor.capture());
+        assertEquals(DocumentoMetadataService.CATEGORIA_REQUISITO_INICIAL,
+                captor.getValue().getCategoriaDocumento());
     }
 }

@@ -573,6 +573,8 @@ public class TareaActividadService {
                 .creadaPor(instancia.getCreadaPor())
                 .creadaPorNombre(resolverNombreUsuario(instancia.getCreadaPor()))
                 .datosContexto(instancia.getDatosContexto())
+                .requisitosInicialesDefinicion(instancia.getRequisitosInicialesDefinicion())
+                .respuestasRequisitosIniciales(instancia.getRespuestasRequisitosIniciales())
                 .tokensJoin(instancia.getTokensJoin())
                 .totalTareas(totalTareas)
                 .tareasAbiertas(tareasAbiertas)
