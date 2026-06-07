@@ -1,0 +1,28 @@
+package com.leo.politicas_de_negocio.workflow_prediction.client;
+
+import com.leo.politicas_de_negocio.workflow_prediction.dto.PredictionRequest;
+import com.leo.politicas_de_negocio.workflow_prediction.dto.PredictionResponse;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+
+@Component
+public class WorkflowPredictionClient {
+
+    private final RestTemplate restTemplate;
+    private final String url;
+
+    public WorkflowPredictionClient(RestTemplate restTemplate, @Value("${ia.service.url:http://localhost:8010}") String iaServiceUrl) {
+        this.restTemplate = restTemplate;
+        this.url = iaServiceUrl + "/api/predicciones/predict";
+    }
+
+    public java.util.Map<String, Object> predict(PredictionRequest request) {
+        try {
+            return restTemplate.postForObject(url, request, java.util.Map.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+}

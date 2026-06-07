@@ -50,4 +50,6 @@ public interface TareaActividadRepository extends MongoRepository<TareaActividad
     long countByInstanciaIdAndEstadoTarea(String instanciaId, EstadoTarea estadoTarea);
 
     long countByInstanciaIdAndEstadoTareaIn(String instanciaId, List<EstadoTarea> estados);
+
+    long countByAsignadoAAndEstadoTareaIn(String asignadoA, List<EstadoTarea> estados);
 }

@@ -23,6 +23,7 @@ import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import com.leo.politicas_de_negocio.workflow.service.WorkflowEngineService;
+import com.leo.politicas_de_negocio.workflow_metricas.service.WorkflowMetricasService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -63,6 +64,8 @@ public class TareaActividadService {
     private final HistorialInstanciaService historialService;
     private final WorkflowEngineService workflowEngineService;
     private final WorkflowNotificationService workflowNotificationService;
+    private final WorkflowMetricasService workflowMetricasService;
+    private final PrioridadRecomendacionService prioridadRecomendacionService;
 
     public List<TareaActividad> listarMisTareas(String actorUserId) {
         Usuario actor = assertUsuarioActivo(actorUserId);
@@ -142,6 +145,9 @@ public class TareaActividadService {
                     ? resumenFormulario
                     : resumirContexto(instancia != null ? instancia.getDatosContexto() : null);
 
+            PrioridadRecomendacionService.RecomendacionResult recomendacion = 
+                    prioridadRecomendacionService.analizarPrioridadYRecurso(tarea, instancia);
+
             respuesta.add(TareaMiaResponse.builder()
                     .id(tarea.getId())
                     .nombreActividad(tarea.getNombreNodo())
@@ -151,7 +157,9 @@ public class TareaActividadService {
                     .politicaNombre(politica != null ? politica.getNombre() : null)
                     .fechaCreacion(tarea.getFechaCreacion())
                     .fechaInicio(tarea.getFechaInicio())
-                    .prioridad(calcularPrioridad(tarea))
+                    .prioridad(recomendacion.getPrioridad())
+                    .recursoRecomendado(recomendacion.getRecursoRecomendado())
+                    .motivoRecomendacion(recomendacion.getMotivoRecomendacion())
                     .responsableActual(normalizarTexto(tarea.getAsignadoA()) != null ? tarea.getAsignadoA() : tarea.getResponsableId())
                     .responsableTipo(tarea.getResponsableTipo())
                     .responsableId(tarea.getResponsableId())
@@ -187,6 +195,9 @@ public class TareaActividadService {
                 .map(this::resolverNombreUsuario)
                 .toList();
 
+        PrioridadRecomendacionService.RecomendacionResult recomendacion = 
+                prioridadRecomendacionService.analizarPrioridadYRecurso(tarea, instancia);
+
         return TareaDetalleResponse.builder()
                 .id(tarea.getId())
                 .instanciaId(instancia.getId())
@@ -194,6 +205,10 @@ public class TareaActividadService {
                 .fechaCreacion(tarea.getFechaCreacion())
                 .fechaInicio(tarea.getFechaInicio())
                 .fechaFin(tarea.getFechaFin())
+                .prioridad(recomendacion.getPrioridad())
+                .recursoRecomendado(recomendacion.getRecursoRecomendado())
+                .recursoRecomendadoNombre(recomendacion.getRecursoRecomendadoNombre())
+                .motivoRecomendacion(recomendacion.getMotivoRecomendacion())
                 .asignadoA(tarea.getAsignadoA())
                 .asignadoANombre(resolverNombreUsuario(tarea.getAsignadoA()))
                 .participantesIds(participantesIds)
@@ -306,6 +321,10 @@ public class TareaActividadService {
         tarea.setEstadoTarea(EstadoTarea.COMPLETADA);
         tarea.setFormularioRespuesta(respuesta);
         tarea.setObservaciones(normalizarTexto(request != null ? request.getObservaciones() : null));
+
+        if (tarea.getObservaciones() != null) {
+            workflowMetricasService.registrarObservacion(instancia.getId(), tarea.getNodoId(), tarea.getObservaciones());
+        }
 
         TareaActividad guardada = tareaRepository.save(tarea);
 
@@ -631,26 +650,6 @@ public class TareaActividadService {
         return cache.get(id);
     }
 
-    private String calcularPrioridad(TareaActividad tarea) {
-        if (tarea.getFechaCreacion() == null || tarea.getEstadoTarea() == null) {
-            return "NORMAL";
-        }
-
-        if (tarea.getEstadoTarea() == EstadoTarea.COMPLETADA
-                || tarea.getEstadoTarea() == EstadoTarea.CANCELADA
-                || tarea.getEstadoTarea() == EstadoTarea.RECHAZADA) {
-            return "NORMAL";
-        }
-
-        long horas = java.time.Duration.between(tarea.getFechaCreacion(), LocalDateTime.now()).toHours();
-        if (horas >= 48) {
-            return "ALTA";
-        }
-        if (horas >= 24) {
-            return "MEDIA";
-        }
-        return "NORMAL";
-    }
 
     private Map<String, Object> resumirContexto(Map<String, Object> contexto) {
         if (contexto == null || contexto.isEmpty()) {

@@ -22,6 +22,7 @@ import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.model.enums.EstadoTarea;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
+import com.leo.politicas_de_negocio.workflow_metricas.service.WorkflowMetricasService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,7 @@ public class WorkflowEngineService {
     private final UsuarioRepository usuarioRepository;
     private final HistorialInstanciaService historialService;
     private final WorkflowNotificationService workflowNotificationService;
+    private final WorkflowMetricasService workflowMetricasService;
 
     public void iniciarInstancia(InstanciaPolitica instancia, PoliticaNegocio politica, String actorUserId) {
         Nodo inicio = buscarNodoInicio(politica);
@@ -71,6 +73,8 @@ public class WorkflowEngineService {
                 actorUserId,
                 "Workflow iniciado en nodo " + inicio.getId()
         );
+        workflowMetricasService.registrarEntradaNodo(instancia.getId(), inicio.getId());
+        workflowMetricasService.registrarSalidaNodo(instancia.getId(), inicio.getId());
         avanzarDesdeNodo(instancia, politica, inicio.getId(), actorUserId, instancia.getDatosContexto());
         workflowNotificationService.notificarTramiteIniciado(instancia, politica);
     }
@@ -106,6 +110,9 @@ public class WorkflowEngineService {
                 throw new ApiException(HttpStatus.CONFLICT,
                         "El nodo destino " + paso.nodoId() + " no existe en la politica");
             }
+
+            workflowMetricasService.registrarSalidaNodo(instancia.getId(), paso.origenId());
+            workflowMetricasService.registrarEntradaNodo(instancia.getId(), paso.nodoId());
 
             procesarNodo(instancia, politica, nodo, paso.origenId(), actorUserId, contexto, cola);
         }
@@ -354,6 +361,10 @@ public class WorkflowEngineService {
         if (instancia.getTokensJoin() != null) {
             instancia.getTokensJoin().clear();
         }
+
+        workflowMetricasService.registrarSalidaNodo(instancia.getId(), nodoFinId);
+        workflowMetricasService.registrarFinInstancia(instancia.getId(), "FINALIZADA");
+
         historialService.registrar(
                 instancia.getId(),
                 null,

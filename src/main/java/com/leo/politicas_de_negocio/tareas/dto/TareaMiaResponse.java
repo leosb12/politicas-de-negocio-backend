@@ -26,4 +26,6 @@ public class TareaMiaResponse {
     private String codigoTramite;
     private EstadoInstancia estadoInstancia;
     private Map<String, Object> contextoResumen;
+    private String recursoRecomendado;
+    private String motivoRecomendacion;
 }

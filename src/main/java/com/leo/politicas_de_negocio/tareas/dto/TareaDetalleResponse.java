@@ -33,6 +33,11 @@ public class TareaDetalleResponse {
     private InstanciaDetalleResponse instancia;
     private PoliticaResumenResponse politica;
     private List<HistorialEventoResponse> historialRelevante;
+    
+    private String prioridad;
+    private String recursoRecomendado;
+    private String recursoRecomendadoNombre;
+    private String motivoRecomendacion;
 
     @Data
     @Builder

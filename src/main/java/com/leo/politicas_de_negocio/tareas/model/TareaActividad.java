@@ -51,4 +51,12 @@ public class TareaActividad {
     private List<CampoFormulario> formularioDefinicion;
     private Map<String, Object> formularioRespuesta;
     private String observaciones;
+
+    // AI Prediction fields
+    private String prioridadRecomendada;
+    private String riesgoDemora;
+    private String cuelloBotella;
+    private String anomalia;
+    private String rutaRecomendadaLabel;
+    private String mensajePrediccion;
 }
