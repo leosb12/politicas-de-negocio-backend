@@ -22,7 +22,7 @@ public class WorkflowPredictionClient {
             return restTemplate.postForObject(url, request, java.util.Map.class);
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
+            throw new RuntimeException("Error in prediction client: " + e.getMessage(), e);
         }
     }
 }

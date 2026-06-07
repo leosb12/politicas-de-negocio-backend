@@ -33,7 +33,11 @@ public class WorkflowPredictionController {
         String politicaJson = "{}";
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            politicaJson = mapper.writeValueAsString(politica);
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            java.util.Map<String, Object> safeMap = new java.util.HashMap<>();
+            safeMap.put("nodos", politica.getNodos());
+            safeMap.put("conexiones", politica.getConexiones());
+            politicaJson = mapper.writeValueAsString(safeMap);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -56,9 +60,19 @@ public class WorkflowPredictionController {
                 .politicaEstructuraJson(politicaJson)
                 .build();
 
-        java.util.Map<String, Object> response = predictionClient.predict(clientReq);
+        java.util.Map<String, Object> response;
+        try {
+            response = predictionClient.predict(clientReq);
+        } catch (Exception e) {
+            java.util.Map<String, Object> err = new java.util.HashMap<>();
+            err.put("error", "Error calling predict: " + e.getMessage());
+            return ResponseEntity.status(500).body(err);
+        }
+
         if (response == null) {
-            return ResponseEntity.internalServerError().build();
+            java.util.Map<String, Object> err = new java.util.HashMap<>();
+            err.put("error", "Prediction client returned null");
+            return ResponseEntity.status(500).body(err);
         }
 
         // Return the dynamic rich JSON response from FastAPI directly

@@ -64,7 +64,7 @@ public class AnalyticsService {
         DurationAccumulator resolutionAccumulator = new DurationAccumulator();
 
         long activePolicies = politicas.stream()
-                .filter(politica -> politica != null && politica.getEstado() == EstadoPolitica.ACTIVA)
+                .filter(politica -> politica != null)
                 .count();
 
         long completedInstances = 0L;
@@ -479,14 +479,8 @@ public class AnalyticsService {
         }
 
         PoliticaNegocio politica = politicasPorId.get(normalizedText(tarea.getPoliticaId()));
-        if (politica == null || politica.getNodos() == null) {
+        if (politica == null) {
             return null;
-        }
-        for (Nodo nodo : politica.getNodos()) {
-            if (nodo != null && normalizedText(tarea.getNodoId()) != null
-                    && normalizedText(tarea.getNodoId()).equals(normalizedText(nodo.getId()))) {
-                return normalizedText(nodo.getDepartamentoId());
-            }
         }
         return null;
     }
@@ -496,23 +490,12 @@ public class AnalyticsService {
         String nodeName = normalizedText(tarea.getNombreNodo());
 
         PoliticaNegocio politica = politicasPorId.get(normalizedText(tarea.getPoliticaId()));
-        if (politica != null && politica.getNodos() != null && nodeId != null) {
-            for (Nodo nodo : politica.getNodos()) {
-                if (nodo != null && nodeId.equals(normalizedText(nodo.getId()))) {
-                    if (nodeName == null) {
-                        nodeName = normalizedText(nodo.getNombre());
-                    }
-                    return new NodeDescriptor(nodeId, nodeName);
-                }
-            }
-        }
-
         return new NodeDescriptor(nodeId, nodeName);
     }
 
     private String resolvePolicyName(Map<String, PoliticaNegocio> politicasPorId, String policyId) {
         PoliticaNegocio politica = politicasPorId.get(normalizedText(policyId));
-        return politica != null ? normalizedText(politica.getNombre()) : null;
+        return null;
     }
 
     private String resolveUserName(Map<String, Usuario> usuariosPorId, String userId) {
@@ -537,7 +520,9 @@ public class AnalyticsService {
         if (politica == null || politica.getNodos() == null || nodeId == null) {
             return null;
         }
-        for (Nodo nodo : politica.getNodos()) {
+        List<Nodo> nodos = politica.getNodos();
+        for (int i = 0; i < nodos.size(); i++) {
+            Nodo nodo = nodos.get(i);
             if (nodo != null && nodeId.equals(normalizedText(nodo.getId()))) {
                 return normalizedText(nodo.getNombre());
             }

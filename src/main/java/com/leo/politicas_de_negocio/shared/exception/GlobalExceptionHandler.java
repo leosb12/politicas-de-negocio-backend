@@ -78,7 +78,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
         log.error("Error no controlado en {} {}", request.getMethod(), request.getRequestURI(), ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor", request.getRequestURI());
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Error interno del servidor: " + ex.getMessage(), request.getRequestURI());
     }
 
     private ResponseEntity<ApiErrorResponse> buildResponse(HttpStatus status, String message, String path) {
