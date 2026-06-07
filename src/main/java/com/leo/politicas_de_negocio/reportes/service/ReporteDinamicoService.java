@@ -33,6 +33,10 @@ public class ReporteDinamicoService {
     @Value("${ia.service.url:http://localhost:8010}")
     private String iaServiceUrl;
 
+    /**
+     * Interpreta una consulta libre enviándola al Motor IA (FastAPI).
+     * La IA interpreta y genera un plan; este servicio valida y orquesta.
+     */
     public ReporteResponseDto interpretar(ReporteRequestDto request, String usuarioId, String rol) {
         try {
             String url = iaServiceUrl + "/api/ia/reportes/interpretar";
@@ -49,19 +53,37 @@ public class ReporteDinamicoService {
             ReporteResponseDto interpretacion = restTemplate.postForObject(url, entity, ReporteResponseDto.class);
             return interpretacion;
         } catch (Exception e) {
-            log.error("Error al comunicarse con IA service: ", e);
-            throw new RuntimeException("Error al interpretar reporte con IA.");
+            log.error("Error al comunicarse con el Motor IA: ", e);
+            // Retornar respuesta de fallback en vez de lanzar excepción
+            ReporteResponseDto fallback = new ReporteResponseDto();
+            fallback.setRequiereAclaracion(true);
+            fallback.setPreguntaAclaratoria(
+                "El servicio de interpretación IA no está disponible en este momento. " +
+                "Por favor, verifica que el servicio ia-deep-learning-service esté ejecutándose."
+            );
+            fallback.setMotor("MOTOR_FALLBACK");
+            fallback.setConfianza(0.0);
+            return fallback;
         }
     }
 
+    /**
+     * Genera vista previa ejecutando la consulta contra MongoDB.
+     * Registra el resultado en el historial de auditoría.
+     */
     public PreviewResponseDto generarPreview(ReporteResponseDto definicion, String originalText, String usuarioId) {
         if (definicion.getRequiereAclaracion() != null && definicion.getRequiereAclaracion()) {
             throw new IllegalArgumentException("El reporte requiere aclaración, no se puede generar vista previa.");
         }
         
+        // Limitar resultados para preview
+        if (definicion.getLimite() == null || definicion.getLimite() > 500) {
+            definicion.setLimite(500);
+        }
+        
         List<Map> resultados = aggregationBuilder.ejecutarConsulta(definicion);
         
-        // Registrar en historial
+        // Registrar en historial de auditoría
         try {
             ReporteGenerado reporte = ReporteGenerado.builder()
                     .usuarioAdminId(usuarioId)
@@ -75,15 +97,58 @@ public class ReporteDinamicoService {
                     .estado("EXITO")
                     .cantidadResultados(resultados.size())
                     .confianzaModelo(definicion.getConfianza())
+                    .motorUsado(definicion.getMotor() != null ? definicion.getMotor() : "DESCONOCIDO")
                     .build();
             repository.save(reporte);
         } catch (Exception e) {
-            log.warn("Error al guardar auditoria de reporte: ", e);
+            log.warn("Error al guardar auditoría de reporte: ", e);
         }
 
         PreviewResponseDto response = new PreviewResponseDto();
         response.setInterpretacion(definicion);
-        response.setResultados((List)resultados);
+        response.setResultados((List) resultados);
+        return response;
+    }
+    
+    /**
+     * Genera vista previa para exportación con límites más altos.
+     */
+    public PreviewResponseDto generarPreviewExportacion(ReporteResponseDto definicion, String originalText, String usuarioId) {
+        if (definicion.getRequiereAclaracion() != null && definicion.getRequiereAclaracion()) {
+            throw new IllegalArgumentException("El reporte requiere aclaración, no se puede exportar.");
+        }
+        
+        // Permitir más resultados para exportación, máximo 5000
+        if (definicion.getLimite() == null || definicion.getLimite() > 5000) {
+            definicion.setLimite(5000);
+        }
+        
+        List<Map> resultados = aggregationBuilder.ejecutarConsulta(definicion);
+        
+        // Registrar exportación en auditoría
+        try {
+            ReporteGenerado reporte = ReporteGenerado.builder()
+                    .usuarioAdminId(usuarioId)
+                    .textoOriginal(originalText)
+                    .jsonInterpretado(objectMapper.writeValueAsString(definicion))
+                    .entidadPrincipal(definicion.getEntidadPrincipal())
+                    .intencionDetectada(definicion.getIntencionDetectada())
+                    .formatoSalida(definicion.getFormatoSalida() != null ? definicion.getFormatoSalida() : "exportacion")
+                    .visualizacion(definicion.getVisualizacion())
+                    .fechaGeneracion(LocalDateTime.now())
+                    .estado("EXPORTADO")
+                    .cantidadResultados(resultados.size())
+                    .confianzaModelo(definicion.getConfianza())
+                    .motorUsado(definicion.getMotor() != null ? definicion.getMotor() : "DESCONOCIDO")
+                    .build();
+            repository.save(reporte);
+        } catch (Exception e) {
+            log.warn("Error al guardar auditoría de exportación: ", e);
+        }
+
+        PreviewResponseDto response = new PreviewResponseDto();
+        response.setInterpretacion(definicion);
+        response.setResultados((List) resultados);
         return response;
     }
     

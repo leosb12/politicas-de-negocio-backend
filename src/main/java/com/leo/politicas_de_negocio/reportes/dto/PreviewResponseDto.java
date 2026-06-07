@@ -8,4 +8,5 @@ import java.util.Map;
 public class PreviewResponseDto {
     private ReporteResponseDto interpretacion;
     private List<Map<String, Object>> resultados;
+    private String respuestaNatural;
 }

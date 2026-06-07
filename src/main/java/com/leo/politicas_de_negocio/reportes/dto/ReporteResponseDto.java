@@ -19,5 +19,8 @@ public class ReporteResponseDto {
     private String visualizacion;
     private Boolean requiereAclaracion;
     private String preguntaAclaratoria;
+    private List<String> opcionesSugeridas;
     private Double confianza;
+    private String motor;
+    private String respuestaNatural;
 }

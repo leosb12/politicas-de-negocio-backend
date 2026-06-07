@@ -99,6 +99,53 @@ public class ReporteMongoAggregationBuilder {
                 }
             }
             operations.add(groupOp);
+
+            // Renombrar _id al campo original y auto-resolver nombres si es necesario
+            if (definicion.getAgrupaciones().size() == 1) {
+                String groupField = definicion.getAgrupaciones().get(0);
+                
+                if (groupField.equals("creadaPor") || groupField.equals("responsableId") || groupField.equals("usuarioId")) {
+                    operations.add(Aggregation.lookup("usuarios", "_id", "_id", "usuarioDetalle"));
+                    operations.add(Aggregation.unwind("usuarioDetalle", true));
+                    
+                    org.springframework.data.mongodb.core.aggregation.ProjectionOperation proj = Aggregation.project()
+                            .and(org.springframework.data.mongodb.core.aggregation.ConditionalOperators.ifNull("usuarioDetalle.nombre").thenValueOf("_id")).as(groupField)
+                            .andExclude("_id");
+                            
+                    if (definicion.getMetricas() != null) {
+                        for (MetricaDto metrica : definicion.getMetricas()) {
+                            proj = proj.andInclude(metrica.getAlias());
+                        }
+                    }
+                    operations.add(proj);
+                    
+                } else if (groupField.equals("politicaId")) {
+                    operations.add(Aggregation.lookup("politicas_negocio", "_id", "_id", "politicaDetalle"));
+                    operations.add(Aggregation.unwind("politicaDetalle", true));
+                    
+                    org.springframework.data.mongodb.core.aggregation.ProjectionOperation proj = Aggregation.project()
+                            .and(org.springframework.data.mongodb.core.aggregation.ConditionalOperators.ifNull("politicaDetalle.nombre").thenValueOf("_id")).as(groupField)
+                            .andExclude("_id");
+                            
+                    if (definicion.getMetricas() != null) {
+                        for (MetricaDto metrica : definicion.getMetricas()) {
+                            proj = proj.andInclude(metrica.getAlias());
+                        }
+                    }
+                    operations.add(proj);
+                } else {
+                    org.springframework.data.mongodb.core.aggregation.ProjectionOperation proj = Aggregation.project()
+                            .andExpression("_id").as(groupField)
+                            .andExclude("_id");
+                    
+                    if (definicion.getMetricas() != null) {
+                        for (MetricaDto metrica : definicion.getMetricas()) {
+                            proj = proj.andInclude(metrica.getAlias());
+                        }
+                    }
+                    operations.add(proj);
+                }
+            }
         }
 
         // 3. Ordenamiento

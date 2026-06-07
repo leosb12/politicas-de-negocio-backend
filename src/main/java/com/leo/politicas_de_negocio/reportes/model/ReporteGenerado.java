@@ -23,8 +23,11 @@ public class ReporteGenerado {
     private String textoOriginal;
     private String textoTranscrito;
     private String jsonInterpretado;
+    private String planConsulta;
+    private String respuestaFinal;
     private String entidadPrincipal;
     private String intencionDetectada;
+    private String tipoConsulta;
     private String formatoSalida;
     private String visualizacion;
     private LocalDateTime fechaGeneracion;
@@ -34,4 +37,5 @@ public class ReporteGenerado {
     private String preguntaAclaratoria;
     private String archivoGeneradoUrl;
     private Double confianzaModelo;
+    private String motorUsado;
 }
