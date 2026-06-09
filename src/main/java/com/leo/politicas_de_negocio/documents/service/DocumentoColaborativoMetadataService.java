@@ -10,6 +10,7 @@ import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.PermisosLecturaSeccion;
 import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
+import com.leo.politicas_de_negocio.archivos.storage.ArchivoStorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,15 +37,18 @@ public class DocumentoColaborativoMetadataService {
 
     private final DynamoDbTable<DocumentoColaborativoMetadata> metadataTable;
     private final DocumentoColaborativoS3Service s3Service;
+    private final ArchivoStorageService storageService;
 
     public DocumentoColaborativoMetadataService(
             DynamoDbEnhancedClient enhancedClient,
             @Value("${aws.dynamodb.document-repositories-table}") String tableName,
-            DocumentoColaborativoS3Service s3Service) {
+            DocumentoColaborativoS3Service s3Service,
+            ArchivoStorageService storageService) {
         this.metadataTable = enhancedClient.table(
                 tableName,
                 TableSchema.fromBean(DocumentoColaborativoMetadata.class));
         this.s3Service = s3Service;
+        this.storageService = storageService;
     }
 
     public void guardarMetadata(DocumentoColaborativoMetadata metadata) {
@@ -266,12 +270,32 @@ public class DocumentoColaborativoMetadataService {
                         metadata.setFechaUltimaModificacion(LocalDateTime.now().toString());
                     } else {
                         try {
-                            System.out.println("        >> Subiendo archivo vacío a S3...");
-                            String s3Key = s3Service.subirDocumentoColaborativoVacio(clienteId, tramiteId, documentoId, tipoDocumento);
+                            String s3Key = "document-repositories/" + clienteId + "/tramites/" + tramiteId + "/documentos-colaborativos/" + documentoId + "." + resolvedEnumExtension(tipoDocumento);
+                            boolean usoPlantilla = false;
+
+                            if (config != null && config.getDocumentoPlantilla() != null && config.getDocumentoPlantilla().getStorageKey() != null) {
+                                String templateKey = config.getDocumentoPlantilla().getStorageKey();
+                                log.info("Copiando plantilla para documento colaborativo desde storage: key={}", templateKey);
+                                try {
+                                    byte[] templateContent = storageService.descargar(templateKey).getContenido();
+                                    String contentType = fileTypeToContentType(tipoDocumento);
+                                    s3Service.subirArchivo(s3Key, templateContent, contentType);
+                                    usoPlantilla = true;
+                                    log.info("Plantilla copiada exitosamente a: {}", s3Key);
+                                } catch (Exception copyEx) {
+                                    log.error("Excepcion al copiar plantilla desde storage key: " + templateKey + ". Cayendo en documento vacio.", copyEx);
+                                }
+                            }
+
+                            if (!usoPlantilla) {
+                                System.out.println("        >> Subiendo archivo vacío a S3...");
+                                s3Key = s3Service.subirDocumentoColaborativoVacio(clienteId, tramiteId, documentoId, tipoDocumento);
+                                System.out.println("        >> [S3 EXITOSO] Archivo vacío creado con s3Key=" + s3Key);
+                            }
+
                             metadata.setEstado("CREADO");
                             metadata.setS3Key(s3Key);
                             metadata.setFechaUltimaModificacion(LocalDateTime.now().toString());
-                            System.out.println("        >> [S3 EXITOSO] Archivo vacío creado con s3Key=" + s3Key);
                             log.info("Archivo colaborativo creado en S3: documentoId={}, s3Key={}", documentoId, s3Key);
                         } catch (Exception s3Ex) {
                             System.out.println("        >> [S3 FALLO] Excepción al subir a S3: " + s3Ex.getMessage());
@@ -479,5 +503,27 @@ public class DocumentoColaborativoMetadataService {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String resolvedEnumExtension(String tipoDocumento) {
+        if ("WORD".equalsIgnoreCase(tipoDocumento)) {
+            return "docx";
+        } else if ("EXCEL".equalsIgnoreCase(tipoDocumento)) {
+            return "xlsx";
+        } else if ("POWERPOINT".equalsIgnoreCase(tipoDocumento)) {
+            return "pptx";
+        }
+        return "docx";
+    }
+
+    private String fileTypeToContentType(String tipoDocumento) {
+        if ("WORD".equalsIgnoreCase(tipoDocumento)) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else if ("EXCEL".equalsIgnoreCase(tipoDocumento)) {
+            return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        } else if ("POWERPOINT".equalsIgnoreCase(tipoDocumento)) {
+            return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        }
+        return "application/octet-stream";
     }
 }

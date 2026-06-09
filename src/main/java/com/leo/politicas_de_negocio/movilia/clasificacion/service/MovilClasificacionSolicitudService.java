@@ -34,7 +34,19 @@ public class MovilClasificacionSolicitudService {
 
     public ClasificarSolicitudMovilResponse clasificar(String usuarioMovilId, ClasificarSolicitudMovilRequest request) {
         validarUsuario(usuarioMovilId);
-        String texto = normalizarTexto(request != null ? request.getTexto() : null);
+        String texto = request != null ? request.getTexto() : null;
+        String nombreDocumento = request != null ? request.getNombreDocumento() : null;
+
+        if ((texto == null || texto.trim().isEmpty()) && (nombreDocumento == null || nombreDocumento.trim().isEmpty())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe ingresar una descripción de su necesidad o subir un documento");
+        }
+
+        if (texto == null || texto.trim().isEmpty()) {
+            texto = "Documento: " + nombreDocumento;
+        } else {
+            texto = texto.trim();
+        }
+
         Boolean usarDeepSeek = request != null && Boolean.TRUE.equals(request.getUsarDeepSeek());
 
         List<PoliticaNegocio> politicasActivas = politicaRepository.findByEstado(EstadoPolitica.ACTIVA);
@@ -47,6 +59,7 @@ public class MovilClasificacionSolicitudService {
                 .canal(CANAL_MOVIL)
                 .politicas(politicasActivas.stream().map(this::mapearPolitica).toList())
                 .usarDeepSeek(usarDeepSeek)
+                .nombreDocumento(nombreDocumento)
                 .build());
 
         if (iaResponse == null || iaResponse.getPoliticaId() == null || iaResponse.getPoliticaId().isBlank()) {

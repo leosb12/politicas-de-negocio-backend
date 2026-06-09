@@ -22,9 +22,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.leo.politicas_de_negocio.archivos.storage.ArchivoStorageService;
+import com.leo.politicas_de_negocio.archivos.storage.model.ArchivoStorageRequest;
+import com.leo.politicas_de_negocio.archivos.storage.model.ArchivoStoredObject;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/politicas")
@@ -34,6 +40,7 @@ public class PoliticaNegocioController {
     private final PoliticaNegocioService service;
     private final AuditoriaDocumentalPoliticaService auditoriaDocumentalService;
     private final AuditoriaGeneralPoliticaService auditoriaGeneralService;
+    private final ArchivoStorageService storageService;
 
     @PostMapping
     public ResponseEntity<PoliticaNegocio> crearPolitica(
@@ -158,6 +165,55 @@ public class PoliticaNegocioController {
             @PathVariable String id
     ) {
         service.eliminarPolitica(adminUserId, id);
+    }
+
+    @PostMapping("/{id}/plantilla")
+    public ResponseEntity<Map<String, Object>> subirDocumentoPlantilla(
+            @PathVariable("id") String id,
+            @RequestParam("campoId") String campoId,
+            @RequestParam("archivo") MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar un archivo valido");
+        }
+        String nombreOriginal = file.getOriginalFilename();
+        if (nombreOriginal == null) {
+            nombreOriginal = "archivo";
+        }
+        // Validar extension
+        String extension = "";
+        int lastDot = nombreOriginal.lastIndexOf('.');
+        if (lastDot > 0) {
+            extension = nombreOriginal.substring(lastDot + 1).toLowerCase();
+        }
+        if (!List.of("docx", "xlsx", "pptx").contains(extension)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Unicamente se permiten archivos .docx, .xlsx y .pptx");
+        }
+
+        String mimeType = file.getContentType();
+        String nombreGuardado = UUID.randomUUID().toString().replace("-", "") + "." + extension;
+
+        try {
+            ArchivoStoredObject stored = storageService.almacenar(
+                ArchivoStorageRequest.builder()
+                    .nombreGuardado(nombreGuardado)
+                    .contentType(mimeType)
+                    .contenido(file.getBytes())
+                    .subdirectorio("politicas/" + id + "/plantillas/" + campoId)
+                    .build()
+            );
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("nombreOriginal", nombreOriginal);
+            response.put("extension", extension);
+            response.put("mimeType", mimeType);
+            response.put("url", stored.getUrlAcceso());
+            response.put("storageKey", stored.getRutaOKey());
+            response.put("fechaSubida", java.time.LocalDateTime.now().toString());
+
+            return ResponseEntity.ok(response);
+        } catch (java.io.IOException ex) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al leer el archivo plantilla: " + ex.getMessage());
+        }
     }
 
     private String resolverActorUserId(String userId, String adminUserId) {

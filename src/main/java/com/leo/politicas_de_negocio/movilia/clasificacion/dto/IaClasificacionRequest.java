@@ -16,4 +16,5 @@ public class IaClasificacionRequest {
     private String canal;
     private List<PoliticaClasificacionDto> politicas;
     private Boolean usarDeepSeek;
+    private String nombreDocumento;
 }

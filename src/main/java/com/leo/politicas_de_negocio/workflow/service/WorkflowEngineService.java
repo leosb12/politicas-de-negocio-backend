@@ -1072,6 +1072,14 @@ public class WorkflowEngineService {
                         .build() : null)
                     .auditarCambios(origConfig.getAuditarCambios())
                     .controlVersionesHabilitado(origConfig.getControlVersionesHabilitado())
+                    .documentoPlantilla(origConfig.getDocumentoPlantilla() != null ? ConfiguracionDocumento.DocumentoPlantilla.builder()
+                        .nombreOriginal(origConfig.getDocumentoPlantilla().getNombreOriginal())
+                        .extension(origConfig.getDocumentoPlantilla().getExtension())
+                        .mimeType(origConfig.getDocumentoPlantilla().getMimeType())
+                        .url(origConfig.getDocumentoPlantilla().getUrl())
+                        .storageKey(origConfig.getDocumentoPlantilla().getStorageKey())
+                        .fechaSubida(origConfig.getDocumentoPlantilla().getFechaSubida())
+                        .build() : null)
                     .build();
             }
 

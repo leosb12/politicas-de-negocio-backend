@@ -768,6 +768,14 @@ public class PoliticaColaboracionService {
                 .permisosAdicionales(clonarPermisosAdicionales(config.getPermisosAdicionales()))
                 .auditarCambios(config.getAuditarCambios())
                 .controlVersionesHabilitado(config.getControlVersionesHabilitado())
+                .documentoPlantilla(config.getDocumentoPlantilla() != null ? ConfiguracionDocumento.DocumentoPlantilla.builder()
+                        .nombreOriginal(config.getDocumentoPlantilla().getNombreOriginal())
+                        .extension(config.getDocumentoPlantilla().getExtension())
+                        .mimeType(config.getDocumentoPlantilla().getMimeType())
+                        .url(config.getDocumentoPlantilla().getUrl())
+                        .storageKey(config.getDocumentoPlantilla().getStorageKey())
+                        .fechaSubida(config.getDocumentoPlantilla().getFechaSubida())
+                        .build() : null)
                 .build();
     }
 

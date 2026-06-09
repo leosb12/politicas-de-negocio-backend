@@ -44,6 +44,20 @@ public class ConfiguracionDocumento {
     private Boolean auditarCambios;
     @Builder.Default
     private Boolean controlVersionesHabilitado = false;
+    private DocumentoPlantilla documentoPlantilla;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class DocumentoPlantilla {
+        private String nombreOriginal;
+        private String extension;
+        private String mimeType;
+        private String url;
+        private String storageKey;
+        private String fechaSubida;
+    }
 
     @JsonAnySetter
     public void capturarPermisosImpresionCompatibles(String fieldName, Object value) {
