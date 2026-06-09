@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +45,23 @@ public class AnalyticsController {
     ) {
         resolveActorUserId(userId, adminUserId);
         return ResponseEntity.ok(systemAuditService.obtenerTodosOrdenados());
+    }
+
+    @PostMapping("/system-audit")
+    public ResponseEntity<AuditoriaSistema> logSystemAudit(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId,
+            @RequestHeader(value = "X-User-Name", required = false, defaultValue = "Desconocido") String userName,
+            @RequestHeader(value = "X-User-Email", required = false, defaultValue = "sin@correo.com") String userEmail,
+            @RequestHeader(value = "X-User-Role", required = false, defaultValue = "USUARIO") String userRole,
+            @RequestBody java.util.Map<String, String> body
+    ) {
+        String actorId = resolveActorUserId(userId, adminUserId);
+        String accion = body.getOrDefault("accion", "DESCONOCIDA");
+        String detalle = body.getOrDefault("detalle", "Sin detalle");
+        
+        AuditoriaSistema log = systemAuditService.log(actorId, userName, userEmail, userRole, accion, detalle);
+        return ResponseEntity.ok(log);
     }
 
     @GetMapping("/attention-times")
