@@ -42,6 +42,18 @@ public class AuthController {
         authService.changePassword(request);
     }
 
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        String actorUserId = userId != null && !userId.isBlank() ? userId : adminUserId;
+        if (actorUserId != null && !actorUserId.isBlank()) {
+            authService.logout(actorUserId.trim());
+        }
+    }
+
     @GetMapping("/funcionario/departamento")
     public FuncionarioDepartamentoResponse getFuncionarioDepartment(
             @RequestHeader("X-User-Id") String funcionarioUserId

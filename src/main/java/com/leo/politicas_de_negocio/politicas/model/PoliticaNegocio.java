@@ -62,4 +62,8 @@ public class PoliticaNegocio {
     
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
+
+    // Datos de auditoria de creacion
+    private String creadoPor;
+    private String creadoPorNombre;
 }

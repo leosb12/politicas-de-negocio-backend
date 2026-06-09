@@ -9,6 +9,7 @@ import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoReposit
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
+import com.leo.politicas_de_negocio.analiticas.service.SystemAuditService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,15 +26,18 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final DepartamentoRepository departamentoRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SystemAuditService systemAuditService;
 
     public AuthService(
             UsuarioRepository usuarioRepository,
             DepartamentoRepository departamentoRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SystemAuditService systemAuditService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.departamentoRepository = departamentoRepository;
         this.passwordEncoder = passwordEncoder;
+        this.systemAuditService = systemAuditService;
     }
 
     public LoginResponse loginWeb(LoginRequest request) {
@@ -43,11 +47,13 @@ public class AuthService {
             throw mobileUserWebAccessException();
         }
 
+        systemAuditService.log(usuario.getId(), usuario.getNombre(), usuario.getCorreo(), usuario.getRol(), "LOGIN_WEB", "Inicio de sesión exitoso en la plataforma web");
         return toLoginResponse(usuario);
     }
 
     public LoginResponse loginMovil(LoginRequest request) {
         Usuario usuario = authenticateActiveUser(request);
+        systemAuditService.log(usuario.getId(), usuario.getNombre(), usuario.getCorreo(), usuario.getRol(), "LOGIN_MOVIL", "Inicio de sesión exitoso desde dispositivo móvil");
         return toLoginResponse(usuario);
     }
 
@@ -75,6 +81,7 @@ public class AuthService {
                 .build();
 
         Usuario creado = usuarioRepository.save(nuevoUsuario);
+        systemAuditService.log(creado.getId(), creado.getNombre(), creado.getCorreo(), creado.getRol(), "REGISTRO_MOVIL", "Registro exitoso de nuevo usuario móvil");
         return toLoginResponse(creado);
     }
 
@@ -106,6 +113,21 @@ public class AuthService {
 
         usuario.setPassword(passwordEncoder.encode(nuevaContrasena));
         usuarioRepository.save(usuario);
+        systemAuditService.log(usuario.getId(), usuario.getNombre(), usuario.getCorreo(), usuario.getRol(), "CAMBIO_PASSWORD", "Cambio de contraseña de usuario realizado correctamente");
+    }
+
+    public void logout(String userId) {
+        Usuario usuario = usuarioRepository.findById(userId).orElse(null);
+        if (usuario != null) {
+            systemAuditService.log(
+                    usuario.getId(),
+                    usuario.getNombre(),
+                    usuario.getCorreo(),
+                    usuario.getRol(),
+                    "LOGOUT",
+                    "Cierre de sesión de la plataforma"
+            );
+        }
     }
 
     public FuncionarioDepartamentoResponse getFuncionarioDepartment(String funcionarioUserId) {

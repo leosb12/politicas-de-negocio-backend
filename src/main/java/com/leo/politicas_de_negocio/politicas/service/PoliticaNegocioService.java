@@ -26,6 +26,9 @@ import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
 import com.leo.politicas_de_negocio.departamentos.repository.DepartamentoRepository;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
+import com.leo.politicas_de_negocio.politicas.model.PoliticaAuditoria;
+import com.leo.politicas_de_negocio.politicas.repository.PoliticaAuditoriaRepository;
+import com.leo.politicas_de_negocio.analiticas.service.SystemAuditService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +80,38 @@ public class PoliticaNegocioService {
     private final MongoTemplate mongoTemplate;
     private final InstanciaPoliticaRepository instanciaPoliticaRepository;
     private final DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
+    private final PoliticaAuditoriaRepository politicaAuditoriaRepository;
+    private final SystemAuditService systemAuditService;
+
+    private void auditar(String politicaId, String tipoAccion, String usuarioId, String usuarioNombre, String detalle) {
+        try {
+            PoliticaAuditoria audit = PoliticaAuditoria.builder()
+                    .politicaId(politicaId)
+                    .fecha(LocalDateTime.now())
+                    .tipoAccion(tipoAccion)
+                    .usuarioId(usuarioId)
+                    .usuarioNombre(usuarioNombre)
+                    .detalle(detalle)
+                    .build();
+            politicaAuditoriaRepository.save(audit);
+
+            // Also log to system-wide audit logs
+            String email = "";
+            String rol = "ADMIN";
+            try {
+                Usuario user = usuarioRepository.findById(usuarioId).orElse(null);
+                if (user != null) {
+                    email = user.getCorreo();
+                    rol = user.getRol();
+                }
+            } catch (Exception ex) {
+                // Ignore
+            }
+            systemAuditService.log(usuarioId, usuarioNombre, email, rol, "POLITICA_" + tipoAccion, detalle);
+        } catch (Exception e) {
+            log.error("Error al registrar auditoria de politica: {}", e.getMessage());
+        }
+    }
 
     private Usuario assertAdmin(String adminUserId) {
         if (adminUserId == null || adminUserId.isBlank()) {
@@ -89,9 +124,8 @@ public class PoliticaNegocioService {
         }
         return admin;
     }
-
     public PoliticaNegocio crearPolitica(String adminUserId, CreatePoliticaRequest request) {
-        assertAdmin(adminUserId);
+        Usuario admin = assertAdmin(adminUserId);
         if (request == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar los datos de la politica");
         }
@@ -131,8 +165,13 @@ public class PoliticaNegocioService {
                 .fechaUltimaColaboracion(LocalDateTime.now())
                 .fechaCreacion(LocalDateTime.now())
                 .fechaActualizacion(LocalDateTime.now())
+                .creadoPor(admin.getId())
+                .creadoPorNombre(admin.getNombre())
                 .build();
-        return repository.save(politica);
+        
+        PoliticaNegocio saved = repository.save(politica);
+        auditar(saved.getId(), "CREACION", admin.getId(), admin.getNombre(), "Creación de la política '" + saved.getNombre() + "' en estado BORRADOR.");
+        return saved;
     }
 
     public List<PoliticaNegocio> obtenerTodas(String adminUserId) {
@@ -172,13 +211,12 @@ public class PoliticaNegocioService {
         validarInicioPoliticaPorActor(actor, politica);
         return clonarCampos(politica.getRequisitosIniciales());
     }
-
     public PoliticaNegocio guardarRequisitosIniciales(
             String adminUserId,
             String id,
             List<CampoFormulario> requisitosIniciales
     ) {
-        assertAdmin(adminUserId);
+        Usuario admin = assertAdmin(adminUserId);
         String politicaId = normalizeNullableText(id);
         if (politicaId == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar politicaId");
@@ -188,19 +226,18 @@ public class PoliticaNegocioService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Politica no encontrada con ID: " + politicaId));
         politica.setRequisitosIniciales(normalizarCamposFormulario(requisitosIniciales));
         politica.setFechaActualizacion(LocalDateTime.now());
-        return repository.save(politica);
+        PoliticaNegocio saved = repository.save(politica);
+        auditar(saved.getId(), "EDICION_REQUISITOS", admin.getId(), admin.getNombre(), "Actualización de requisitos iniciales (" + (requisitosIniciales != null ? requisitosIniciales.size() : 0) + " campos definidos).");
+        return saved;
     }
-
     public PoliticaNegocio guardarFlujo(String adminUserId, String id, UpdateFlujoRequest request) {
-        assertAdmin(adminUserId);
+        Usuario admin = assertAdmin(adminUserId);
         if (request == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Debe enviar el flujo de la politica");
         }
 
         PoliticaNegocio politica = obtenerPorId(adminUserId, id);
         
-        // No se puede modificar el flujo si ya está activa y no queremos romper instancias vivas.
-        // Podría permitirse si hacemos versionado, pero por ahora simplificamos
         if (politica.getEstado() == EstadoPolitica.ACTIVA) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "No se puede modificar el flujo de una política activa");
         }
@@ -229,12 +266,16 @@ public class PoliticaNegocioService {
             log.warn("No se pudo sincronizar documentos colaborativos existentes para politicaId={}. "
                     + "El flujo ya fue guardado y no se bloqueara el borrador.", persistida.getId(), ex);
         }
+        
+        auditar(persistida.getId(), "EDICION_FLUJO", admin.getId(), admin.getNombre(), 
+                "Actualización del flujo canvas (" + nodos.size() + " nodos, " + (request.getConexiones() != null ? request.getConexiones().size() : 0) + " conexiones).");
         return persistida;
     }
 
     public PoliticaNegocio cambiarEstado(String adminUserId, String id, EstadoPolitica nuevoEstado) {
-        assertAdmin(adminUserId);
+        Usuario admin = assertAdmin(adminUserId);
         PoliticaNegocio politica = obtenerPorId(adminUserId, id);
+        EstadoPolitica estadoAnterior = politica.getEstado();
 
         if (nuevoEstado == EstadoPolitica.ACTIVA) {
             validarPoliticaParaActivacion(politica);
@@ -249,14 +290,19 @@ public class PoliticaNegocioService {
 
         politica.setEstado(nuevoEstado);
         politica.setFechaActualizacion(LocalDateTime.now());
-        return repository.save(politica);
+        
+        PoliticaNegocio saved = repository.save(politica);
+        auditar(saved.getId(), "CAMBIO_ESTADO", admin.getId(), admin.getNombre(), 
+                "Cambiado estado de la política de '" + (estadoAnterior != null ? estadoAnterior.name() : "INDEFINIDO") + "' a '" + nuevoEstado.name() + "'.");
+        return saved;
     }
 
     public void eliminarPolitica(String adminUserId, String id) {
-        assertAdmin(adminUserId);
+        Usuario admin = assertAdmin(adminUserId);
         PoliticaNegocio politica = obtenerPorId(adminUserId, id);
         validarPoliticaEliminable(politica);
         repository.delete(politica);
+        systemAuditService.log(admin.getId(), admin.getNombre(), admin.getCorreo(), admin.getRol(), "POLITICA_ELIMINACION", "Eliminación de la política '" + politica.getNombre() + "'");
     }
 
     private void validarPoliticaEliminable(PoliticaNegocio politica) {
@@ -726,7 +772,6 @@ public class PoliticaNegocioService {
         politica.setFechaActualizacion(LocalDateTime.now());
         return repository.save(politica);
     }
-
     public PoliticaNegocio actualizarMetadatos(
             String adminUserId,
             String id,
@@ -739,7 +784,7 @@ public class PoliticaNegocioService {
             String monedaPago,
             String descripcionPago
     ) {
-        assertAdmin(adminUserId);
+        Usuario admin = assertAdmin(adminUserId);
         PoliticaNegocio politica = obtenerPorId(adminUserId, id);
 
         String normalizedNombre = normalizeNullableText(nombre);
@@ -784,7 +829,10 @@ public class PoliticaNegocioService {
         }
 
         politica.setFechaActualizacion(LocalDateTime.now());
-        return repository.save(politica);
+        PoliticaNegocio saved = repository.save(politica);
+        auditar(saved.getId(), "EDICION_METADATOS", admin.getId(), admin.getNombre(), 
+                "Actualización de metadatos de la política (nombre, descripción, o configuraciones generales/pago).");
+        return saved;
     }
 
     public boolean puedeIniciarPolitica(Usuario actor, PoliticaNegocio politica) {

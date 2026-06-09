@@ -13,7 +13,10 @@ import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.enums.EstadoPolitica;
 import com.leo.politicas_de_negocio.politicas.service.AuditoriaDocumentalPoliticaService;
 import com.leo.politicas_de_negocio.politicas.service.PoliticaNegocioService;
+import com.leo.politicas_de_negocio.politicas.service.AuditoriaGeneralPoliticaService;
+import com.leo.politicas_de_negocio.politicas.dto.PoliticaAuditoriaGeneralResponse;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +33,7 @@ public class PoliticaNegocioController {
 
     private final PoliticaNegocioService service;
     private final AuditoriaDocumentalPoliticaService auditoriaDocumentalService;
+    private final AuditoriaGeneralPoliticaService auditoriaGeneralService;
 
     @PostMapping
     public ResponseEntity<PoliticaNegocio> crearPolitica(
@@ -65,6 +69,13 @@ public class PoliticaNegocioController {
             @RequestHeader("X-Admin-User-Id") String adminUserId,
             @PathVariable String id) {
         return ResponseEntity.ok(auditoriaDocumentalService.obtenerAuditoriaDocumental(adminUserId, id));
+    }
+
+    @GetMapping("/{id}/auditoria/general")
+    public ResponseEntity<PoliticaAuditoriaGeneralResponse> obtenerAuditoriaGeneral(
+            @RequestHeader("X-Admin-User-Id") String adminUserId,
+            @PathVariable String id) {
+        return ResponseEntity.ok(auditoriaGeneralService.obtenerAuditoriaGeneral(adminUserId, id));
     }
 
     @GetMapping("/{id}/requisitos-iniciales")

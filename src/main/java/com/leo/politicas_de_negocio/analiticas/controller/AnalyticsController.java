@@ -8,6 +8,8 @@ import com.leo.politicas_de_negocio.analiticas.dto.response.PolicyImprovementAna
 import com.leo.politicas_de_negocio.analiticas.dto.response.TaskAccumulationAnalyticsResponse;
 import com.leo.politicas_de_negocio.analiticas.dto.response.TaskRedistributionAnalyticsResponse;
 import com.leo.politicas_de_negocio.analiticas.service.AnalyticsService;
+import com.leo.politicas_de_negocio.analiticas.service.SystemAuditService;
+import com.leo.politicas_de_negocio.analiticas.model.AuditoriaSistema;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/analytics")
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AnalyticsController {
 
     private final AnalyticsService analyticsService;
+    private final SystemAuditService systemAuditService;
 
     @GetMapping("/general")
     public ResponseEntity<GeneralAnalyticsResponse> getGeneral(
@@ -30,6 +34,15 @@ public class AnalyticsController {
             @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
     ) {
         return ResponseEntity.ok(analyticsService.getGeneralMetrics(resolveActorUserId(userId, adminUserId)));
+    }
+
+    @GetMapping("/system-audit")
+    public ResponseEntity<List<AuditoriaSistema>> getSystemAudit(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        resolveActorUserId(userId, adminUserId);
+        return ResponseEntity.ok(systemAuditService.obtenerTodosOrdenados());
     }
 
     @GetMapping("/attention-times")
