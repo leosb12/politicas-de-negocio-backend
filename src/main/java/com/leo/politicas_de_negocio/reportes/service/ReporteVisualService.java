@@ -78,45 +78,47 @@ public class ReporteVisualService {
                     continue;
                 }
 
-                // A) Validaciones obligatorias de seguridad y semántica
-                if (intent.getEntidadPrincipal() == null || intent.getEntidadPrincipal().trim().isEmpty()) {
-                    bloquesDto.add(BloqueReporteDTO.createErrorBlock(
-                            blockId,
-                            intent.getTitulo(),
-                            "La entidad principal no fue especificada para este bloque.",
-                            intent.getOrden()
-                    ));
-                    continue;
-                }
+                // A) Validaciones obligatorias de seguridad y semántica (se omiten por completo en modo IA+)
+                if (!Boolean.TRUE.equals(iaPlus)) {
+                    if (intent.getEntidadPrincipal() == null || intent.getEntidadPrincipal().trim().isEmpty()) {
+                        bloquesDto.add(BloqueReporteDTO.createErrorBlock(
+                                blockId,
+                                intent.getTitulo(),
+                                "La entidad principal no fue especificada para este bloque.",
+                                intent.getOrden()
+                        ));
+                        continue;
+                    }
 
-                if (!catalogoService.esEntidadPermitida(intent.getEntidadPrincipal())) {
-                    bloquesDto.add(BloqueReporteDTO.createErrorBlock(
-                            blockId,
-                            intent.getTitulo(),
-                            "No puedo generar este bloque porque la entidad '" + intent.getEntidadPrincipal() + "' no está en el catálogo de datos permitido.",
-                            intent.getOrden()
-                    ));
-                    continue;
-                }
+                    if (!catalogoService.esEntidadPermitida(intent.getEntidadPrincipal())) {
+                        bloquesDto.add(BloqueReporteDTO.createErrorBlock(
+                                blockId,
+                                intent.getTitulo(),
+                                "No puedo generar este bloque porque la entidad '" + intent.getEntidadPrincipal() + "' no está en el catálogo de datos permitido.",
+                                intent.getOrden()
+                        ));
+                        continue;
+                    }
 
-                // Validar filtros
-                boolean filtrosValidos = true;
-                if (intent.getFiltros() != null) {
-                    for (String campoFiltro : intent.getFiltros().keySet()) {
-                        if (!catalogoService.esCampoPermitido(intent.getEntidadPrincipal(), campoFiltro)) {
-                            bloquesDto.add(BloqueReporteDTO.createErrorBlock(
-                                    blockId,
-                                    intent.getTitulo(),
-                                    "No puedo generar este bloque porque el campo de filtro '" + campoFiltro + "' no existe en la entidad '" + intent.getEntidadPrincipal() + "'.",
-                                    intent.getOrden()
-                            ));
-                            filtrosValidos = false;
-                            break;
+                    // Validar filtros
+                    boolean filtrosValidos = true;
+                    if (intent.getFiltros() != null) {
+                        for (String campoFiltro : intent.getFiltros().keySet()) {
+                            if (!catalogoService.esCampoPermitido(intent.getEntidadPrincipal(), campoFiltro)) {
+                                bloquesDto.add(BloqueReporteDTO.createErrorBlock(
+                                        blockId,
+                                        intent.getTitulo(),
+                                        "No puedo generar este bloque porque el campo de filtro '" + campoFiltro + "' no existe en la entidad '" + intent.getEntidadPrincipal() + "'.",
+                                        intent.getOrden()
+                                ));
+                                filtrosValidos = false;
+                                break;
+                            }
                         }
                     }
-                }
-                if (!filtrosValidos) {
-                    continue;
+                    if (!filtrosValidos) {
+                        continue;
+                    }
                 }
 
                 // B) Ejecutar la consulta o utilizar los datos simulados
@@ -189,8 +191,16 @@ public class ReporteVisualService {
         String yKey = "Valor";
         String desc = "Distribución de datos para " + intent.getTitulo();
 
+        if (dataset == null) {
+            return ConfiguracionGraficoDTO.builder()
+                    .xKey(xKey)
+                    .yKey(yKey)
+                    .descripcion(desc)
+                    .build();
+        }
+
         if ("kpi".equalsIgnoreCase(intent.getTipo())) {
-            xKey = dataset.getLabels().isEmpty() ? "Métrica" : dataset.getLabels().get(0);
+            xKey = (dataset.getLabels() == null || dataset.getLabels().isEmpty()) ? "Métrica" : dataset.getLabels().get(0);
             yKey = "total";
             desc = "Valor principal para: " + intent.getTitulo();
         } else if ("table".equalsIgnoreCase(intent.getTipo()) || "matrix".equalsIgnoreCase(intent.getTipo())) {

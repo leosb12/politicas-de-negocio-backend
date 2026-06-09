@@ -236,7 +236,17 @@ public class AsistenteDatosService {
                 case "<": c.lt(valor); break;
                 case "<=": c.lte(valor); break;
                 case "mes_actual":
-                    c.gte(LocalDate.now().withDayOfMonth(1).atStartOfDay()); break;
+                    String valStr = valor != null ? valor.toString().toLowerCase() : "";
+                    int monthNum = parseMonthName(valStr);
+                    if (monthNum > 0) {
+                        int year = LocalDate.now().getYear();
+                        LocalDate start = LocalDate.of(year, monthNum, 1);
+                        LocalDate end = start.plusMonths(1).minusDays(1);
+                        c.gte(start.atStartOfDay()).lte(end.atTime(23, 59, 59, 999000000));
+                    } else {
+                        c.gte(LocalDate.now().withDayOfMonth(1).atStartOfDay());
+                    }
+                    break;
                 case "anio_actual":
                     c.gte(LocalDate.now().withDayOfYear(1).atStartOfDay()); break;
                 case "ultimos_dias":
@@ -315,7 +325,7 @@ public class AsistenteDatosService {
                 orders.add(new Sort.Order(
                         dir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC,
                         campOrd
-                ));
+                 ));
             }
             operations.add(Aggregation.sort(Sort.by(orders)));
         }
@@ -360,6 +370,25 @@ public class AsistenteDatosService {
             repository.save(reporte);
         } catch (Exception e) {
             log.warn("Error registrando auditoría asistente datos: ", e);
+        }
+    }
+
+    private int parseMonthName(String monthName) {
+        if (monthName == null) return -1;
+        switch (monthName.toLowerCase().trim()) {
+            case "enero": return 1;
+            case "febrero": return 2;
+            case "marzo": return 3;
+            case "abril": return 4;
+            case "mayo": return 5;
+            case "junio": return 6;
+            case "julio": return 7;
+            case "agosto": return 8;
+            case "septiembre": return 9;
+            case "octubre": return 10;
+            case "noviembre": return 11;
+            case "diciembre": return 12;
+            default: return -1;
         }
     }
 }

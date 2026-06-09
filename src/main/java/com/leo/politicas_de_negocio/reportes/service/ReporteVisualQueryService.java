@@ -215,8 +215,19 @@ public class ReporteVisualQueryService {
             for (Map.Entry<String, Object> entry : filtrosMap.entrySet()) {
                 FiltroDto f = new FiltroDto();
                 f.setCampo(entry.getKey());
-                f.setOperador("=");
-                f.setValor(entry.getValue());
+                if (entry.getValue() instanceof Map) {
+                    Map<?, ?> valMap = (Map<?, ?>) entry.getValue();
+                    if (valMap.containsKey("operador")) {
+                        f.setOperador(String.valueOf(valMap.get("operador")));
+                        f.setValor(valMap.get("valor"));
+                    } else {
+                        f.setOperador("=");
+                        f.setValor(entry.getValue());
+                    }
+                } else {
+                    f.setOperador("=");
+                    f.setValor(entry.getValue());
+                }
                 list.add(f);
             }
         }
