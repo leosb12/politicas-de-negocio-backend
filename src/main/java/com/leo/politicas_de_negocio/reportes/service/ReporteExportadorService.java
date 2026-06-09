@@ -30,13 +30,15 @@ public class ReporteExportadorService {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Reporte");
 
-            if (preview.getResultados().isEmpty()) {
+            if (preview.getFilas().isEmpty()) {
                 workbook.write(out);
                 return out.toByteArray();
             }
 
-            // Encabezados
-            Set<String> keys = preview.getResultados().get(0).keySet();
+            // Encabezados (filtrando columnas técnicas)
+            List<String> keys = preview.getFilas().get(0).keySet().stream()
+                    .filter(k -> !k.startsWith("_"))
+                    .toList();
             int colIdx = 0;
             Row headerRow = sheet.createRow(0);
             for (String key : keys) {
@@ -45,13 +47,19 @@ public class ReporteExportadorService {
 
             // Datos
             int rowIdx = 1;
-            for (Map<String, Object> fila : preview.getResultados()) {
+            for (Map<String, Object> fila : preview.getFilas()) {
                 Row row = sheet.createRow(rowIdx++);
                 colIdx = 0;
                 for (String key : keys) {
                     Object val = fila.get(key);
                     row.createCell(colIdx++).setCellValue(val != null ? val.toString() : "");
                 }
+            }
+
+            if (Boolean.TRUE.equals(preview.getAsistido())) {
+                rowIdx++; // Fila en blanco
+                Row footnoteRow = sheet.createRow(rowIdx++);
+                footnoteRow.createCell(0).setCellValue("Nota: Este reporte contiene asistencia extendida (IA+) con estimaciones plausibles y coherentes.");
             }
 
             workbook.write(out);
@@ -76,8 +84,10 @@ public class ReporteExportadorService {
             desc.setSpacingAfter(20f);
             document.add(desc);
 
-            if (!preview.getResultados().isEmpty()) {
-                Set<String> keys = preview.getResultados().get(0).keySet();
+            if (preview.getFilas() != null && !preview.getFilas().isEmpty()) {
+                List<String> keys = preview.getFilas().get(0).keySet().stream()
+                        .filter(k -> !k.startsWith("_"))
+                        .toList();
                 PdfPTable table = new PdfPTable(keys.size());
 
                 for (String key : keys) {
@@ -85,13 +95,19 @@ public class ReporteExportadorService {
                     table.addCell(header);
                 }
 
-                for (Map<String, Object> fila : preview.getResultados()) {
+                for (Map<String, Object> fila : preview.getFilas()) {
                     for (String key : keys) {
                         Object val = fila.get(key);
                         table.addCell(val != null ? val.toString() : "");
                     }
                 }
                 document.add(table);
+            }
+
+            if (Boolean.TRUE.equals(preview.getAsistido())) {
+                Paragraph footnote = new Paragraph("Nota: Este reporte contiene asistencia extendida (IA+) con estimaciones plausibles y coherentes.", new Font(Font.HELVETICA, 9, Font.ITALIC));
+                footnote.setSpacingBefore(15f);
+                document.add(footnote);
             }
 
             document.close();
@@ -113,9 +129,11 @@ public class ReporteExportadorService {
             XWPFRun runDesc = desc.createRun();
             runDesc.setText("Entidad Principal: " + preview.getInterpretacion().getEntidadPrincipal());
 
-            if (!preview.getResultados().isEmpty()) {
-                List<Map<String, Object>> resultados = preview.getResultados();
-                Set<String> keys = resultados.get(0).keySet();
+            if (preview.getFilas() != null && !preview.getFilas().isEmpty()) {
+                List<Map<String, Object>> resultados = preview.getFilas();
+                List<String> keys = resultados.get(0).keySet().stream()
+                        .filter(k -> !k.startsWith("_"))
+                        .toList();
                 XWPFTable table = document.createTable(resultados.size() + 1, keys.size());
 
                 int colIdx = 0;
@@ -132,6 +150,15 @@ public class ReporteExportadorService {
                     }
                     rowIdx++;
                 }
+            }
+
+            if (Boolean.TRUE.equals(preview.getAsistido())) {
+                XWPFParagraph footnote = document.createParagraph();
+                footnote.setSpacingBefore(200); // 200 twentieths of a point
+                XWPFRun runFootnote = footnote.createRun();
+                runFootnote.setText("Nota: Este reporte contiene asistencia extendida (IA+) con estimaciones plausibles y coherentes.");
+                runFootnote.setItalic(true);
+                runFootnote.setFontSize(9);
             }
 
             document.write(out);

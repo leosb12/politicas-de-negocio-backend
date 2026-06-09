@@ -7,6 +7,7 @@ import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import org.springframework.stereotype.Component;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -124,7 +125,8 @@ public class WorkflowAiEditValidator {
             errors.add("La operacion " + humanLabel(operation, index) + " requiere nodeName para el nuevo nodo.");
             return;
         }
-        if (existingNodeNames.contains(nodeName)) {
+        String normalizedName = normalizeForSearch(nodeName);
+        if (existingNodeNames.contains(nodeName) || existingNodeNames.contains(normalizedName)) {
             errors.add("La operacion " + humanLabel(operation, index)
                     + " intenta crear nodeName='" + nodeName + "' pero ese nodo ya existe en la politica actual.");
         }
@@ -141,7 +143,9 @@ public class WorkflowAiEditValidator {
         if (nodeName == null) {
             return;
         }
-        if (!nodeNames.contains(nodeName)) {
+        // Check exact match OR normalized match (handles case/accent differences from IA)
+        String normalizedName = normalizeForSearch(nodeName);
+        if (!nodeNames.contains(nodeName) && !nodeNames.contains(normalizedName)) {
             errors.add("La operacion " + humanLabel(operation, index)
                     + " referencia " + fieldName + "='" + nodeName + "' pero ese nodo no existe en la politica actual.");
         }
@@ -233,6 +237,11 @@ public class WorkflowAiEditValidator {
             String name = normalize(nodo.getNombre());
             if (name != null) {
                 nodeNames.add(name);
+                // Also add normalized form for fuzzy matching
+                String normalized = normalizeForSearch(name);
+                if (!normalized.isEmpty()) {
+                    nodeNames.add(normalized);
+                }
             }
         }
         return nodeNames;
@@ -251,6 +260,10 @@ public class WorkflowAiEditValidator {
             String nodeName = readNodeReference(operation, "nodeName");
             if (nodeName != null) {
                 proposedNodeNames.add(nodeName);
+                String normalized = normalizeForSearch(nodeName);
+                if (!normalized.isEmpty()) {
+                    proposedNodeNames.add(normalized);
+                }
             }
         }
         return proposedNodeNames;
@@ -270,5 +283,14 @@ public class WorkflowAiEditValidator {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String normalizeForSearch(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(value.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return normalized.replaceAll("[^a-z0-9]+", " ").trim().replaceAll("\\s+", " ");
     }
 }

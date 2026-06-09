@@ -23,4 +23,5 @@ public class ReporteResponseDto {
     private Double confianza;
     private String motor;
     private String respuestaNatural;
+    private Boolean requiereResolucionBackend;
 }

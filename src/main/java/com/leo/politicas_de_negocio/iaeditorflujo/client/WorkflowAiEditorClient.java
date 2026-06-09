@@ -24,7 +24,10 @@ import org.springframework.web.client.RestTemplate;
 public class WorkflowAiEditorClient {
 
     private static final Logger log = LoggerFactory.getLogger(WorkflowAiEditorClient.class);
-    private static final ObjectMapper JSON = JsonMapper.builder().findAndAddModules().build();
+    private static final ObjectMapper JSON = JsonMapper.builder()
+            .findAndAddModules()
+            .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .build();
 
     private final RestTemplate analyticsIaRestTemplate;
     private final AiServiceUrlBuilder aiServiceUrlBuilder;
@@ -36,7 +39,7 @@ public class WorkflowAiEditorClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Object> requestEntity = new HttpEntity<>(payload, headers);
+        HttpEntity<String> requestEntity = new HttpEntity<>(serializedPayload, headers);
 
         try {
             ResponseEntity<String> responseEntity = analyticsIaRestTemplate.exchange(

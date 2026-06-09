@@ -31,7 +31,10 @@ import java.util.Map;
 public class AnalyticsIaClient {
 
     private static final Logger log = LoggerFactory.getLogger(AnalyticsIaClient.class);
-    private static final ObjectMapper JSON = JsonMapper.builder().findAndAddModules().build();
+    private static final ObjectMapper JSON = JsonMapper.builder()
+            .findAndAddModules()
+            .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .build();
 
     private final RestTemplate analyticsIaRestTemplate;
     private final AiServiceUrlBuilder aiServiceUrlBuilder;
@@ -105,7 +108,7 @@ public class AnalyticsIaClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        HttpEntity<Object> requestEntity = new HttpEntity<>(payload, headers);
+        HttpEntity<String> requestEntity = new HttpEntity<>(serializedPayload, headers);
         Instant startedAt = Instant.now();
 
         try {

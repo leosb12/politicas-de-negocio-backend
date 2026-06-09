@@ -32,6 +32,7 @@ public class AsistenteDatosService {
 
     private final MongoTemplate mongoTemplate;
     private final ReporteCatalogoService catalogoService;
+    private final ReporteJsonNormalizer jsonNormalizer;
     private final ReporteGeneradoRepository repository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -76,7 +77,10 @@ public class AsistenteDatosService {
                 return response;
             }
             
-            // 2. Validar plan contra catálogo
+            // 2. Normalizar plan
+            jsonNormalizer.normalizarPlan(plan);
+            
+            // 3. Validar plan contra catálogo
             String entidadPrincipal = (String) plan.getOrDefault("entidadPrincipal", "");
             if (!entidadPrincipal.isEmpty() && !catalogoService.esEntidadPermitida(entidadPrincipal)) {
                 response.setRespuesta("La entidad solicitada no está disponible para consulta: " + entidadPrincipal);
@@ -136,6 +140,7 @@ public class AsistenteDatosService {
             ));
             return fallback;
         }
+        jsonNormalizer.normalizarPlan(planResult);
         return planResult;
     }
 
@@ -146,6 +151,8 @@ public class AsistenteDatosService {
         AsistenteDatosResponseDto response = new AsistenteDatosResponseDto();
         
         try {
+            jsonNormalizer.normalizarPlan(plan);
+            
             String entidadPrincipal = (String) plan.getOrDefault("entidadPrincipal", "");
             if (!entidadPrincipal.isEmpty() && !catalogoService.esEntidadPermitida(entidadPrincipal)) {
                 response.setRespuesta("Entidad no permitida: " + entidadPrincipal);
@@ -246,6 +253,11 @@ public class AsistenteDatosService {
         // Agrupaciones
         List<String> agrupaciones = (List<String>) plan.getOrDefault("agrupaciones", Collections.emptyList());
         if (!agrupaciones.isEmpty()) {
+            for (String groupField : agrupaciones) {
+                if (!catalogoService.esCampoPermitido(entidad, groupField)) {
+                    throw new IllegalArgumentException("Campo de agrupación no permitido: " + groupField);
+                }
+            }
             String[] groupFields = agrupaciones.toArray(new String[0]);
             var groupOp = Aggregation.group(groupFields).count().as("total");
             operations.add(groupOp);
@@ -253,7 +265,8 @@ public class AsistenteDatosService {
             if (agrupaciones.size() == 1) {
                 String groupField = agrupaciones.get(0);
                 if (groupField.equals("creadaPor") || groupField.equals("responsableId") || groupField.equals("usuarioId") || groupField.equals("usuarioSubio")) {
-                    operations.add(Aggregation.lookup("usuarios", "_id", "_id", "usuarioDetalle"));
+                    operations.add(Aggregation.addFields().addField("_idObj").withValueOfExpression("{$toObjectId: '$_id'}").build());
+                    operations.add(Aggregation.lookup("usuarios", "_idObj", "_id", "usuarioDetalle"));
                     operations.add(Aggregation.unwind("usuarioDetalle", true));
                     
                     operations.add(Aggregation.project()
@@ -261,7 +274,8 @@ public class AsistenteDatosService {
                             .andInclude("total")
                             .andExclude("_id"));
                 } else if (groupField.equals("politicaId")) {
-                    operations.add(Aggregation.lookup("politicas_negocio", "_id", "_id", "politicaDetalle"));
+                    operations.add(Aggregation.addFields().addField("_idObj").withValueOfExpression("{$toObjectId: '$_id'}").build());
+                    operations.add(Aggregation.lookup("politicas_negocio", "_idObj", "_id", "politicaDetalle"));
                     operations.add(Aggregation.unwind("politicaDetalle", true));
                     
                     operations.add(Aggregation.project()
@@ -274,6 +288,20 @@ public class AsistenteDatosService {
                             .andInclude("total")
                             .andExclude("_id"));
                 }
+            }
+        } else {
+            // Sin agrupaciones: Listado simple
+            List<String> campos = (List<String>) plan.getOrDefault("campos", Collections.emptyList());
+            if (!campos.isEmpty()) {
+                for (String campo : campos) {
+                    if (!catalogoService.esCampoPermitido(entidad, campo)) {
+                        throw new IllegalArgumentException("Campo solicitado no permitido: " + campo);
+                    }
+                }
+                String[] fields = campos.toArray(new String[0]);
+                operations.add(Aggregation.project(fields).andExclude("_id"));
+            } else {
+                operations.add(Aggregation.project().andExclude("_id"));
             }
         }
 

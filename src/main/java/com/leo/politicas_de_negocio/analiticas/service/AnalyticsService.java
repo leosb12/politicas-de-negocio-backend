@@ -479,8 +479,16 @@ public class AnalyticsService {
         }
 
         PoliticaNegocio politica = politicasPorId.get(normalizedText(tarea.getPoliticaId()));
-        if (politica == null) {
+        if (politica == null || politica.getNodos() == null) {
             return null;
+        }
+        String nodeId = normalizedText(tarea.getNodoId());
+        if (nodeId != null) {
+            for (Nodo nodo : politica.getNodos()) {
+                if (nodo != null && nodeId.equals(normalizedText(nodo.getId()))) {
+                    return normalizedText(nodo.getDepartamentoId());
+                }
+            }
         }
         return null;
     }
@@ -495,7 +503,7 @@ public class AnalyticsService {
 
     private String resolvePolicyName(Map<String, PoliticaNegocio> politicasPorId, String policyId) {
         PoliticaNegocio politica = politicasPorId.get(normalizedText(policyId));
-        return null;
+        return politica != null ? normalizedText(politica.getNombre()) : null;
     }
 
     private String resolveUserName(Map<String, Usuario> usuariosPorId, String userId) {
