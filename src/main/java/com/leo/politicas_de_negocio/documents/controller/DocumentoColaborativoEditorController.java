@@ -10,6 +10,7 @@ import com.leo.politicas_de_negocio.documents.permissions.service.DocumentAuditS
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetadataService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoPermisoService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoS3Service;
+import com.leo.politicas_de_negocio.documents.service.DocumentoPdfConverterService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoVersionService;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
@@ -64,6 +65,7 @@ public class DocumentoColaborativoEditorController {
     private final DocumentoColaborativoS3Service s3Service;
     private final DocumentoVersionService versionService;
     private final DocumentAuditService auditService;
+    private final DocumentoPdfConverterService pdfConverterService;
     private final UsuarioRepository usuarioRepository;
     private final InstanciaPoliticaRepository instanciaPoliticaRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -419,7 +421,22 @@ public class DocumentoColaborativoEditorController {
         byte[] content;
         String outputFileType;
         if ("pdf".equals(normalizedFormat)) {
-            content = convertirDocumento(metadata, originalFileType, "pdf");
+            byte[] originalContent;
+            try {
+                originalContent = s3Service.descargarArchivo(metadata.getS3Key());
+            } catch (Exception ex) {
+                log.error("Error leyendo archivo colaborativo para conversión PDF: documentoId={}, s3Key={}", documentoId, metadata.getS3Key(), ex);
+                throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Error leyendo archivo para conversión a PDF");
+            }
+            try {
+                content = pdfConverterService.convertirAPdf(originalContent, originalFileType);
+            } catch (UnsupportedOperationException ex) {
+                log.warn("Tipo de archivo no soportado para PDF: documentoId={}, fileType={}", documentoId, originalFileType);
+                throw new ApiException(HttpStatus.BAD_REQUEST, ex.getMessage());
+            } catch (Exception ex) {
+                log.error("Error convirtiendo archivo a PDF: documentoId={}, fileType={}", documentoId, originalFileType, ex);
+                throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "No se pudo convertir el documento a PDF");
+            }
             outputFileType = "pdf";
         } else {
             try {
@@ -1096,47 +1113,9 @@ public class DocumentoColaborativoEditorController {
         }
     }
 
-    private byte[] convertirDocumento(DocumentoColaborativoMetadata metadata, String inputType, String outputType) {
-        String key = hashCorto(metadata.getDocumentoId() + "|" + metadata.getS3Key() + "|" + outputType + "|" + LocalDateTime.now());
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("async", false);
-        body.put("filetype", inputType);
-        body.put("key", key);
-        body.put("outputtype", outputType);
-        body.put("title", resolverTitulo(metadata.getNombreDocumento(), outputType));
-        body.put("url", construirSourceUrlInterna(metadata));
-        if (jwtEnabled) {
-            body.put("token", generarJwtOnlyOffice(body));
-        }
-
-        String converterUrl = limpiarUrlBase(documentServerUrl) + "/converter?shardkey=" + encode(key);
-        RestTemplate restTemplate = new RestTemplate();
-        Map<?, ?> response;
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            response = restTemplate.postForObject(converterUrl, new HttpEntity<>(body, headers), Map.class);
-        } catch (Exception ex) {
-            String fallbackUrl = limpiarUrlBase(documentServerUrl) + "/ConvertService.ashx";
-            log.warn("No se pudo convertir usando /converter. Reintentando con ConvertService.ashx: {}", converterUrl, ex);
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            response = restTemplate.postForObject(fallbackUrl, new HttpEntity<>(body, headers), Map.class);
-        }
-
-        if (response == null) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "OnlyOffice no devolvio respuesta de conversion");
-        }
-        Object error = response.get("error");
-        if (error instanceof Number number && number.intValue() != 0) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "OnlyOffice no pudo convertir el documento. Codigo: " + number.intValue());
-        }
-        Object fileUrl = response.get("fileUrl");
-        if (!(fileUrl instanceof String url) || url.isBlank()) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "OnlyOffice no devolvio URL del archivo convertido");
-        }
-        return descargarDesdeOnlyOffice(url);
-    }
+    // Método convertirDocumento eliminado: la conversión a PDF ahora se realiza
+    // localmente usando DocumentoPdfConverterService (Apache POI + fr.opensagres.xwpf.converter.pdf),
+    // sin depender del servicio de conversión de OnlyOffice.
 
     private String construirOnlyOfficeDownloadFallbackUrl(String originalUrl) {
         try {
