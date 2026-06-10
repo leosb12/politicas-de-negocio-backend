@@ -3,10 +3,20 @@ target/
 uploads/
 .env
 .env.local
+deploy/.env
 src/main/java/com/leo/politicas_de_negocio/notifications/secrets/*.json
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+
+# Logs de Spring Boot y JVM
+*.log
+spring-boot-run.log
+hs_err_pid*.log
+
+# Scripts de test temporales
+test_kpis_8081.py
+test_port_8081.py
 
 ### STS ###
 .apt_generated
