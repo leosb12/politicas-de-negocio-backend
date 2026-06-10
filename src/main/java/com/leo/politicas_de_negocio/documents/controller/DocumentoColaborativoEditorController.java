@@ -669,6 +669,8 @@ public class DocumentoColaborativoEditorController {
                 metadata.setVersionActual(version.getNumeroVersion());
                 log.info("version creada documentoId={}, version={}, s3Key={}",
                         documentoId, version.getNumeroVersion(), version.getS3KeyVersion());
+            } else {
+                metadata.setVersionActual((metadata.getVersionActual() != null ? metadata.getVersionActual() : 0) + 1);
             }
             metadataService.guardarMetadata(metadata);
             registrarEdicionDesdeCallback(metadata, modificadoPor, body);
@@ -726,7 +728,7 @@ public class DocumentoColaborativoEditorController {
     }
 
     private String construirSourceUrl(DocumentoColaborativoMetadata metadata, String userId) {
-        String baseUrl = limpiarUrlBase(callbackBaseUrl)
+        String baseUrl = resolverCallbackBaseUrl()
                 + "/api/documentos-colaborativos/"
                 + metadata.getDocumentoId()
                 + "/source";
@@ -740,7 +742,7 @@ public class DocumentoColaborativoEditorController {
     }
 
     private String construirCallbackUrl(String documentoId, String userId) {
-        String url = limpiarUrlBase(callbackBaseUrl)
+        String url = resolverCallbackBaseUrl()
                 + "/api/documentos-colaborativos/onlyoffice/callback/"
                 + documentoId;
         if (userId == null || userId.isBlank()) {
@@ -757,7 +759,7 @@ public class DocumentoColaborativoEditorController {
     }
 
     private String construirSourceUrlInterna(DocumentoColaborativoMetadata metadata) {
-        return limpiarUrlBase(callbackBaseUrl)
+        return resolverCallbackBaseUrl()
                 + "/api/documentos-colaborativos/"
                 + metadata.getDocumentoId()
                 + "/source?accessToken="
@@ -878,13 +880,14 @@ public class DocumentoColaborativoEditorController {
     }
 
     private String resolverDocumentKey(DocumentoColaborativoMetadata metadata) {
-        String version = metadata.getFechaUltimaModificacion() != null
+        String fileType = resolverFileType(metadata.getTipoDocumento());
+        String updatedAt = (metadata.getFechaUltimaModificacion() != null && !metadata.getFechaUltimaModificacion().isBlank())
                 ? metadata.getFechaUltimaModificacion()
-                : metadata.getFechaCreacion();
-        if (version == null || version.isBlank()) {
-            return metadata.getDocumentoId();
-        }
-        return metadata.getDocumentoId() + "_" + hashCorto(version);
+                : ((metadata.getFechaCreacion() != null && !metadata.getFechaCreacion().isBlank()) ? metadata.getFechaCreacion() : "0");
+        Integer version = metadata.getVersionActual() != null ? metadata.getVersionActual() : 0;
+        
+        String stamp = updatedAt + "_" + version;
+        return metadata.getDocumentoId() + "_" + fileType + "_" + hashCorto(stamp);
     }
 
     private String hashCorto(String value) {
@@ -1200,6 +1203,14 @@ public class DocumentoColaborativoEditorController {
             return comma >= 0 ? forwarded.substring(0, comma).trim() : forwarded;
         }
         return primerValor(request.getRemoteAddr());
+    }
+
+    private String resolverCallbackBaseUrl() {
+        String url = limpiarUrlBase(callbackBaseUrl);
+        if (url.endsWith("/api")) {
+            url = url.substring(0, url.length() - 4);
+        }
+        return url;
     }
 
     private String limpiarUrlBase(String value) {
