@@ -16,6 +16,7 @@ import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
+import com.leo.politicas_de_negocio.workflow_metricas.service.WorkflowMetricasService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,9 @@ class WorkflowEngineServiceTest {
     @Mock
     private WorkflowNotificationService workflowNotificationService;
 
+    @Mock
+    private WorkflowMetricasService workflowMetricasService;
+
     private AutoCloseable mocks;
     private WorkflowEngineService service;
 
@@ -69,7 +73,8 @@ class WorkflowEngineServiceTest {
                 tareaRepository,
                 usuarioRepository,
                 historialService,
-                workflowNotificationService
+                workflowNotificationService,
+                workflowMetricasService
         );
 
         AtomicInteger secuenciaTarea = new AtomicInteger(0);

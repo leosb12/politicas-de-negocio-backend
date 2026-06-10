@@ -9,6 +9,7 @@ import com.leo.politicas_de_negocio.politicas.model.politica.ConfiguracionDocume
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.PermisosAdicionalesDocumento;
 import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
+import com.leo.politicas_de_negocio.archivos.storage.ArchivoStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -42,13 +43,16 @@ class DocumentoColaborativoMetadataServiceTest {
     @Mock
     private DocumentoColaborativoS3Service s3Service;
 
+    @Mock
+    private ArchivoStorageService storageService;
+
     private DocumentoColaborativoMetadataService service;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
         when(enhancedClient.table(anyString(), any(TableSchema.class))).thenReturn(metadataTable);
-        service = new DocumentoColaborativoMetadataService(enhancedClient, "test-table", s3Service);
+        service = new DocumentoColaborativoMetadataService(enhancedClient, "test-table", s3Service, storageService);
     }
 
     @Test

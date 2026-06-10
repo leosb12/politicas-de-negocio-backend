@@ -21,6 +21,8 @@ import com.leo.politicas_de_negocio.politicas.model.politica.ConfiguracionDocume
 import com.leo.politicas_de_negocio.politicas.model.politica.Nodo;
 import com.leo.politicas_de_negocio.politicas.model.politica.PermisosSeccion;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
+import com.leo.politicas_de_negocio.politicas.repository.PoliticaAuditoriaRepository;
+import com.leo.politicas_de_negocio.analiticas.service.SystemAuditService;
 import com.leo.politicas_de_negocio.shared.exception.ApiException;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
@@ -78,6 +80,12 @@ class PoliticaNegocioServiceTest {
     @Mock
     private DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
 
+    @Mock
+    private PoliticaAuditoriaRepository politicaAuditoriaRepository;
+
+    @Mock
+    private SystemAuditService systemAuditService;
+
     private AutoCloseable mocks;
     private PoliticaNegocioService service;
 
@@ -93,7 +101,9 @@ class PoliticaNegocioServiceTest {
                 presenciaService,
                 mongoTemplate,
                 instanciaPoliticaRepository,
-                documentoColaborativoMetadataService
+                documentoColaborativoMetadataService,
+                politicaAuditoriaRepository,
+                systemAuditService
         );
     }
 

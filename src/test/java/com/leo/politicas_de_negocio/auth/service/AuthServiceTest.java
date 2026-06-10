@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.leo.politicas_de_negocio.analiticas.service.SystemAuditService;
 
 import java.util.Optional;
 
@@ -29,6 +30,8 @@ class AuthServiceTest {
     private DepartamentoRepository departamentoRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private SystemAuditService systemAuditService;
 
     private AutoCloseable mocks;
     private AuthService authService;
@@ -36,7 +39,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
-        authService = new AuthService(usuarioRepository, departamentoRepository, passwordEncoder);
+        authService = new AuthService(usuarioRepository, departamentoRepository, passwordEncoder, systemAuditService);
     }
 
     @AfterEach

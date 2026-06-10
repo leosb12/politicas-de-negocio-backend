@@ -64,7 +64,7 @@ public class AnalyticsService {
         DurationAccumulator resolutionAccumulator = new DurationAccumulator();
 
         long activePolicies = politicas.stream()
-                .filter(politica -> politica != null)
+                .filter(politica -> politica != null && politica.getEstado() == EstadoPolitica.ACTIVA)
                 .count();
 
         long completedInstances = 0L;

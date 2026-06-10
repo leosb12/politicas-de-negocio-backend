@@ -20,6 +20,7 @@ import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import com.leo.politicas_de_negocio.workflow.service.WorkflowEngineService;
+import com.leo.politicas_de_negocio.workflow_metricas.service.WorkflowMetricasService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,12 +65,23 @@ class TareaActividadServiceTest {
     @Mock
     private WorkflowNotificationService workflowNotificationService;
 
+    @Mock
+    private WorkflowMetricasService workflowMetricasService;
+
+    @Mock
+    private PrioridadRecomendacionService prioridadRecomendacionService;
+
     private AutoCloseable mocks;
     private TareaActividadService service;
 
     @BeforeEach
     void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
+        when(prioridadRecomendacionService.analizarPrioridadYRecurso(any(), any()))
+                .thenReturn(PrioridadRecomendacionService.RecomendacionResult.builder()
+                        .prioridad("NORMAL")
+                        .motivoRecomendacion("Mock")
+                        .build());
         service = new TareaActividadService(
                 tareaRepository,
                 instanciaRepository,
@@ -77,7 +89,9 @@ class TareaActividadServiceTest {
                 usuarioRepository,
                 historialService,
                 workflowEngineService,
-                workflowNotificationService
+                workflowNotificationService,
+                workflowMetricasService,
+                prioridadRecomendacionService
         );
     }
 
