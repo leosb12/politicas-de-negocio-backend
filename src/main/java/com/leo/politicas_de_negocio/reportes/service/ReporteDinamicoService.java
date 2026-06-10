@@ -39,7 +39,7 @@ public class ReporteDinamicoService {
     private final ReporteOutputContractService outputContractService;
     private final ReporteAsistidoService asistidoService;
 
-    @Value("${ia.service.url:http://localhost:8010}")
+    @Value("${app.ia.deep-learning-url:http://localhost:8010}")
     private String iaServiceUrl;
 
     /**

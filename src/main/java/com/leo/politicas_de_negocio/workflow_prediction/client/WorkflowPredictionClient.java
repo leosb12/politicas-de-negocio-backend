@@ -15,7 +15,7 @@ public class WorkflowPredictionClient {
     private final RestTemplate restTemplate;
     private final String url;
 
-    public WorkflowPredictionClient(RestTemplate restTemplate, @Value("${ia.service.url:http://localhost:8010}") String iaServiceUrl) {
+    public WorkflowPredictionClient(RestTemplate restTemplate, @Value("${app.ia.deep-learning-url:http://localhost:8010}") String iaServiceUrl) {
         this.restTemplate = restTemplate;
         this.url = iaServiceUrl + "/api/predicciones/predict";
     }

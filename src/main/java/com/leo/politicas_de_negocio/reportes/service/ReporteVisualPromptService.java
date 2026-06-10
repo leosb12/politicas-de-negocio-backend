@@ -23,7 +23,16 @@ public class ReporteVisualPromptService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${ia.service.url:http://localhost:8010}")
+    @Value("${spring.profiles.active:default}")
+    private String activeProfile;
+
+    @Value("${IA_SERVICE_URL:http://localhost:8000}")
+    private String envIaServiceUrl;
+
+    @Value("${IA_DEEP_LEARNING_URL:http://localhost:8010}")
+    private String envIaDeepLearningUrl;
+
+    @Value("${app.ia.deep-learning-url:http://localhost:8010}")
     private String iaServiceUrl;
 
     @Data
@@ -56,8 +65,13 @@ public class ReporteVisualPromptService {
             Boolean iaPlus, 
             List<String> usuariosReales, 
             List<String> politicasReales) {
+        String url = iaServiceUrl + "/api/ia/reportes-visuales/interpretar";
         try {
-            String url = iaServiceUrl + "/api/ia/reportes-visuales/interpretar";
+            log.info("== CONFIGURACIÓN DE IA EN REPORTE VISUAL ==");
+            log.info("Profile activo: {}", activeProfile);
+            log.info("Variable IA_SERVICE_URL: {}", envIaServiceUrl);
+            log.info("Variable IA_DEEP_LEARNING_URL: {}", envIaDeepLearningUrl);
+            log.info("URL final configurada: {}", iaServiceUrl);
             log.info("Llamando a FastAPI para interpretar prompt visual: '{}' en URL: {}, iaPlus: {}", prompt, url, iaPlus);
 
             Map<String, Object> request = new HashMap<>();
@@ -77,7 +91,7 @@ public class ReporteVisualPromptService {
             }
             return response;
         } catch (Exception e) {
-            log.error("Error al comunicarse con el Motor de Reportes Visuales IA: ", e);
+            log.error("Error al comunicarse con el Motor de Reportes Visuales IA en URL: " + url + ". Se activó fallback local por error: " + e.getMessage(), e);
             // Fallback manual en caso de desconexión del microservicio de IA
             return generarInterpretacionLocalFallback(prompt);
         }

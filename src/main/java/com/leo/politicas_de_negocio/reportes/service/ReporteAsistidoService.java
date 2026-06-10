@@ -32,7 +32,7 @@ public class ReporteAsistidoService {
     private final DepartamentoRepository departamentoRepository;
     private final RestTemplate restTemplate;
 
-    @Value("${ia.service.url:http://localhost:8010}")
+    @Value("${app.ia.deep-learning-url:http://localhost:8010}")
     private String iaServiceUrl;
 
     // Cache to store previous simulated results for identical or similar requests
