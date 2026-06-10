@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -14,6 +15,7 @@ import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
 import com.leo.politicas_de_negocio.politicas.repository.PoliticaNegocioRepository;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.politicas.model.PoliticaNegocio;
+import com.leo.politicas_de_negocio.analiticas.service.AnalyticsService;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +28,7 @@ public class ReporteVisualService {
     private final ReporteCatalogoService catalogoService;
     private final UsuarioRepository usuarioRepository;
     private final PoliticaNegocioRepository politicaNegocioRepository;
+    private final AnalyticsService analyticsService;
 
     public ReporteVisualDTO generarReporteVisual(String prompt, String usuarioId) {
         return generarReporteVisual(prompt, usuarioId, false);
@@ -125,6 +128,28 @@ public class ReporteVisualService {
                 ResultadoBloqueReporteDTO datasetDto;
                 if (intent.getDatos() != null) {
                     datasetDto = intent.getDatos();
+                } else if ("cuellos_botella".equalsIgnoreCase(intent.getMetrica())) {
+                    List<Map> registros = new ArrayList<>();
+                    try {
+                        com.leo.politicas_de_negocio.analiticas.dto.response.BottlenecksAnalyticsResponse iaResponse = 
+                                analyticsService.getBottlenecks(usuarioId);
+                        
+                        if (iaResponse != null && iaResponse.isAvailable() && iaResponse.getBottlenecks() != null) {
+                            for (com.leo.politicas_de_negocio.analiticas.dto.response.BottlenecksAnalyticsResponse.BottleneckItem item : iaResponse.getBottlenecks()) {
+                                Map<String, Object> fila = new LinkedHashMap<>();
+                                fila.put("tipo", item.getType());
+                                fila.put("nombre", item.getName());
+                                fila.put("severidad", item.getSeverity());
+                                fila.put("evidencia", item.getEvidence());
+                                fila.put("impacto", item.getImpact());
+                                fila.put("recomendacion", item.getRecommendation());
+                                registros.add(fila);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("Error al obtener cuellos de botella para reporte visual: ", e);
+                    }
+                    datasetDto = visualMapper.mapear(intent.getTipo(), registros);
                 } else {
                     int limite = intent.getLimite() > 0 ? intent.getLimite() : 10;
                     List<Map> registros = queryService.ejecutarConsultaMetrica(

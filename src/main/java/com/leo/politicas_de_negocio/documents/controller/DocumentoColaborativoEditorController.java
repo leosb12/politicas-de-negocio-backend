@@ -1100,9 +1100,9 @@ public class DocumentoColaborativoEditorController {
         String key = hashCorto(metadata.getDocumentoId() + "|" + metadata.getS3Key() + "|" + outputType + "|" + LocalDateTime.now());
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("async", false);
-        body.put("filetype", inputType);
+        body.put("fileType", inputType);
         body.put("key", key);
-        body.put("outputtype", outputType);
+        body.put("outputType", outputType);
         body.put("title", resolverTitulo(metadata.getNombreDocumento(), outputType));
         body.put("url", construirSourceUrlInterna(metadata));
         if (jwtEnabled) {
