@@ -130,8 +130,8 @@ services:
       # Microservicios IA — nombres de servicio Docker
       IA_SERVICE_URL: http://ia-service:8000
       IA_DEEP_LEARNING_URL: http://ia-deep-learning-service:8010
-      # OnlyOffice — nombre de servicio Docker
       ONLYOFFICE_DOCUMENT_SERVER_URL: http://onlyoffice:80
+      ONLYOFFICE_PUBLIC_URL: ${ONLYOFFICE_PUBLIC_URL:-${APP_PUBLIC_BASE_URL:-http://localhost}/onlyoffice}
       # OnlyOffice llama de vuelta al backend vía Nginx o IP interna
       # En EC2: usar http://backend:8080 (red interna Docker)
       ONLYOFFICE_CALLBACK_BASE_URL: ${ONLYOFFICE_CALLBACK_BASE_URL:-http://backend:8080}

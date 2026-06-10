@@ -75,6 +75,12 @@ public class DocumentoColaborativoEditorController {
     @Value("${onlyoffice.callback-base-url}")
     private String callbackBaseUrl;
 
+    @Value("${onlyoffice.public-url}")
+    private String onlyofficePublicUrl;
+
+    @Value("${app.public-base-url:http://localhost:8080}")
+    private String publicBaseUrl;
+
     @Value("${onlyoffice.source-public-access-enabled:true}")
     private boolean sourcePublicAccessEnabled;
 
@@ -113,7 +119,7 @@ public class DocumentoColaborativoEditorController {
         String sourceUrl = construirSourceUrl(metadata, usuario.getId());
         String callbackUrl = construirCallbackUrl(metadata.getDocumentoId(), usuario.getId());
         String auditEventUrl = construirAuditEventUrl(metadata.getDocumentoId());
-        String serverUrl = limpiarUrlBase(documentServerUrl);
+        String serverUrl = limpiarUrlBase(onlyofficePublicUrl);
 
         boolean puedeEditar = permisos.isPuedeEditar();
         String editorMode = puedeEditar ? "edit" : "view";
@@ -346,7 +352,7 @@ public class DocumentoColaborativoEditorController {
         }
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("documentServerUrl", limpiarUrlBase(documentServerUrl));
+        response.put("documentServerUrl", limpiarUrlBase(onlyofficePublicUrl));
         response.put("config", config);
         response.put("auditEventUrl", construirAuditEventUrl(metadata.getDocumentoId()));
         response.put("audit", construirAuditInstructions(metadata.getDocumentoId(), usuario.getId()));
@@ -744,7 +750,7 @@ public class DocumentoColaborativoEditorController {
     }
 
     private String construirAuditEventUrl(String documentoId) {
-        return limpiarUrlBase(callbackBaseUrl)
+        return limpiarUrlBase(publicBaseUrl)
                 + "/api/documentos-colaborativos/"
                 + documentoId
                 + "/audit-event";
