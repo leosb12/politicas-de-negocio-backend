@@ -10,7 +10,7 @@ COPY mvnw mvnw
 COPY mvnw.cmd mvnw.cmd
 COPY src src
 
-RUN mvn -q -DskipTests clean package
+RUN mvn -q -Dmaven.test.skip=true clean package
 
 FROM --platform=$BUILDPLATFORM eclipse-temurin:17-jre-jammy
 
