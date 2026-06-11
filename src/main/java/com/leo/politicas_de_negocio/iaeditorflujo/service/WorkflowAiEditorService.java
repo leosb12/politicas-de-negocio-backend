@@ -511,7 +511,7 @@ public class WorkflowAiEditorService {
                 .validaciones(firstMap(operation, "validations", "validaciones"))
                 .build();
         if (field.getRequerido() == null) {
-            field.setRequerido(true);
+            field.setRequerido(false);
         }
 
         Map<String, Object> configDocMap = firstMap(operation, "configuracionDocumento");
@@ -686,7 +686,7 @@ public class WorkflowAiEditorService {
                 .validaciones(firstMap(operation, "validations", "validaciones"))
                 .build();
         if (field.getRequerido() == null) {
-            field.setRequerido(true);
+            field.setRequerido(false);
         }
 
         Map<String, Object> configDocMap = firstMap(operation, "configuracionDocumento");
@@ -1069,7 +1069,7 @@ public class WorkflowAiEditorService {
                         .validaciones(asStringObjectMap(firstNonNull(map, "validaciones", "validations")))
                         .build();
                 if (field.getRequerido() == null) {
-                    field.setRequerido(true);
+                    field.setRequerido(false);
                 }
                 result.add(field);
             }

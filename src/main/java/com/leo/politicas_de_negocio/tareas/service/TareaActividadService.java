@@ -682,7 +682,7 @@ public class TareaActividadService {
             if (campo != null && campo.getTipo() == TipoCampo.DOCUMENTO_COLABORATIVO) {
                 continue;
             }
-            if (campo != null && Boolean.FALSE.equals(campo.getRequerido())) {
+            if (campo != null && !Boolean.TRUE.equals(campo.getRequerido())) {
                 continue;
             }
             String clave = normalizarTexto(campo != null ? campo.getCampo() : null);
