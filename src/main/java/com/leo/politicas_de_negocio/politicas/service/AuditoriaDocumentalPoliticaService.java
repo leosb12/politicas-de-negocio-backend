@@ -18,6 +18,11 @@ import com.leo.politicas_de_negocio.tareas.model.TareaActividad;
 import com.leo.politicas_de_negocio.tareas.repository.TareaActividadRepository;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
 import com.leo.politicas_de_negocio.usuarios.repository.UsuarioRepository;
+import com.leo.politicas_de_negocio.documents.permissions.model.enums.DocumentPermissionAction;
+import com.leo.politicas_de_negocio.documents.permissions.dto.DocumentPermissionValidationRequest;
+import com.leo.politicas_de_negocio.documents.permissions.service.DocumentPermissionService;
+import com.leo.politicas_de_negocio.documents.permissions.model.DocumentPermissionConfig;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -45,9 +50,10 @@ public class AuditoriaDocumentalPoliticaService {
     private final DocumentoColaborativoMetadataService documentoColaborativoMetadataService;
     private final DocumentoVersionService documentoVersionService;
     private final UsuarioRepository usuarioRepository;
+    private final DocumentPermissionService documentPermissionService;
 
     public AuditoriaDocumentalPoliticaResponse obtenerAuditoriaDocumental(String adminUserId, String politicaId) {
-        assertAdmin(adminUserId);
+        Usuario admin = assertAdmin(adminUserId);
         String idPolitica = normalizar(politicaId);
         if (idPolitica == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "Debe indicar el id de la politica");
@@ -62,8 +68,8 @@ public class AuditoriaDocumentalPoliticaService {
                 .collect(Collectors.toMap(TareaActividad::getId, tarea -> tarea, (a, b) -> a));
 
         Map<String, List<AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse>> documentosPorTarea = new HashMap<>();
-        agregarArchivosAdjuntos(idPolitica, tareasPorId, documentosPorTarea);
-        agregarDocumentosColaborativos(idPolitica, tareas, documentosPorTarea);
+        agregarArchivosAdjuntos(idPolitica, tareas, tareasPorId, documentosPorTarea, admin);
+        agregarDocumentosColaborativos(idPolitica, tareas, documentosPorTarea, admin);
 
         Set<String> usuariosIds = new HashSet<>();
         tareas.forEach(tarea -> {
@@ -127,22 +133,39 @@ public class AuditoriaDocumentalPoliticaService {
 
     private void agregarArchivosAdjuntos(
             String politicaId,
+            List<TareaActividad> tareas,
             Map<String, TareaActividad> tareasPorId,
-            Map<String, List<AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse>> documentosPorTarea
+            Map<String, List<AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse>> documentosPorTarea,
+            Usuario admin
     ) {
-        archivoRepository.findByPoliticaIdAndEstadoOrderByFechaSubidaDesc(politicaId, EstadoArchivo.ACTIVO)
-                .stream()
-                .filter(archivo -> normalizar(archivo.getTareaId()) != null)
-                .filter(archivo -> tareasPorId.containsKey(archivo.getTareaId()))
-                .forEach(archivo -> documentosPorTarea
-                        .computeIfAbsent(archivo.getTareaId(), ignored -> new ArrayList<>())
-                        .add(toArchivoResponse(archivo)));
+        List<ArchivoAdjunto> archivos = archivoRepository.findByPoliticaIdAndEstadoOrderByFechaSubidaDesc(politicaId, EstadoArchivo.ACTIVO);
+        for (ArchivoAdjunto archivo : archivos) {
+            String tId = normalizar(archivo.getTareaId());
+            if (tId != null && tareasPorId.containsKey(tId)) {
+                documentosPorTarea
+                        .computeIfAbsent(tId, ignored -> new ArrayList<>())
+                        .add(toArchivoResponse(archivo, admin));
+            } else {
+                String instId = normalizar(archivo.getInstanciaId());
+                if (instId != null) {
+                    Optional<TareaActividad> oldestTask = tareas.stream()
+                            .filter(t -> instId.equals(t.getInstanciaId()))
+                            .min(Comparator.comparing(TareaActividad::getFechaCreacion));
+                    if (oldestTask.isPresent()) {
+                        documentosPorTarea
+                                .computeIfAbsent(oldestTask.get().getId(), ignored -> new ArrayList<>())
+                                .add(toArchivoResponse(archivo, admin));
+                    }
+                }
+            }
+        }
     }
 
     private void agregarDocumentosColaborativos(
             String politicaId,
             List<TareaActividad> tareas,
-            Map<String, List<AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse>> documentosPorTarea
+            Map<String, List<AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse>> documentosPorTarea,
+            Usuario admin
     ) {
         List<InstanciaPolitica> instancias = instanciaRepository.findByPoliticaIdOrderByFechaCreacionDesc(politicaId);
         Map<String, List<TareaActividad>> tareasPorInstancia = tareas.stream()
@@ -165,12 +188,20 @@ public class AuditoriaDocumentalPoliticaService {
 
             for (DocumentoColaborativoMetadata documento : documentos) {
                 TareaActividad tarea = resolverTareaDocumentoColaborativo(documento, tareasPorInstancia.getOrDefault(tramiteId, List.of()));
-                if (tarea == null || normalizar(tarea.getId()) == null) {
-                    continue;
+                String tId = (tarea != null) ? normalizar(tarea.getId()) : null;
+                if (tId == null) {
+                    List<TareaActividad> instTareas = tareasPorInstancia.getOrDefault(tramiteId, List.of());
+                    Optional<TareaActividad> oldestTask = instTareas.stream()
+                            .min(Comparator.comparing(TareaActividad::getFechaCreacion));
+                    if (oldestTask.isPresent()) {
+                        tId = oldestTask.get().getId();
+                    }
                 }
-                documentosPorTarea
-                        .computeIfAbsent(tarea.getId(), ignored -> new ArrayList<>())
-                        .add(toDocumentoColaborativoResponse(documento));
+                if (tId != null) {
+                    documentosPorTarea
+                            .computeIfAbsent(tId, ignored -> new ArrayList<>())
+                            .add(toDocumentoColaborativoResponse(documento, admin));
+                }
             }
         }
     }
@@ -246,7 +277,45 @@ public class AuditoriaDocumentalPoliticaService {
                 .build();
     }
 
-    private AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse toArchivoResponse(ArchivoAdjunto archivo) {
+    private boolean checkPermission(
+            Usuario admin,
+            String campoId,
+            String clienteId,
+            String tramiteId,
+            DocumentPermissionAction action
+    ) {
+        String normalizedCampoId = normalizar(campoId);
+        if (normalizedCampoId == null) {
+            return false;
+        }
+        Optional<DocumentPermissionConfig> config = documentPermissionService.buscarConfiguracionActivaPorCampoOpcional(normalizedCampoId);
+        if (config.isEmpty()) {
+            return false;
+        }
+
+        DocumentPermissionValidationRequest request = new DocumentPermissionValidationRequest();
+        request.setUsuarioId(admin.getId());
+        request.setRol(admin.getRol());
+        request.setDepartamentoId(admin.getDepartamentoId());
+        request.setClienteId(clienteId);
+        request.setTramiteId(tramiteId);
+        request.setCampoId(normalizedCampoId);
+        request.setAccion(action);
+
+        try {
+            return Boolean.TRUE.equals(documentPermissionService.validarPermiso(request).getPermitido());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse toArchivoResponse(ArchivoAdjunto archivo, Usuario admin) {
+        boolean puedeLeer = checkPermission(admin, archivo.getCampoId(), archivo.getClienteId(), archivo.getTramiteId(), DocumentPermissionAction.LEER);
+        boolean puedeDescargar = checkPermission(admin, archivo.getCampoId(), archivo.getClienteId(), archivo.getTramiteId(), DocumentPermissionAction.DESCARGAR);
+        boolean puedeEditar = checkPermission(admin, archivo.getCampoId(), archivo.getClienteId(), archivo.getTramiteId(), DocumentPermissionAction.EDITAR);
+        boolean puedeReemplazar = checkPermission(admin, archivo.getCampoId(), archivo.getClienteId(), archivo.getTramiteId(), DocumentPermissionAction.REEMPLAZAR);
+        boolean puedeEliminar = checkPermission(admin, archivo.getCampoId(), archivo.getClienteId(), archivo.getTramiteId(), DocumentPermissionAction.ELIMINAR);
+
         return AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse.builder()
                 .id(archivo.getId())
                 .tipoOrigen("ARCHIVO")
@@ -258,12 +327,24 @@ public class AuditoriaDocumentalPoliticaService {
                 .estado(archivo.getEstado() != null ? archivo.getEstado().name() : null)
                 .subidoOCreadoPor(archivo.getSubidoPor())
                 .fecha(archivo.getFechaSubida())
+                .puedeLeer(puedeLeer)
+                .puedeDescargar(puedeDescargar)
+                .puedeEditar(puedeEditar)
+                .puedeReemplazar(puedeReemplazar)
+                .puedeEliminar(puedeEliminar)
+                .puedeAuditar(puedeLeer)
                 .build();
     }
 
     private AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse toDocumentoColaborativoResponse(
-            DocumentoColaborativoMetadata documento
+            DocumentoColaborativoMetadata documento, Usuario admin
     ) {
+        boolean puedeLeer = checkPermission(admin, documento.getCampoFormularioId(), documento.getClienteId(), documento.getTramiteId(), DocumentPermissionAction.LEER);
+        boolean puedeDescargar = checkPermission(admin, documento.getCampoFormularioId(), documento.getClienteId(), documento.getTramiteId(), DocumentPermissionAction.DESCARGAR);
+        boolean puedeEditar = checkPermission(admin, documento.getCampoFormularioId(), documento.getClienteId(), documento.getTramiteId(), DocumentPermissionAction.EDITAR);
+        boolean puedeReemplazar = checkPermission(admin, documento.getCampoFormularioId(), documento.getClienteId(), documento.getTramiteId(), DocumentPermissionAction.REEMPLAZAR);
+        boolean puedeEliminar = checkPermission(admin, documento.getCampoFormularioId(), documento.getClienteId(), documento.getTramiteId(), DocumentPermissionAction.ELIMINAR);
+
         return AuditoriaDocumentalPoliticaResponse.DocumentoAuditoriaResponse.builder()
                 .id(documento.getDocumentoId())
                 .tipoOrigen("DOCUMENTO_COLABORATIVO")
@@ -278,6 +359,12 @@ public class AuditoriaDocumentalPoliticaService {
                                 ? documento.getFechaUltimaModificacion()
                                 : documento.getFechaCreacion()
                 ))
+                .puedeLeer(puedeLeer)
+                .puedeDescargar(puedeDescargar)
+                .puedeEditar(puedeEditar)
+                .puedeReemplazar(puedeReemplazar)
+                .puedeEliminar(puedeEliminar)
+                .puedeAuditar(puedeLeer)
                 .build();
     }
 

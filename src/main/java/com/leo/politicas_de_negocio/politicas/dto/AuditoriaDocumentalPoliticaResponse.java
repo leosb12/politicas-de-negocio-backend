@@ -46,5 +46,11 @@ public class AuditoriaDocumentalPoliticaResponse {
         private String subidoOCreadoPor;
         private String subidoOCreadoPorNombre;
         private LocalDateTime fecha;
+        private Boolean puedeLeer;
+        private Boolean puedeDescargar;
+        private Boolean puedeEditar;
+        private Boolean puedeReemplazar;
+        private Boolean puedeEliminar;
+        private Boolean puedeAuditar;
     }
 }

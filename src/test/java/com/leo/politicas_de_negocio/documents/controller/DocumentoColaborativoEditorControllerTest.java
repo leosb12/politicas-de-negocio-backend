@@ -10,6 +10,7 @@ import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoMetad
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoPermisoService;
 import com.leo.politicas_de_negocio.documents.service.DocumentoColaborativoS3Service;
 import com.leo.politicas_de_negocio.documents.service.DocumentoVersionService;
+import com.leo.politicas_de_negocio.documents.service.DocumentoPdfConverterService;
 import com.leo.politicas_de_negocio.instancias.model.InstanciaPolitica;
 import com.leo.politicas_de_negocio.instancias.repository.InstanciaPoliticaRepository;
 import com.leo.politicas_de_negocio.usuarios.model.Usuario;
@@ -49,6 +50,9 @@ class DocumentoColaborativoEditorControllerTest {
     private DocumentAuditService auditService;
 
     @Mock
+    private DocumentoPdfConverterService pdfConverterService;
+
+    @Mock
     private UsuarioRepository usuarioRepository;
 
     @Mock
@@ -65,6 +69,7 @@ class DocumentoColaborativoEditorControllerTest {
                 s3Service,
                 versionService,
                 auditService,
+                pdfConverterService,
                 usuarioRepository,
                 instanciaPoliticaRepository
         );
