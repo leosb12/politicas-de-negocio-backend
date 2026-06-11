@@ -1,0 +1,177 @@
+@startuml CU27_Gestionar_Documentos_Colaborativos
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam shadowing false
+skinparam handwritten false
+
+title CU-27 - Gestionar documentos colaborativos (Estados del Documento)
+
+[*] --> NoCreado
+NoCreado --> Creado : registrarDocumento() [Administrador]
+Creado --> ValidandoPermisos : obtenerEditorConfig() / evaluarPermisos()
+ValidandoPermisos --> ErrorPermisos : [sin permisos de lectura] / lanzar403()
+ValidandoPermisos --> Habilitado : [permisos lectura ok] / cargarIframeOnlyOffice()
+Habilitado --> EnEdicionColaborativa : DocsAPI.DocEditor() / registrarEvento(VISUALIZAR)
+EnEdicionColaborativa --> BloqueoEdicion : presenciaJoin() [co-edición activa] / registrarSesion()
+BloqueoEdicion --> EnEdicionColaborativa : presenciaLeave() / desregistrarSesion()
+EnEdicionColaborativa --> GuardandoCambios : callbackOnlyOffice() [status = 2] / descargarDesdeOnlyOffice()
+GuardandoCambios --> Versionando : [controlVersionesHabilitado == true] / crearVersion()
+Versionando --> Creado : guardarMetadata() / subirS3()
+GuardandoCambios --> Creado : [controlVersionesHabilitado == false] / guardarMetadata()
+EnEdicionColaborativa --> ErrorIntegracion : [fallo de descarga / subida S3] / rollback()
+ErrorIntegracion --> Creado : reintentar()
+Creado --> Cerrado : finalizarEdicion() / cerrarDocumento()
+Cerrado --> [*]
+ErrorPermisos --> [*]
+
+note right of ErrorIntegracion
+  MongoDB registra la
+  auditoría del error
+  y el estado del
+  documento en S3.
+end note
+@enduml
+
+@startuml CU28_Gestionar_Documentos_Tramite
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam shadowing false
+skinparam handwritten false
+
+title CU-28 - Gestionar documentos del trámite (Estados del Requisito)
+
+[*] --> Requerido
+Requerido --> PendienteCarga : inicializarTramite()
+PendienteCarga --> ValidandoFormato : cargarDocumento(usuario) / POST /tramites/{id}/archivos
+ValidandoFormato --> PendienteCarga : [formato no docx/xlsx/pptx] / lanzar400()
+ValidandoFormato --> ValidandoPermisos : [formato correcto] / resolverActor()
+ValidandoPermisos --> PendienteCarga : [sin permisos] / lanzar403()
+ValidandoPermisos --> AlmacenadoS3 : [autorizado] / almacenar() en S3
+AlmacenadoS3 --> AsociadoAlTramite : guardarMetadata() en MongoDB/DynamoDB
+AsociadoAlTramite --> EnRevision : revisarDocumento(funcionario)
+EnRevision --> Observado : [criterio incompleto o incorrecto]
+Observado --> PendienteCarga : subsanarRequisito()
+EnRevision --> Aprobado : [criterio aceptado]
+AsociadoAlTramite --> Reemplazado : reemplazar(administrador) / PUT /archivos/{id}/replace
+Reemplazado --> ValidandoFormato
+AsociadoAlTramite --> Eliminado : eliminar(administrador) / DELETE /archivos/{id}
+Aprobado --> Auditado : registrarEventoAuditoria(APROBADO)
+Eliminado --> Auditado : registrarEventoAuditoria(ELIMINADO)
+Auditado --> [*]
+@enduml
+
+@startuml CU29_Gestionar_Permisos_Documentales
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam shadowing false
+skinparam handwritten false
+
+title CU-29 - Gestionar permisos documentales (Estados del Permiso)
+
+[*] --> Inexistente
+Inexistente --> SolicitudConfiguracion : crearConfiguracionPermisos() [Administrador]
+SolicitudConfiguracion --> ValidandoRolAdmin : resolverActorUserId()
+ValidandoRolAdmin --> CambioRechazado : [no es administrador] / lanzar403()
+ValidandoRolAdmin --> ConsultandoPermisosActuales : obtenerConfiguracionPorCampo()
+ConsultandoPermisosActuales --> PermisoCreado : [criterios correctos] / save(config)
+ConsultandoPermisosActuales --> CambioRechazado : [campoId duplicado o inválido] / lanzar400()
+PermisoCreado --> PermisoActivo : [activo == true]
+PermisoActivo --> PermisoModificado : actualizarConfiguracionPermisos() / save(config)
+PermisoModificado --> CambioAuditado : registrarCambioPermisos() en MongoDB
+PermisoActivo --> PermisoRevocado : revocarPermiso() / [activo == false]
+PermisoRevocado --> CambioAuditado : registrarCambioPermisos()
+CambioAuditado --> [*]
+CambioRechazado --> [*]
+@enduml
+
+@startuml CU30_Gestionar_Auditoria_Sistema
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam shadowing false
+skinparam handwritten false
+
+title CU-30 - Gestionar auditoría del sistema (Proceso de Consulta)
+
+[*] --> ConsultaIniciada
+ConsultaIniciada --> ValidandoPermisosAdmin : GET /system-audit [X-Admin-User-Id]
+ValidandoPermisosAdmin --> AccesoDenegado : [sin rol de administrador] / lanzar403()
+ValidandoPermisosAdmin --> FiltrosDefinidos : [autorizado] / resolverActor()
+FiltrosDefinidos --> ConsultandoEventos : obtenerTodosOrdenados()
+ConsultandoEventos --> ResultadosEncontrados : [logs recuperados] / findAllByOrderByFechaDesc()
+ConsultandoEventos --> SinResultados : [sin registros en rango]
+ConsultandoEventos --> ErrorConsulta : [fallo de conexión a MongoDB] / lanzar500()
+ResultadosEncontrados --> DetalleConsultado : seleccionarLog() / verDetalle()
+DetalleConsultado --> ResultadosEncontrados : regresar()
+ResultadosEncontrados --> ExportacionGenerada : exportarAuditoria()
+ExportacionGenerada --> [*]
+SinResultados --> [*]
+ErrorConsulta --> [*]
+AccesoDenegado --> [*]
+
+note right of ExportacionGenerada
+  No se encontró implementación completa
+  en el backend para este flujo.
+  (Sólo implementado en reportes dinámicos).
+end note
+@enduml
+
+@startuml CU31_Consultar_Versiones_Documentales
+skinparam backgroundColor #FFFFFF
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam shadowing false
+skinparam handwritten false
+
+title CU-31 - Consultar versiones documentales (Proceso de Consulta de Historial)
+
+[*] --> DocumentoSeleccionado
+DocumentoSeleccionado --> ValidandoPermisos : GET /versiones [X-Admin-User-Id]
+ValidandoPermisos --> ErrorPermisos : [sin permisos de descarga/lectura] / lanzar403()
+ValidandoPermisos --> ConsultandoHistorial : [autorizado] / resolverActor()
+ConsultandoHistorial --> VersionesEncontradas : [controlVersionesHabilitado == true] / Query en DynamoDB
+ConsultandoHistorial --> SinVersiones : [controlVersionesHabilitado == false] / return []
+VersionesEncontradas --> VersionSeleccionada : GET /versiones/{v}/download
+VersionSeleccionada --> MetadatosCargados : buscarVersion()
+MetadatosCargados --> ErrorRecuperacion : [error de lectura DynamoDB] / lanzar404()
+MetadatosCargados --> ContenidoRecuperado : descargarArchivo() / GetObject en S3
+ContenidoRecuperado --> ConsultaAuditada : registrarEventoDocumento(DESCARGAR) en MongoDB
+MetadatosCargados --> ErrorRecuperacion : [s3.GetObject fallido] / lanzar500()
+ConsultaAuditada --> [*]
+SinVersiones --> [*]
+ErrorPermisos --> [*]
+ErrorRecuperacion --> [*]
+@enduml

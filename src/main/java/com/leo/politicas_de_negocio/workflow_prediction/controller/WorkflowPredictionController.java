@@ -78,4 +78,16 @@ public class WorkflowPredictionController {
         // Return the dynamic rich JSON response from FastAPI directly
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/train")
+    public ResponseEntity<java.util.Map<String, Object>> trainModels() {
+        try {
+            java.util.Map<String, Object> result = predictionClient.train();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            java.util.Map<String, Object> err = new java.util.HashMap<>();
+            err.put("error", e.getMessage());
+            return ResponseEntity.status(500).body(err);
+        }
+    }
 }

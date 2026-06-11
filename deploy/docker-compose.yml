@@ -79,8 +79,8 @@ services:
       DATASET_DIR: app/modules/predicciones/datasets
     volumes:
       # Persistir modelos entrenados para no re-entrenar en cada restart
-      - dl_models:/app/app/modules/predicciones/models
-      - dl_datasets:/app/app/modules/predicciones/datasets
+      - ./models:/app/app/modules/predicciones/models
+      - ./datasets:/app/app/modules/predicciones/datasets
     networks:
       - app-network
     depends_on:
@@ -214,5 +214,3 @@ volumes:
   onlyoffice_logs:
   onlyoffice_cache:
   onlyoffice_fonts:
-  dl_models:
-  dl_datasets:

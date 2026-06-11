@@ -1,0 +1,117 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="C2-Containers-Diagram-V2" name="Contenedores">
+    <mxGraphModel dx="1266" dy="521" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=18;fontColor=#08427B;" value="C2 - Diagrama de Contenedores | Sistema de Gestión de Políticas de Negocio" vertex="1">
+          <mxGeometry height="40" width="800" x="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=0;fontSize=11;fontColor=#7F8C8D;" value="Modelo C4 - Nivel 2: Diagrama de Contenedores del sistema principal y relaciones externas." vertex="1">
+          <mxGeometry height="30" width="700" x="200" y="930" as="geometry" />
+        </mxCell>
+        <mxCell id="color_legend" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#CCCCCC;align=left;verticalAlign=top;spacingLeft=10;spacingTop=5;fontSize=11;fontColor=#555555;" value="&lt;b&gt;Leyenda de Elementos - C2&lt;/b&gt;&lt;br/&gt;• &lt;font color=&quot;#08427B&quot;&gt;■&lt;/font&gt; Actor / Persona&lt;br/&gt;• &lt;font color=&quot;#1168BD&quot;&gt;■&lt;/font&gt; Contenedor Interno (Desplegable)&lt;br/&gt;• &lt;font color=&quot;#85929E&quot;&gt;■&lt;/font&gt; Contenedor / Sistema Externo" vertex="1">
+          <mxGeometry height="75" width="240" x="50" y="830" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_usuario" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052C52;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Usuario del Sistema&lt;/b&gt;&lt;br&gt;[Person]&lt;br&gt;&lt;br&gt;Inicia politicas y realiza tramites" vertex="1">
+          <mxGeometry height="100" width="160" x="40" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_analista" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052C52;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;div&gt;Funcionario&lt;/div&gt;[Person]&lt;br&gt;&lt;br&gt;Supervisa procesos, reportes, documentos y seguimiento operativo." vertex="1">
+          <mxGeometry height="100" width="160" x="40" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_admin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052C52;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Administrador&lt;/b&gt;&lt;br/&gt;[Person]&lt;br/&gt;&lt;br/&gt;Administra usuarios, políticas, flujos y configuración del sistema." vertex="1">
+          <mxGeometry height="100" width="160" x="40" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="system_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7F8C8D;strokeWidth=2;dashed=1;align=center;verticalAlign=top;spacingTop=10;fontColor=#7F8C8D;fontSize=12;" value="Sistema de Gestión de Políticas de Negocio&#xa;[Software System]" vertex="1">
+          <mxGeometry height="820" width="550" x="250" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_frontend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Frontend Web&lt;/b&gt;&lt;br/&gt;[Container: Angular]&lt;br/&gt;&lt;br/&gt;Interfaz web SPA que permite gestionar flujos de políticas, formularios y reportes." vertex="1">
+          <mxGeometry height="90" width="180" x="290" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_mobile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Aplicación Móvil&lt;/b&gt;&lt;br/&gt;[Container: Flutter]&lt;br/&gt;&lt;br/&gt;Interfaz móvil para consultar políticas, completar formularios y recibir alertas." vertex="1">
+          <mxGeometry height="90" width="180" x="580" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_nginx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Nginx&lt;/b&gt;&lt;br/&gt;[Container: Reverse Proxy]&lt;br/&gt;&lt;br/&gt;Recibe peticiones HTTPS y las redirige al frontend, backend o OnlyOffice." vertex="1">
+          <mxGeometry height="80" width="180" x="435" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_backend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=3;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Backend / API Principal&lt;/b&gt;&lt;br/&gt;[Container: Spring Boot / Java]&lt;br/&gt;&lt;br/&gt;Lógica de negocio principal, motor de workflows, gestión de usuarios, auditorías, pagos y notificaciones." vertex="1">
+          <mxGeometry height="110" width="220" x="415" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_ia_service" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Microservicio de IA&lt;/b&gt;&lt;br/&gt;[Container: FastAPI / Python]&lt;br/&gt;&lt;br/&gt;Proporciona asistencia, redacción y generación de formularios mediante LLM." vertex="1">
+          <mxGeometry height="90" width="180" x="290" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_ia_dl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Microservicio IA Deep Learning&lt;/b&gt;&lt;br/&gt;[Container: FastAPI / TensorFlow]&lt;br/&gt;&lt;br/&gt;Realiza predicciones de rendimiento y métricas de flujos con modelos locales." vertex="1">
+          <mxGeometry height="95" width="180" x="580" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_mongodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Base de Datos Principal&lt;/b&gt;&lt;br/&gt;[Container: MongoDB]&lt;br/&gt;&lt;br/&gt;Almacena usuarios, roles, políticas y ejecuciones de workflows." vertex="1">
+          <mxGeometry height="100" width="170" x="295" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="cnt_modelos_ia" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Artefactos de Modelos IA&lt;/b&gt;&lt;br/&gt;[Container: Data Store]&lt;br/&gt;&lt;br/&gt;Modelos locales serializados (.keras, .pkl) para inferencia." vertex="1">
+          <mxGeometry height="100" width="170" x="585" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="sys_onlyoffice" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;OnlyOffice&lt;/b&gt;&lt;br/&gt;[External Software System]&lt;br/&gt;&lt;br/&gt;Permite visualizar y editar documentos colaborativamente." vertex="1">
+          <mxGeometry height="85" width="180" x="870" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="sys_firebase" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Firebase / FCM&lt;/b&gt;&lt;br/&gt;[External Software System]&lt;br/&gt;&lt;br/&gt;Gestiona notificaciones push y servicios asociados." vertex="1">
+          <mxGeometry height="85" width="180" x="870" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="sys_s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Amazon S3&lt;/b&gt;&lt;br/&gt;[External Software System]&lt;br/&gt;&lt;br/&gt;Almacena documentos y archivos del sistema." vertex="1">
+          <mxGeometry height="85" width="180" x="870" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="sys_dynamodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Amazon DynamoDB&lt;/b&gt;&lt;br/&gt;[External Database]&lt;br/&gt;&lt;br/&gt;Almacena la metadata y repositorios de los documentos colaborativos." vertex="1">
+          <mxGeometry height="100" width="180" x="870" y="445" as="geometry" />
+        </mxCell>
+        <mxCell id="sys_deepseek" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;DeepSeek API&lt;/b&gt;&lt;br/&gt;[External Software System]&lt;br/&gt;&lt;br/&gt;Enriquece análisis y recomendaciones en lenguaje natural." vertex="1">
+          <mxGeometry height="85" width="180" x="870" y="575" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_user_to_mobile" edge="1" parent="1" source="actor_usuario" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_mobile" value="Usa [HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_analista_to_frontend" edge="1" parent="1" source="actor_analista" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_frontend" value="Consulta reportes [HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_admin_to_frontend" edge="1" parent="1" source="actor_admin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.75;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_frontend" value="Administra configuración [HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_frontend_to_nginx" edge="1" parent="1" source="cnt_frontend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_nginx" value="Consume API [JSON/HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_mobile_to_nginx" edge="1" parent="1" source="cnt_mobile" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_nginx" value="Consume API [JSON/HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_nginx_to_backend" edge="1" parent="1" source="cnt_nginx" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_backend" value="Proxy de API [HTTP]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_backend_to_mongodb" edge="1" parent="1" source="cnt_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_mongodb" value="Lee y escribe [driver]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_backend_to_ia_general" edge="1" parent="1" source="cnt_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_ia_service" value="Solicita asistencia [JSON/HTTP]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_backend_to_ia_dl" edge="1" parent="1" source="cnt_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.9;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_ia_dl" value="Solicita predicciones [JSON/HTTP]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_ia_dl_to_modelos" edge="1" parent="1" source="cnt_ia_dl" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="cnt_modelos_ia" value="Carga modelos locales [File System]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_ia_to_deepseek" edge="1" parent="1" source="cnt_ia_service" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="sys_deepseek" value="Solicita procesamiento [HTTPS]">
+          <mxGeometry relative="1" x="-0.5152" y="-75" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_backend_to_onlyoffice" edge="1" parent="1" source="cnt_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.15;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="sys_onlyoffice" value="Integra edición [HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_backend_to_firebase" edge="1" parent="1" source="cnt_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.35;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="sys_firebase" value="Envía notificaciones push [HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_backend_to_s3" edge="1" parent="1" source="cnt_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.55;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="sys_s3" value="Guarda/recupera documentos [S3]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_backend_to_dynamodb" edge="1" parent="1" source="cnt_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=10;" target="sys_dynamodb" value="Lee/escribe metadatos [AWS SDK]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

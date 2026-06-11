@@ -1,0 +1,160 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="C3-Backend-Components" name="Componentes Backend">
+    <mxGraphModel dx="1266" dy="521" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=18;fontColor=#08427B;" value="C3 - Diagrama de Componentes | Backend / API Principal" vertex="1">
+          <mxGeometry height="40" width="800" x="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=0;fontSize=11;fontColor=#7F8C8D;" value="Modelo C4 - Nivel 3: muestra los componentes internos principales de un contenedor." vertex="1">
+          <mxGeometry height="30" width="700" x="200" y="880" as="geometry" />
+        </mxCell>
+        <mxCell id="color_legend" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#CCCCCC;align=left;verticalAlign=top;spacingLeft=10;spacingTop=5;fontSize=11;fontColor=#555555;" value="&lt;b&gt;Leyenda de Elementos - C3&lt;/b&gt;&lt;br/&gt;• &lt;font color=&quot;#1168BD&quot;&gt;■&lt;/font&gt; Componente Interno (Clases agrupadas)&lt;br/&gt;• &lt;font color=&quot;#85929E&quot;&gt;■&lt;/font&gt; Contenedor / Sistema Externo" vertex="1">
+          <mxGeometry height="75" width="240" x="50" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7F8C8D;strokeWidth=2;dashed=1;align=center;verticalAlign=top;spacingTop=10;fontColor=#7F8C8D;fontSize=12;" value="Backend / API Principal&#xa;[Container: Spring Boot / Java]" vertex="1">
+          <mxGeometry height="670" width="680" x="180" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_controllers" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;API REST / Controladores&lt;/b&gt;&lt;br/&gt;[Component: Spring MVC]&lt;br/&gt;&lt;br/&gt;Expone los endpoints del sistema consumidos por la web y aplicación móvil." vertex="1">
+          <mxGeometry height="80" width="180" x="430" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_auth" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Componente de Autenticación&lt;/b&gt;&lt;br/&gt;[Component: Spring Security]&lt;br/&gt;&lt;br/&gt;Gestiona sesiones, contraseñas, roles y control de acceso del sistema." vertex="1">
+          <mxGeometry height="80" width="180" x="210" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_users" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicio de Usuarios y Deptos&lt;/b&gt;&lt;br/&gt;[Component: Spring Service]&lt;br/&gt;&lt;br/&gt;Administra el ciclo de vida de usuarios, roles y asignación de departamentos." vertex="1">
+          <mxGeometry height="80" width="180" x="210" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_policies" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicio de Políticas&lt;/b&gt;&lt;br/&gt;[Component: Spring Service]&lt;br/&gt;&lt;br/&gt;Gestiona la definición de políticas de negocio y el canvas de nodos del flujo." vertex="1">
+          <mxGeometry height="80" width="180" x="210" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_workflow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Motor de Workflows&lt;/b&gt;&lt;br/&gt;[Component: Spring Service]&lt;br/&gt;&lt;br/&gt;Controla transiciones de estados de instancias de flujos, forks, joins y fin." vertex="1">
+          <mxGeometry height="80" width="180" x="210" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_tasks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicio de Tareas&lt;/b&gt;&lt;br/&gt;[Component: Spring Service]&lt;br/&gt;&lt;br/&gt;Crea, asigna y da seguimiento a las actividades de flujos pendientes." vertex="1">
+          <mxGeometry height="80" width="180" x="210" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_documental" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Gestión Documental y PDF&lt;/b&gt;&lt;br/&gt;[Component: Spring Service / POI]&lt;br/&gt;&lt;br/&gt;Genera documentos PDF y gestiona los adjuntos de políticas." vertex="1">
+          <mxGeometry height="80" width="180" x="430" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_collab" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicio de Colaboración&lt;/b&gt;&lt;br/&gt;[Component: WebSockets / STOMP]&lt;br/&gt;&lt;br/&gt;Sincroniza en tiempo real los cambios y snapshots en documentos." vertex="1">
+          <mxGeometry height="80" width="180" x="430" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_notifications" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicio de Notificaciones&lt;/b&gt;&lt;br/&gt;[Component: Spring Service]&lt;br/&gt;&lt;br/&gt;Despacha alertas push y correos a usuarios y funcionarios." vertex="1">
+          <mxGeometry height="80" width="180" x="650" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_payments" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicio de Pagos&lt;/b&gt;&lt;br/&gt;[Component: Stripe / PayPal Clients]&lt;br/&gt;&lt;br/&gt;Procesa transacciones y suscripciones financieras." vertex="1">
+          <mxGeometry height="80" width="180" x="650" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_ai_clients" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Clientes de API de IA&lt;/b&gt;&lt;br/&gt;[Component: HTTP Clients]&lt;br/&gt;&lt;br/&gt;Consume ia-service e ia-deep-learning-service para analítica y sugerencias." vertex="1">
+          <mxGeometry height="80" width="180" x="650" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_repositories" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Repositorios y Persistencia&lt;/b&gt;&lt;br/&gt;[Component: Spring Data / AWS SDK]&lt;br/&gt;&lt;br/&gt;Persistencia de datos en MongoDB, DynamoDB y Amazon S3." vertex="1">
+          <mxGeometry height="80" width="180" x="460" y="567.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_mongodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;MongoDB&lt;/b&gt;&lt;br/&gt;[Database]" vertex="1">
+          <mxGeometry height="80" width="120" x="490" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_onlyoffice" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;OnlyOffice&lt;/b&gt;&lt;br/&gt;[Software System]" vertex="1">
+          <mxGeometry height="65" width="130" x="20" y="347.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_firebase" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Firebase / FCM&lt;/b&gt;&lt;br/&gt;[Software System]" vertex="1">
+          <mxGeometry height="65" width="130" x="910" y="237.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_s3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Amazon S3&lt;/b&gt;&lt;br/&gt;[Storage]" vertex="1">
+          <mxGeometry height="65" width="130" x="910" y="567.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_dynamodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Amazon DynamoDB&lt;/b&gt;&lt;br/&gt;[Database]" vertex="1">
+          <mxGeometry height="80" width="130" x="910" y="670" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_ia_service" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Microservicio IA&lt;/b&gt;&lt;br/&gt;[Container]" vertex="1">
+          <mxGeometry height="65" width="130" x="910" y="347.5" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_ia_dl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Microservicio IA DL&lt;/b&gt;&lt;br/&gt;[Container]" vertex="1">
+          <mxGeometry height="65" width="130" x="910" y="457.5" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_ctrl_to_auth" edge="1" parent="1" source="cmp_controllers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_auth" value="Verifica accesos">
+          <mxGeometry relative="1" x="-1" y="241" as="geometry">
+            <mxPoint x="240" y="-221" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_ctrl_to_users" edge="1" parent="1" source="cmp_controllers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_users" value="Llama">
+          <mxGeometry relative="1" x="-0.8" y="-40" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_ctrl_to_policies" edge="1" parent="1" source="cmp_controllers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_policies" value="Llama">
+          <mxGeometry relative="1" x="0.1613" y="-50" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_ctrl_to_workflow" edge="1" parent="1" source="cmp_controllers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_workflow" value="Llama">
+          <mxGeometry relative="1" x="-0.0952" y="30" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_ctrl_to_tasks" edge="1" parent="1" source="cmp_controllers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_tasks" value="Llama">
+          <mxGeometry relative="1" x="0.1724" y="20" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="520" y="210" />
+              <mxPoint x="300" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_users_to_repos" edge="1" parent="1" source="cmp_users" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_repositories" value="Persiste">
+          <mxGeometry relative="1" x="-0.1429" y="-20" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_policies_to_repos" edge="1" parent="1" source="cmp_policies" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_repositories" value="Persiste">
+          <mxGeometry relative="1" x="0.2662" y="-20" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_workflow_to_repos" edge="1" parent="1" source="cmp_workflow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_repositories" value="Persiste">
+          <mxGeometry relative="1" x="-0.8316" y="-20" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_tasks_to_repos" edge="1" parent="1" source="cmp_tasks" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_repositories" value="Persiste">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_repos_to_mongodb" edge="1" parent="1" source="cmp_repositories" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_mongodb" value="MongoDB [driver]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_repos_to_s3" edge="1" parent="1" source="cmp_repositories" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_s3" value="Sube [AWS SDK]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_repos_to_dynamodb" edge="1" parent="1" source="cmp_repositories" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_dynamodb" value="Metadata [AWS SDK]">
+          <mxGeometry relative="1" x="-0.2644" y="-40" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_collab_to_onlyoffice" edge="1" parent="1" source="cmp_collab" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_onlyoffice" value="STOMP/WS">
+          <mxGeometry relative="1" x="0.3254" y="20" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_doc_to_onlyoffice" edge="1" parent="1" source="cmp_documental" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_onlyoffice" value="Callback [HTTP]">
+          <mxGeometry relative="1" x="0.2143" y="60" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_notifications_to_firebase" edge="1" parent="1" source="cmp_notifications" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_firebase" value="Push [HTTP]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_clients_to_ia" edge="1" parent="1" source="cmp_ai_clients" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_ia_service" value="LLM [HTTP]">
+          <mxGeometry relative="1" x="-0.5506" y="30" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_clients_to_dl" edge="1" parent="1" source="cmp_ai_clients" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_ia_dl" value="TensorFlow [HTTP]">
+          <mxGeometry relative="1" x="-0.75" y="-50" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

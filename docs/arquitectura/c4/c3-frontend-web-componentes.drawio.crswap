@@ -1,0 +1,100 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="C3-Frontend-Components" name="Componentes Frontend">
+    <mxGraphModel dx="965" dy="397" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="750" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=18;fontColor=#08427B;" value="C3 - Diagrama de Componentes | Frontend Web (Angular)" vertex="1">
+          <mxGeometry height="40" width="800" x="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=0;fontSize=11;fontColor=#7F8C8D;" value="Modelo C4 - Nivel 3: muestra los componentes internos principales de un contenedor." vertex="1">
+          <mxGeometry height="30" width="700" x="200" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="color_legend" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#CCCCCC;align=left;verticalAlign=top;spacingLeft=10;spacingTop=5;fontSize=11;fontColor=#555555;" value="&lt;b&gt;Leyenda de Elementos - C3&lt;/b&gt;&lt;br/&gt;• &lt;font color=&quot;#1168BD&quot;&gt;■&lt;/font&gt; Componente Interno (Clases agrupadas)&lt;br/&gt;• &lt;font color=&quot;#08427B&quot;&gt;■&lt;/font&gt; Actor / Persona&lt;br/&gt;• &lt;font color=&quot;#85929E&quot;&gt;■&lt;/font&gt; Contenedor Externo" vertex="1">
+          <mxGeometry height="75" width="240" x="50" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7F8C8D;strokeWidth=2;dashed=1;align=center;verticalAlign=top;spacingTop=10;fontColor=#7F8C8D;fontSize=12;" value="Frontend Web&#xa;[Container: Angular SPA]" vertex="1">
+          <mxGeometry height="490" width="550" x="300" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_routing" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Enrutador y Guardias&lt;/b&gt;&lt;br/&gt;[Component: Angular Router / Guards]&lt;br/&gt;&lt;br/&gt;Gestiona las rutas de la SPA y protege el acceso según roles del usuario." vertex="1">
+          <mxGeometry height="80" width="190" x="460" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_api_services" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicios de API&lt;/b&gt;&lt;br/&gt;[Component: HTTP Services]&lt;br/&gt;&lt;br/&gt;Consume la API REST a través de peticiones HTTP/JSON." vertex="1">
+          <mxGeometry height="80" width="150" x="290" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_admin_module" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Módulo de Vistas de Admin&lt;/b&gt;&lt;br/&gt;[Component: Angular Components]&lt;br/&gt;&lt;br/&gt;Vistas de gestión de usuarios, canvas de políticas, flujos y formularios." vertex="1">
+          <mxGeometry height="80" width="180" x="460" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_workflow_module" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Módulo de Trámites y Tareas&lt;/b&gt;&lt;br/&gt;[Component: Angular Components]&lt;br/&gt;&lt;br/&gt;Vistas para el seguimiento operativo y ejecución de tareas asignadas." vertex="1">
+          <mxGeometry height="80" width="180" x="460" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_reports_module" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Módulo de Reportes e IA&lt;/b&gt;&lt;br/&gt;[Component: Angular Components]&lt;br/&gt;&lt;br/&gt;Vistas de estadísticas de workflow y predicciones del microservicio IA DL." vertex="1">
+          <mxGeometry height="80" width="150" x="290" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_collab_module" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Módulo de Edición Colaborativa&lt;/b&gt;&lt;br/&gt;[Component: Angular Components]&lt;br/&gt;&lt;br/&gt;Integra la edición en tiempo real e incrusta el editor OnlyOffice." vertex="1">
+          <mxGeometry height="80" width="180" x="460" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_websocket_client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Cliente WebSocket STOMP&lt;/b&gt;&lt;br/&gt;[Component: RxJS / STOMP Service]&lt;br/&gt;&lt;br/&gt;Mantiene la conexión WebSocket activa para sincronización colaborativa." vertex="1">
+          <mxGeometry height="80" width="150" x="290" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_admin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052C52;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Administrador&lt;/b&gt;&lt;br/&gt;[Person]" vertex="1">
+          <mxGeometry height="70" width="150" x="50" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="actor_funcionario" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#08427B;strokeColor=#052C52;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Funcionario&lt;/b&gt;&lt;br/&gt;[Person]" vertex="1">
+          <mxGeometry height="70" width="150" x="50" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_nginx" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Nginx&lt;/b&gt;&lt;br/&gt;[Container]" vertex="1">
+          <mxGeometry height="80" width="160" x="890" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_admin_to_views" edge="1" parent="1" source="actor_admin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_routing" value="Gestiona configuración [HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_func_to_views" edge="1" parent="1" source="actor_funcionario" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_routing" value="Ejecuta tareas [HTTPS]">
+          <mxGeometry relative="1" x="-0.2093" y="-15" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_routing_to_admin" edge="1" parent="1" source="cmp_routing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_admin_module" value="Enruta">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_routing_to_workflow" edge="1" parent="1" source="cmp_routing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_workflow_module" value="Enruta">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_routing_to_collab" edge="1" parent="1" source="cmp_routing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_collab_module" value="Enruta">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="430" y="170" />
+              <mxPoint x="430" y="343" />
+              <mxPoint x="550" y="343" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_admin_to_api" edge="1" parent="1" source="cmp_admin_module" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_api_services" value="Llama">
+          <mxGeometry relative="1" x="0.2941" y="85" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_workflow_to_api" edge="1" parent="1" source="cmp_workflow_module" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_api_services" value="Llama">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_reports_to_api" edge="1" parent="1" source="cmp_reports_module" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_api_services" value="Llama">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="320" y="310" />
+              <mxPoint x="320" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_collab_to_ws" edge="1" parent="1" source="cmp_collab_module" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_websocket_client" value="Usa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_api_to_nginx" edge="1" parent="1" source="cmp_api_services" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_nginx" value="Llamadas REST [HTTPS]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_ws_to_nginx" edge="1" parent="1" source="cmp_websocket_client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_nginx" value="WebSocket [STOMP]">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

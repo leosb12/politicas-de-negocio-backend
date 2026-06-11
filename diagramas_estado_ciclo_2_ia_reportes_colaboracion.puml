@@ -1,0 +1,259 @@
+@startuml CU32_Trabajar_Documentos_Colaborativos
+
+title CU-32 - Trabajar en documentos colaborativos
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam handwritten false
+
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam NoteBackgroundColor #FEF9C3
+skinparam NoteBorderColor #CA8A04
+skinparam NoteFontColor #422006
+
+[*] --> DocumentoDisponible
+
+DocumentoDisponible --> ValidandoAcceso : abrirDocumento() / obtenerEditorConfig()
+ValidandoAcceso --> AccesoDenegado : [sin permisos]
+AccesoDenegado --> [*]
+
+ValidandoAcceso --> AccesoAutorizado : [permisos concedidos]
+note right of AccesoAutorizado
+  Los roles Funcionario, Usuario o Administrador
+  determinan los permisos de edición, descarga o impresión
+  evaluados por permisoService.evaluarPermisos()
+end note
+
+AccesoAutorizado --> EditorCargando : visualizarDocumento()
+EditorCargando --> EditorAbierto : iniciarOnlyOffice()
+
+EditorAbierto --> EdicionColaborativa : editarDocumento() / onDocumentStateChange()
+EdicionColaborativa --> EdicionColaborativa : editarDocumento() / registrarEdicion()
+EdicionColaborativa --> SincronizacionSolicitada : callbackOnlyOffice() / status = 2 o 6
+
+SincronizacionSolicitada --> DescargandoArchivo : descargarDesdeOnlyOffice()
+DescargandoArchivo --> ErrorIntegracion : [error descarga OnlyOffice]
+ErrorIntegracion --> [*]
+
+DescargandoArchivo --> ArchivoSubidoS3 : subirArchivo()
+ArchivoSubidoS3 --> VersionCreada : [controlVersionesHabilitado] / crearVersion()
+ArchivoSubidoS3 --> MetadataActualizada : [controlVersionesDeshabilitado] / guardarMetadata()
+
+VersionCreada --> MetadataActualizada : guardarMetadata()
+MetadataActualizada --> DocumentoGuardado : registrarCambios()
+DocumentoGuardado --> [*]
+
+@enduml
+
+@startuml CU33_Definir_Requisitos_Politica_Negocio
+
+title CU-33 - Definir requisitos de una política de negocio
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam handwritten false
+
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam NoteBackgroundColor #FEF9C3
+skinparam NoteBorderColor #CA8A04
+skinparam NoteFontColor #422006
+
+[*] --> PoliticaSeleccionada
+
+PoliticaSeleccionada --> ValidandoPermisosAdmin : seleccionarPolitica() / obtenerPorId()
+ValidandoPermisosAdmin --> AccesoDenegado : [sin rol ADMIN]
+AccesoDenegado --> [*]
+
+ValidandoPermisosAdmin --> RequisitosEnDefinicion : [rol ADMIN] / crearRequisito()
+RequisitosEnDefinicion --> ValidandoCamposFormulario : guardarRequisitosIniciales()
+
+ValidandoCamposFormulario --> RequisitoIncompleto : [tipo o campo nulo]
+RequisitoIncompleto --> RequisitosEnDefinicion : corregirDatos()
+
+ValidandoCamposFormulario --> RequisitoConfigurado : normalizarCamposFormulario()
+RequisitoConfigurado --> RequisitoValidado : clonarCampos()
+RequisitoValidado --> PoliticaActualizada : setRequisitosIniciales()
+
+PoliticaActualizada --> GuardandoEnMongoDB : repository.save()
+note right of GuardandoEnMongoDB
+  La política y sus requisitos se guardan
+  como documento NoSQL en la colección
+  politicas_negocio de MongoDB.
+end note
+
+GuardandoEnMongoDB --> AuditoriaRegistrada : auditar() / logSystemAudit()
+AuditoriaRegistrada --> [*]
+
+@enduml
+
+@startuml CU34_Solicitar_Tramite_Agente_Inteligente
+
+title CU-34 - Solicitar trámite mediante agente inteligente
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam handwritten false
+
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam NoteBackgroundColor #FEF9C3
+skinparam NoteBorderColor #CA8A04
+skinparam NoteFontColor #422006
+
+[*] --> SolicitudIniciada
+
+SolicitudIniciada --> DatosIngresados : iniciarSolicitud() / ingresarTexto()
+DatosIngresados --> ConsultaEnviadaIA : clasificar() / enviarConsultaIA()
+
+ConsultaEnviadaIA --> ErrorAgenteInteligente : [error de IA / timeout]
+ErrorAgenteInteligente --> [*]
+note right of ErrorAgenteInteligente
+  Si el motor FastAPI de IA no está disponible,
+  se retorna IA_DEEP_LEARNING_NO_DISPONIBLE.
+end note
+
+ConsultaEnviadaIA --> IntencionDetectada : procesarConsulta() / detectarIntencion()
+IntencionDetectada --> RequisitosIdentificados : analizarRequisitos() / identificarRequisitos()
+RequisitosIdentificados --> PoliticaSugerida : sugerirPolitica()
+
+PoliticaSugerida --> DatosIncompletos : [politica sugerida no existe en MongoDB]
+DatosIncompletos --> [*]
+
+PoliticaSugerida --> TramitePrearmado : [politica encontrada] / mapearRequisitos()
+TramitePrearmado --> TramiteConfirmado : confirmarTramite()
+TramiteConfirmado --> CreandoInstancia : crearTramite() / crearInstanciaRequest()
+
+CreandoInstancia --> TramiteCreado : repository.save() / saveInstanciaPolitica()
+TramiteCreado --> TramiteEnviado : enviarTramite()
+TramiteEnviado --> AuditoriaRegistrada : registrarAuditoria()
+AuditoriaRegistrada --> [*]
+
+@enduml
+
+@startuml CU35_Analizar_Politicas_Motor_Inteligente
+
+title CU-35 - Analizar políticas con motor inteligente
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam handwritten false
+
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam NoteBackgroundColor #FEF9C3
+skinparam NoteBorderColor #CA8A04
+skinparam NoteFontColor #422006
+
+[*] --> PoliticaSeleccionada
+
+PoliticaSeleccionada --> ValidandoPermisosAdmin : seleccionarPolitica() / obtenerPorId()
+ValidandoPermisosAdmin --> AccesoDenegado : [sin rol ADMIN]
+AccesoDenegado --> [*]
+
+ValidandoPermisosAdmin --> AnalisisSolicitado : [rol ADMIN] / solicitarAnalisis()
+AnalisisSolicitado --> DatosPoliticaPreparados : prepararDatos() / getPolicyPredictions()
+DatosPoliticaPreparados --> EnviandoAMotorInteligente : ejecutarMotorInteligente()
+note right of EnviandoAMotorInteligente
+  Se realiza una petición REST POST a http://localhost:8010/predict
+  donde el IA Service Deep Learning analiza la estructura
+  del flujo de trabajo (nodos, decisiones, forks, joins).
+end note
+
+EnviandoAMotorInteligente --> MotorEnProcesamiento : predict()
+MotorEnProcesamiento --> ErrorMotorInteligente : [error de red / excepcion REST]
+ErrorMotorInteligente --> [*]
+
+MotorEnProcesamiento --> ResultadoGenerado : recibirResultado()
+ResultadoGenerado --> RiesgosDetectados : detectarInconsistencias()
+RiesgosDetectados --> RecomendacionesGeneradas : generarRecomendaciones()
+RecomendacionesGeneradas --> AnalisisGuardado : guardarAnalisis()
+AnalisisGuardado --> [*]
+
+@enduml
+
+@startuml CU36_Generar_Reportes_Dinamicos
+
+title CU-36 - Generar reportes dinámicos
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam handwritten false
+
+skinparam state {
+  BackgroundColor #F8FAFC
+  BorderColor #334155
+  FontColor #0F172A
+  FontSize 13
+}
+
+skinparam ArrowColor #334155
+skinparam ArrowFontColor #0F172A
+skinparam NoteBackgroundColor #FEF9C3
+skinparam NoteBorderColor #CA8A04
+skinparam NoteFontColor #422006
+
+[*] --> ReporteSolicitado
+
+ReporteSolicitado --> ValidandoPermisosAdmin : solicitarReporte() / interpretar()
+ValidandoPermisosAdmin --> ConsultaPreparada : [rol ADMIN] / interpretarPrompt()
+ConsultaPreparada --> FiltrosConfigurados : configurarFiltros()
+FiltrosConfigurados --> MetricasSeleccionadas : seleccionarMetricas()
+MetricasSeleccionadas --> EjecutandoAggregationQuery : ejecutarConsulta() / generarPreview()
+note right of EjecutandoAggregationQuery
+  ReporteMongoAggregationBuilder
+  construye pipelines dinámicos de agregación
+  para consultar colecciones de MongoDB.
+end note
+
+EjecutandoAggregationQuery --> SinDatosDisponibles : [cero registros retornados]
+SinDatosDisponibles --> [*]
+
+EjecutandoAggregationQuery --> ErrorGeneracion : [error consulta o parseo]
+ErrorGeneracion --> [*]
+
+EjecutandoAggregationQuery --> ReporteGenerado : recibirFilas() / generarReporte()
+ReporteGenerado --> ReporteVisualizado : visualizarReporte()
+
+ReporteVisualizado --> ExportacionSolicitada : exportar() / exportarReporte()
+ExportacionSolicitada --> ExportandoAExcel : [formato == excel] / exportarExcel()
+ExportacionSolicitada --> ExportandoAPdf : [formato == pdf] / exportarPdf()
+ExportacionSolicitada --> ExportandoAWord : [formato == word] / exportarWord()
+
+ExportandoAExcel --> ReporteExportado : escribirBytes()
+ExportandoAPdf --> ReporteExportado : escribirBytes()
+ExportandoAWord --> ReporteExportado : escribirBytes()
+
+ReporteExportado --> AuditoriaRegistrada : registrarAuditoria() / systemAuditService.log()
+AuditoriaRegistrada --> [*]
+
+@enduml

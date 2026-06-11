@@ -1,0 +1,125 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="C4-Backend-Code-Diagram" name="Código Backend">
+    <mxGraphModel dx="1558" dy="642" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=18;fontColor=#08427B;" value="C4 - Diagrama de Código | Backend / Dominio Principal" vertex="1">
+          <mxGeometry height="40" width="800" x="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=0;fontSize=11;fontColor=#7F8C8D;" value="Modelo C4 - Nivel 4: muestra detalles relevantes de código, clases, modelos, interfaces y persistencia." vertex="1">
+          <mxGeometry height="30" width="700" x="200" y="890" as="geometry" />
+        </mxCell>
+        <mxCell id="color_legend" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#CCCCCC;align=left;verticalAlign=top;spacingLeft=10;spacingTop=5;fontSize=11;fontColor=#555555;" value="&lt;b&gt;Leyenda de Elementos - C4 Código&lt;/b&gt;&lt;br/&gt;• &lt;font color=&quot;#1168BD&quot;&gt;■&lt;/font&gt; Clase / Componente de Código Interno&lt;br/&gt;• &lt;font color=&quot;#85929E&quot;&gt;■&lt;/font&gt; Sistema Externo / Datastore NoSQL" vertex="1">
+          <mxGeometry height="75" width="260" x="50" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="backend_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7F8C8D;strokeWidth=2;dashed=1;align=center;verticalAlign=top;spacingTop=10;fontColor=#7F8C8D;fontSize=12;" value="Backend / API Principal&#xa;[Container: Spring Boot / Java]" vertex="1">
+          <mxGeometry height="660" width="850" x="140" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_politica" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;PoliticaNegocioController&lt;/b&gt;&lt;br/&gt;[Class: Spring RestController]&lt;br/&gt;&lt;br/&gt;Expone endpoints para la gestión de flujos de políticas y canvas de diseño." vertex="1">
+          <mxGeometry height="90" width="180" x="170" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_instancia" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;InstanciaPoliticaController&lt;/b&gt;&lt;br/&gt;[Class: Spring RestController]&lt;br/&gt;&lt;br/&gt;Expone endpoints para iniciar trámites, completar formularios y transicionar flujos." vertex="1">
+          <mxGeometry height="90" width="180" x="380" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_prediction" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;WorkflowPredictionController&lt;/b&gt;&lt;br/&gt;[Class: Spring RestController]&lt;br/&gt;&lt;br/&gt;Expone endpoint de análisis predictivo de workflows e integración con IA." vertex="1">
+          <mxGeometry height="90" width="180" x="590" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ctrl_colaborativo" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;DocumentoColaborativoController&lt;/b&gt;&lt;br/&gt;[Class: Spring RestController]&lt;br/&gt;&lt;br/&gt;Gestiona la creación y metadata de documentos colaborativos." vertex="1">
+          <mxGeometry height="90" width="180" x="790" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_politica" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;PoliticaNegocioService&lt;/b&gt;&lt;br/&gt;[Class: Spring Service]&lt;br/&gt;&lt;br/&gt;Gestiona la lógica de diseño, validación estructural y guardado de políticas." vertex="1">
+          <mxGeometry height="90" width="180" x="170" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_engine" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;WorkflowEngineService&lt;/b&gt;&lt;br/&gt;[Class: Spring Service]&lt;br/&gt;&lt;br/&gt;Motor de workflows: ejecuta transiciones de nodos, fork/join, reglas y decisiones." vertex="1">
+          <mxGeometry height="90" width="180" x="380" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_metadata" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;DocumentoColaborativoMetadataService&lt;/b&gt;&lt;br/&gt;[Class: Spring Service]&lt;br/&gt;&lt;br/&gt;Gestiona metadatos y mapeo NoSQL de documentos en Amazon DynamoDB." vertex="1">
+          <mxGeometry height="90" width="190" x="590" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="repo_politica" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;PoliticaNegocioRepository&lt;/b&gt;&lt;br/&gt;[Interface: MongoRepository]&lt;br/&gt;&lt;br/&gt;Consultas y escrituras en colección de MongoDB &#39;politicas_negocio&#39;." vertex="1">
+          <mxGeometry height="80" width="180" x="170" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="repo_instancia" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;InstanciaPoliticaRepository&lt;/b&gt;&lt;br/&gt;[Interface: MongoRepository]&lt;br/&gt;&lt;br/&gt;Consultas y escrituras en colección de MongoDB &#39;instancias_politica&#39;." vertex="1">
+          <mxGeometry height="80" width="180" x="380" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="client_prediction" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;WorkflowPredictionClient&lt;/b&gt;&lt;br/&gt;[Class: Spring HTTP Client]&lt;br/&gt;&lt;br/&gt;Llama al servicio FastAPI IA Deep Learning enviando DTOs de predicción." vertex="1">
+          <mxGeometry height="80" width="180" x="590" y="420" as="geometry" />
+        </mxCell>
+        <mxCell id="client_dynamodb" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;DynamoDbEnhancedClient&lt;/b&gt;&lt;br/&gt;[Class: software.amazon.awssdk]&lt;br/&gt;&lt;br/&gt;Cliente SDK Enhanced para persistir clases mapeadas como Beans NoSQL." vertex="1">
+          <mxGeometry height="80" width="190" x="590" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="db_mongodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;MongoDB&lt;/b&gt;&lt;br/&gt;[NoSQL Database]&lt;br/&gt;&lt;br/&gt;Colecciones: politicas_negocio, instancias_politica, tareas_actividad" vertex="1">
+          <mxGeometry height="110" width="160" x="260" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="db_dynamodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Amazon DynamoDB&lt;/b&gt;&lt;br/&gt;[NoSQL Database]&lt;br/&gt;&lt;br/&gt;Tabla: document-repositories (NoSQL PK/SK)" vertex="1">
+          <mxGeometry height="110" width="170" x="530" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_ia_dl" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Microservicio IA Deep Learning&lt;/b&gt;&lt;br/&gt;[Container: FastAPI]&lt;br/&gt;&lt;br/&gt;Endpoint: POST /predict (Inferencia local y DeepSeek)" vertex="1">
+          <mxGeometry height="80" width="180" x="750" y="735" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_ctrl_pol_to_srv" edge="1" parent="1" source="ctrl_politica" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="srv_politica" value="Llama servicio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_ctrl_ins_to_srv" edge="1" parent="1" source="ctrl_instancia" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="srv_engine" value="Ejecuta workflow">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_ctrl_pred_to_client" edge="1" parent="1" source="ctrl_prediction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="client_prediction" value="Llama cliente predict">
+          <mxGeometry relative="1" x="0.4" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="680" y="250" />
+              <mxPoint x="550" y="250" />
+              <mxPoint x="550" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_ctrl_pred_to_repo" edge="1" parent="1" source="ctrl_prediction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="repo_politica" value="Carga politica">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="240" />
+              <mxPoint x="360" y="240" />
+              <mxPoint x="360" y="460" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_ctrl_colab_to_srv" edge="1" parent="1" source="ctrl_colaborativo" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="srv_metadata" value="Administra metadatos">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="840" y="380" />
+              <mxPoint x="685" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_srv_pol_to_repo" edge="1" parent="1" source="srv_politica" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="repo_politica" value="CRUD Politica">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_srv_eng_to_repo" edge="1" parent="1" source="srv_engine" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="repo_instancia" value="CRUD Instancia">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_srv_meta_to_client" edge="1" parent="1" source="srv_metadata" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="client_dynamodb" value="Usa mapeo NoSQL">
+          <mxGeometry relative="1" x="-0.6667" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_repo_pol_to_mongo" edge="1" parent="1" source="repo_politica" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="db_mongodb" value="driver mongodb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_repo_ins_to_mongo" edge="1" parent="1" source="repo_instancia" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="db_mongodb" value="driver mongodb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_client_dyn_to_db" edge="1" parent="1" source="client_dynamodb" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="db_dynamodb" value="AWS SDK DynamoDB">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_client_pred_to_ext" edge="1" parent="1" source="client_prediction" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_ia_dl" value="HTTP POST /predict">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="520" />
+              <mxPoint x="840" y="520" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

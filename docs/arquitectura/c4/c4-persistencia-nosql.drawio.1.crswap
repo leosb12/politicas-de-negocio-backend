@@ -1,0 +1,112 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="C4-Persistencia-NoSQL-Code-Diagram" name="Persistencia NoSQL">
+    <mxGraphModel dx="1266" dy="521" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="950" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=18;fontColor=#08427B;" value="C4 - Diagrama de Código | Persistencia NoSQL" vertex="1">
+          <mxGeometry height="40" width="800" x="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=0;fontSize=11;fontColor=#7F8C8D;" value="Modelo C4 - Nivel 4: muestra la persistencia NoSQL nativa. Mapeo de documentos en MongoDB y diseño de tablas Hash/Range (PK/SK) en DynamoDB." vertex="1">
+          <mxGeometry height="30" width="750" x="175" y="890" as="geometry" />
+        </mxCell>
+        <mxCell id="color_legend" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#CCCCCC;align=left;verticalAlign=top;spacingLeft=10;spacingTop=5;fontSize=11;fontColor=#555555;" value="&lt;b&gt;Leyenda de Elementos - Persistencia NoSQL&lt;/b&gt;&lt;br/&gt;• &lt;font color=&quot;#1168BD&quot;&gt;■&lt;/font&gt; Clase de Negocio / Repositorio / Documento NoSQL&lt;br/&gt;• &lt;font color=&quot;#85929E&quot;&gt;■&lt;/font&gt; Base de Datos NoSQL Externa" vertex="1">
+          <mxGeometry height="75" width="310" x="15" y="830" as="geometry" />
+        </mxCell>
+        <mxCell id="boundary_mongodb" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7F8C8D;strokeWidth=2;dashed=1;align=center;verticalAlign=top;spacingTop=10;fontColor=#7F8C8D;fontSize=12;" value="MongoDB Persistence&#xa;[Spring Data MongoDB]" vertex="1">
+          <mxGeometry height="690" width="470" x="50" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="boundary_dynamodb" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7F8C8D;strokeWidth=2;dashed=1;align=center;verticalAlign=top;spacingTop=10;fontColor=#7F8C8D;fontSize=12;" value="Amazon DynamoDB Persistence&#xa;[AWS SDK Enhanced Client]" vertex="1">
+          <mxGeometry height="690" width="470" x="580" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_engine_nosql" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;WorkflowEngineService&lt;/b&gt;&lt;br/&gt;[Class: Spring Service]&lt;br/&gt;&lt;br/&gt;Gestiona el ciclo de vida e histórico de transiciones de los flujos." vertex="1">
+          <mxGeometry height="70" width="180" x="195" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="repo_politica_nosql" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;PoliticaNegocioRepository&lt;/b&gt;&lt;br/&gt;[Interface: MongoRepository]" vertex="1">
+          <mxGeometry height="60" width="180" x="70" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="repo_instancia_nosql" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;InstanciaPoliticaRepository&lt;/b&gt;&lt;br/&gt;[Interface: MongoRepository]" vertex="1">
+          <mxGeometry height="60" width="180" x="310" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_politica" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=left;spacingLeft=8;spacingTop=4;fontSize=10;" value="&lt;center&gt;&lt;b&gt;PoliticaNegocio&lt;/b&gt;&lt;br/&gt;[MongoDB Document: politicas_negocio]&lt;/center&gt;&lt;br/&gt;• id: String [ID]&lt;br/&gt;• nombre: String&lt;br/&gt;• categoria: String&lt;br/&gt;• estado: EstadoPolitica&lt;br/&gt;• requierePago: Boolean&lt;br/&gt;• &lt;b&gt;nodos&lt;/b&gt;: List&lt;Nodo&gt; [Embedded Document]&lt;br/&gt;• &lt;b&gt;conexiones&lt;/b&gt;: List&lt;Conexion&gt; [Embedded]&lt;br/&gt;• &lt;b&gt;requisitosIniciales&lt;/b&gt;: List&lt;CampoFormulario&gt; [Embedded]" vertex="1">
+          <mxGeometry height="160" width="220" x="60" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_instancia" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=left;spacingLeft=8;spacingTop=4;fontSize=10;" value="&lt;center&gt;&lt;b&gt;InstanciaPolitica&lt;/b&gt;&lt;br/&gt;[MongoDB Document: instancias_politica]&lt;/center&gt;&lt;br/&gt;• id: String [ID]&lt;br/&gt;• politicaId: String&lt;br/&gt;• estadoInstancia: EstadoInstancia&lt;br/&gt;• creadaPor: String&lt;br/&gt;• &lt;b&gt;datosContexto&lt;/b&gt;: Map&lt;String, Object&gt; [NoSQL Map]&lt;br/&gt;• &lt;b&gt;tokensJoin&lt;/b&gt;: Map&lt;String, List&lt;String&gt;&gt; [NoSQL Map]" vertex="1">
+          <mxGeometry height="160" width="220" x="290" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_usuario" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=left;spacingLeft=8;spacingTop=4;fontSize=10;" value="&lt;center&gt;&lt;b&gt;Usuario&lt;/b&gt;&lt;br/&gt;[MongoDB Document: usuarios]&lt;/center&gt;&lt;br/&gt;• id: String [ID]&lt;br/&gt;• email: String&lt;br/&gt;• rolId: String&lt;br/&gt;• departamentoId: String" vertex="1">
+          <mxGeometry height="90" width="200" x="80" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="doc_tarea" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=left;spacingLeft=8;spacingTop=4;fontSize=10;" value="&lt;center&gt;&lt;b&gt;TareaActividad&lt;/b&gt;&lt;br/&gt;[MongoDB Document: tareas_actividad]&lt;/center&gt;&lt;br/&gt;• id: String [ID]&lt;br/&gt;• instanciaId: String&lt;br/&gt;• nodoId: String&lt;br/&gt;• responsableId: String&lt;br/&gt;• estadoTarea: EstadoTarea&lt;br/&gt;• &lt;b&gt;formularioDefinicion&lt;/b&gt;: List&lt;CampoFormulario&gt; [Embedded]" vertex="1">
+          <mxGeometry height="120" width="220" x="290" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="srv_metadata_nosql" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;DocumentoColaborativoMetadataService&lt;/b&gt;&lt;br/&gt;[Class: Spring Service]&lt;br/&gt;&lt;br/&gt;Administra metadatos de colaboración en tiempo real sobre DynamoDB." vertex="1">
+          <mxGeometry height="70" width="220" x="705" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="client_enhanced_nosql" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;DynamoDbEnhancedClient&lt;/b&gt;&lt;br/&gt;[AWS SDK Enhanced Client]" vertex="1">
+          <mxGeometry height="60" width="200" x="715" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="bean_colab_metadata" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=left;spacingLeft=8;spacingTop=4;fontSize=10;" value="&lt;center&gt;&lt;b&gt;DocumentoColaborativoMetadata&lt;/b&gt;&lt;br/&gt;[DynamoDB Bean: document-repositories]&lt;/center&gt;&lt;br/&gt;• &lt;b&gt;pk (Partition Key)&lt;/b&gt;: CLIENTE#{clienteId} [clientId]&lt;br/&gt;• &lt;b&gt;sk (Sort Key)&lt;/b&gt;: TRAMITE#{tramiteId}#DOC_COLAB#{documentoId} [repositoryId]&lt;br/&gt;• documentoId: String&lt;br/&gt;• campoFormularioId: String&lt;br/&gt;• nombreDocumento: String&lt;br/&gt;• estado: String&lt;br/&gt;• s3Key: String&lt;br/&gt;• &lt;b&gt;configuracionOrigen&lt;/b&gt;: ConfiguracionOrigen [Embedded Bean]&lt;br/&gt;• &lt;b&gt;permisosEdicion&lt;/b&gt;: PermisosEdicion [Embedded Bean]&lt;br/&gt;• &lt;b&gt;permisosLectura&lt;/b&gt;: PermisosLectura [Embedded Bean]" vertex="1">
+          <mxGeometry height="200" width="280" x="675" y="325" as="geometry" />
+        </mxCell>
+        <mxCell id="bean_repository" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=left;spacingLeft=8;spacingTop=4;fontSize=10;" value="&lt;center&gt;&lt;b&gt;DocumentRepository&lt;/b&gt;&lt;br/&gt;[DynamoDB Bean: document-repositories]&lt;/center&gt;&lt;br/&gt;• &lt;b&gt;pk&lt;/b&gt;: Partition Key&lt;br/&gt;• &lt;b&gt;sk&lt;/b&gt;: Sort Key&lt;br/&gt;• id: String&lt;br/&gt;• metadata: String" vertex="1">
+          <mxGeometry height="110" width="240" x="695" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="cyl_mongodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;MongoDB Atlas&lt;/b&gt;&lt;br/&gt;[External Database]&lt;br/&gt;&lt;br/&gt;Colecciones NoSQL auto-descriptivas con documentos dinámicos." vertex="1">
+          <mxGeometry height="100" width="180" x="195" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="cyl_dynamodb" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Amazon DynamoDB&lt;/b&gt;&lt;br/&gt;[External Database]&lt;br/&gt;&lt;br/&gt;Persistencia de almacenamiento de tipo clave-valor mapeada por atributos." vertex="1">
+          <mxGeometry height="130" width="185" x="725" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_srv_to_repo_pol" edge="1" parent="1" source="srv_engine_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="repo_politica_nosql" value="Consulta">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_srv_to_repo_ins" edge="1" parent="1" source="srv_engine_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="repo_instancia_nosql" value="Crea/Modifica">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_repo_pol_to_doc" edge="1" parent="1" source="repo_politica_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="doc_politica" value="Mapea">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_repo_ins_to_doc" edge="1" parent="1" source="repo_instancia_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="doc_instancia" value="Mapea">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_repo_pol_to_db" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" value="Consulta / Guarda">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="40" y="263" />
+              <mxPoint x="40" y="763" />
+              <mxPoint x="195" y="763" />
+            </Array>
+            <mxPoint x="70" y="262.9565217391305" as="sourcePoint" />
+            <mxPoint x="195" y="762.9565217391305" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_repo_ins_to_db" edge="1" parent="1" source="repo_instancia_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cyl_mongodb" value="Consulta / Guarda">
+          <mxGeometry relative="1" x="0.3435" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="500" y="260" />
+              <mxPoint x="500" y="780" />
+              <mxPoint x="375" y="780" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_srv_meta_to_client" edge="1" parent="1" source="srv_metadata_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="client_enhanced_nosql" value="CRUD Documento">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_client_to_bean" edge="1" parent="1" source="client_enhanced_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="bean_colab_metadata" value="Mapea Bean">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_client_to_db" edge="1" parent="1" source="client_enhanced_nosql" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cyl_dynamodb" value="Guarda / Query NoSQL">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="260" />
+              <mxPoint x="980" y="790" />
+              <mxPoint x="905" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

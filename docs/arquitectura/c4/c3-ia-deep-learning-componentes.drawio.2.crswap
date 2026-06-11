@@ -1,0 +1,111 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0">
+  <diagram id="C3-IaDl-Components" name="Componentes IA DL">
+    <mxGraphModel dx="1447" dy="596" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=18;fontColor=#08427B;" value="C3 - Diagrama de Componentes | Microservicio IA Deep Learning" vertex="1">
+          <mxGeometry height="40" width="800" x="150" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=0;fontSize=11;fontColor=#7F8C8D;" value="Modelo C4 - Nivel 3: muestra los componentes internos principales de un contenedor." vertex="1">
+          <mxGeometry height="30" width="700" x="200" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="color_legend" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#CCCCCC;align=left;verticalAlign=top;spacingLeft=10;spacingTop=5;fontSize=11;fontColor=#555555;" value="&lt;b&gt;Leyenda de Elementos - C3&lt;/b&gt;&lt;br/&gt;• &lt;font color=&quot;#1168BD&quot;&gt;■&lt;/font&gt; Componente Interno (Clases agrupadas)&lt;br/&gt;• &lt;font color=&quot;#85929E&quot;&gt;■&lt;/font&gt; Contenedor / Sistema Externo" vertex="1">
+          <mxGeometry height="75" width="240" x="50" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="ia_dl_boundary" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#7F8C8D;strokeWidth=2;dashed=1;align=center;verticalAlign=top;spacingTop=10;fontColor=#7F8C8D;fontSize=12;" value="Microservicio IA Deep Learning&#xa;[Container: FastAPI / Python / TensorFlow]" vertex="1">
+          <mxGeometry height="580" width="550" x="270" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_routers" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;API FastAPI / Routers&lt;/b&gt;&lt;br/&gt;[Component: FastAPI Router]&lt;br/&gt;&lt;br/&gt;Expone endpoints para predición de flujos y generación de reportes visuales." vertex="1">
+          <mxGeometry height="80" width="180" x="600" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_config" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Configuración Compartida&lt;/b&gt;&lt;br/&gt;[Component: Python Config]&lt;br/&gt;&lt;br/&gt;Centraliza variables, rutas de modelos local y llaves de la API de enriquecimiento." vertex="1">
+          <mxGeometry height="80" width="150" x="270" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_predictions" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Módulo de Predicciones&lt;/b&gt;&lt;br/&gt;[Component: Python Service]&lt;br/&gt;&lt;br/&gt;Calcula métricas y tiempos de ejecución de flujos canvas." vertex="1">
+          <mxGeometry height="80" width="180" x="390" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_classifier" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Clasificador de Solicitudes&lt;/b&gt;&lt;br/&gt;[Component: Python Service]&lt;br/&gt;&lt;br/&gt;Clasifica solicitudes en base a embeddings y modelos locales de coincidencia." vertex="1">
+          <mxGeometry height="90" width="210" x="600" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_reports" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Reportes Dinámicos y Visuales&lt;/b&gt;&lt;br/&gt;[Component: Python Service]&lt;br/&gt;&lt;br/&gt;Genera estructuras de visualización y análisis de reportes." vertex="1">
+          <mxGeometry height="80" width="150" x="290" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_deepseek_client" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Cliente DeepSeek API&lt;/b&gt;&lt;br/&gt;[Component: HTTP Client]&lt;br/&gt;&lt;br/&gt;Solicita análisis generativo y resúmenes opcionales para complementar reportes." vertex="1">
+          <mxGeometry height="80" width="150" x="290" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="cmp_model_artifacts" parent="1" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Artefactos de Modelos IA&lt;/b&gt;&lt;br/&gt;[Component: Data Store]&lt;br/&gt;&lt;br/&gt;Archivos serializados (.keras, .pkl) de redes neuronales locales." vertex="1">
+          <mxGeometry height="100" width="190" x="455" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_backend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Backend / API Principal&lt;/b&gt;&lt;br/&gt;[Container]" vertex="1">
+          <mxGeometry height="70" width="160" x="50" y="135" as="geometry" />
+        </mxCell>
+        <mxCell id="ext_deepseek" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#85929E;strokeColor=#5D6D7E;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;DeepSeek API&lt;/b&gt;&lt;br/&gt;[External Software System]" vertex="1">
+          <mxGeometry height="80" width="160" x="890" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_backend_to_routers" edge="1" parent="1" source="ext_backend" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_routers" value="Solicitudes [HTTP/JSON]">
+          <mxGeometry relative="1" x="-1" y="-67" as="geometry">
+            <mxPoint x="-30" y="-7" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_routers_to_pred" edge="1" parent="1" source="cmp_routers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_predictions" value="Llama">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_routers_to_class" edge="1" parent="1" source="cmp_routers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_classifier" value="Llama">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="690" y="320" />
+              <mxPoint x="550" y="320" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_routers_to_rep" edge="1" parent="1" source="cmp_routers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_reports" value="Llama">
+          <mxGeometry relative="1" x="-0.0123" y="20" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_pred_to_inf" edge="1" parent="1" source="cmp_predictions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_inference" value="Usa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_class_to_inf" edge="1" parent="1" source="cmp_classifier" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_inference" value="Usa">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_pred_to_deepseek" edge="1" parent="1" source="cmp_predictions" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_deepseek_client" value="Enriquece">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_reports_to_deepseek" edge="1" parent="1" source="cmp_reports" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_deepseek_client" value="Enriquece">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_inference_to_models" edge="1" parent="1" source="cmp_inference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_model_artifacts" value="Carga">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_client_to_api" edge="1" parent="1" source="cmp_inference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="ext_deepseek" value="Llamadas [HTTPS]">
+          <mxGeometry relative="1" x="0.6" y="-40" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge_routers_to_config" edge="1" parent="1" source="cmp_routers" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_config" value="Lee">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_inference_to_config" edge="1" parent="1" source="cmp_inference" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_config" value="Model paths">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_deepseek_to_config" edge="1" parent="1" source="cmp_deepseek_client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_config" value="API Key">
+          <mxGeometry relative="1" x="0.0488" y="135" as="geometry">
+            <mxPoint y="6" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="D_gKoWcSibwtp9CCaA57-1" edge="1" parent="1" source="cmp_deepseek_client" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#7F8C8D;strokeWidth=1.5;dashed=1;fontColor=#4A5568;fontSize=9;" target="cmp_inference" value="">
+          <mxGeometry relative="1" x="0.6" y="-40" as="geometry">
+            <mxPoint as="offset" />
+            <mxPoint x="440" y="500" as="sourcePoint" />
+            <mxPoint x="890" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cmp_inference" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1168BD;strokeColor=#0B4C8C;strokeWidth=2;fontColor=#FFFFFF;align=center;fontSize=11;" value="&lt;b&gt;Servicios de Inferencia Local&lt;/b&gt;&lt;br/&gt;[Component: TensorFlow / Keras Wrapper]&lt;br/&gt;&lt;br/&gt;Carga y ejecuta inferencia con modelos de redes neuronales y Sentence Transformers." vertex="1">
+          <mxGeometry height="100" width="210" x="500" y="460" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
