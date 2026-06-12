@@ -19,4 +19,5 @@ public class ReporteVisualDTO {
     private LocalDateTime fechaGeneracion;
     private List<BloqueReporteDTO> bloques;
     private Boolean asistido;
+    private String offlineMessage;
 }
