@@ -500,6 +500,14 @@ public class WorkflowAiEditorService {
         }
 
         TipoCampo fieldType = parseFieldType(firstText(operation, "fieldType", "tipoCampo", "type", "tipo"), fieldName);
+        List<String> options = firstStringList(operation, "options", "opciones");
+        if (options.isEmpty()) {
+            if (fieldType == TipoCampo.GRID) {
+                options = List.of("Columna 1", "Columna 2");
+            } else if (fieldType == TipoCampo.CHECKBOX || fieldType == TipoCampo.SELECCION) {
+                options = List.of("Opción 1", "Opción 2");
+            }
+        }
         CampoFormulario field = CampoFormulario.builder()
                 .campo(fieldName)
                 .tipo(fieldType)
@@ -507,7 +515,7 @@ public class WorkflowAiEditorService {
                 .requerido(firstNullableBoolean(operation, "required", "requerido", "obligatorio"))
                 .placeholder(firstText(operation, "placeholder"))
                 .ayuda(firstText(operation, "help", "ayuda", "description", "descripcion"))
-                .opciones(firstStringList(operation, "options", "opciones"))
+                .opciones(options)
                 .validaciones(firstMap(operation, "validations", "validaciones"))
                 .build();
         if (field.getRequerido() == null) {
@@ -675,6 +683,14 @@ public class WorkflowAiEditorService {
         }
 
         TipoCampo fieldType = parseFieldType(firstText(operation, "fieldType", "tipoCampo", "type", "tipo"), fieldName);
+        List<String> options = firstStringList(operation, "options", "opciones");
+        if (options.isEmpty()) {
+            if (fieldType == TipoCampo.GRID) {
+                options = List.of("Columna 1", "Columna 2");
+            } else if (fieldType == TipoCampo.CHECKBOX || fieldType == TipoCampo.SELECCION) {
+                options = List.of("Opción 1", "Opción 2");
+            }
+        }
         CampoFormulario field = CampoFormulario.builder()
                 .campo(fieldName)
                 .tipo(fieldType)
@@ -682,7 +698,7 @@ public class WorkflowAiEditorService {
                 .requerido(firstNullableBoolean(operation, "required", "requerido", "obligatorio"))
                 .placeholder(firstText(operation, "placeholder"))
                 .ayuda(firstText(operation, "help", "ayuda", "description", "descripcion"))
-                .opciones(firstStringList(operation, "options", "opciones"))
+                .opciones(options)
                 .validaciones(firstMap(operation, "validations", "validaciones"))
                 .build();
         if (field.getRequerido() == null) {
@@ -1098,13 +1114,13 @@ public class WorkflowAiEditorService {
         if (source.contains("archivo") || source.contains("file") || source.contains("pdf") || source.contains("documento")) {
             return TipoCampo.ARCHIVO;
         }
-        if (source.contains("checkbox") || source.contains("opcion multiple") || source.contains("casilla")) {
+        if (source.contains("checkbox") || source.contains("opcion multiple") || source.contains("casilla") || source.contains("verificacion")) {
             return TipoCampo.CHECKBOX;
         }
-        if (source.contains("seleccion") || source.contains("selection") || source.contains("dropdown") || source.contains("opcion unica")) {
+        if (source.contains("seleccion") || source.contains("selection") || source.contains("dropdown") || source.contains("opcion unica") || source.contains("select") || source.contains("combo") || source.contains("desplegable") || source.contains("combobox")) {
             return TipoCampo.SELECCION;
         }
-        if (source.contains("grid") || source.contains("matriz") || source.contains("tabla")) {
+        if (source.contains("grid") || source.contains("matriz") || source.contains("tabla") || source.contains("tabular")) {
             return TipoCampo.GRID;
         }
         if (source.contains("label") || source.contains("etiqueta") || source.contains("mensaje") || source.contains("titulo")) {
@@ -1119,7 +1135,7 @@ public class WorkflowAiEditorService {
         if (source.contains("fecha") || source.contains("date")) {
             return TipoCampo.FECHA;
         }
-        if (source.contains("textarea") || source.contains("area de texto") || source.contains("texto largo") || source.contains("multilinea")) {
+        if (source.contains("textarea") || source.contains("area de texto") || source.contains("texto largo") || source.contains("multilinea") || source.contains("descripcion larga")) {
             return TipoCampo.TEXTAREA;
         }
         return TipoCampo.TEXTO;
@@ -1566,7 +1582,7 @@ public class WorkflowAiEditorService {
     private Map<String, Object> toIaContext(PoliticaNegocio politica) {
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("supportedNodeTypes", List.of("INICIO", "ACTIVIDAD", "DECISION", "FORK", "JOIN", "FIN"));
-        context.put("supportedFieldTypes", List.of("TEXTO", "NUMERO", "BOOLEANO", "ARCHIVO", "FECHA"));
+        context.put("supportedFieldTypes", List.of("TEXTO", "TEXTAREA", "NUMERO", "BOOLEANO", "ARCHIVO", "FECHA", "CHECKBOX", "SELECCION", "GRID", "DOCUMENTO_COLABORATIVO"));
         context.put("departments", departamentoRepository.findAll().stream()
                 .map(department -> {
                     Map<String, Object> item = new LinkedHashMap<>();

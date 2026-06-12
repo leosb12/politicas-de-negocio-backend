@@ -404,5 +404,70 @@ class WorkflowAiEditorServiceTest {
         assertEquals("Código de usuario", politica.getRequisitosIniciales().get(0).getCampo());
         assertEquals(TipoCampo.NUMERO, politica.getRequisitosIniciales().get(0).getTipo());
     }
+
+    @Test
+    void applyEdition_debeAgregarCamposDeNuevosTiposConOpcionesPorDefecto() {
+        PoliticaNegocio politica = policy();
+        when(usuarioRepository.findById("admin-1")).thenReturn(Optional.of(admin()));
+        when(politicaNegocioRepository.findById("pol-1")).thenReturn(Optional.of(politica));
+        when(politicaNegocioRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // 1. GRID field
+        WorkflowAiEditOperationDto gridOp = operationWithType("ADD_FORM_FIELD");
+        gridOp.setNodeName("Validar datos");
+        gridOp.addProperty("fieldLabel", "Tabla de precios");
+        gridOp.addProperty("fieldType", "GRID");
+
+        // 2. CHECKBOX field
+        WorkflowAiEditOperationDto checkboxOp = operationWithType("ADD_FORM_FIELD");
+        checkboxOp.setNodeName("Validar datos");
+        checkboxOp.addProperty("fieldLabel", "Aceptar términos");
+        checkboxOp.addProperty("fieldType", "CHECKBOX");
+
+        // 3. SELECCION field
+        WorkflowAiEditOperationDto seleccionOp = operationWithType("ADD_FORM_FIELD");
+        seleccionOp.setNodeName("Validar datos");
+        seleccionOp.addProperty("fieldLabel", "Color favorito");
+        seleccionOp.addProperty("fieldType", "SELECCION");
+
+        // 4. TEXTAREA field
+        WorkflowAiEditOperationDto textareaOp = operationWithType("ADD_FORM_FIELD");
+        textareaOp.setNodeName("Validar datos");
+        textareaOp.addProperty("fieldLabel", "Comentarios");
+        textareaOp.addProperty("fieldType", "TEXTAREA");
+
+        WorkflowAiEditApplyRequest request = new WorkflowAiEditApplyRequest();
+        request.setPrompt("Agrega campos varios");
+        request.setOperations(List.of(gridOp, checkboxOp, seleccionOp, textareaOp));
+
+        WorkflowAiEditApplyResponse response = service.applyEdition("admin-1", "pol-1", request);
+
+        assertTrue(response.isSuccess());
+        Nodo validar = politica.getNodos().get(2);
+
+        // Verify GRID
+        CampoFormulario gridField = validar.getFormulario().stream()
+                .filter(f -> "Tabla de precios".equals(f.getCampo())).findFirst().orElseThrow();
+        assertEquals(TipoCampo.GRID, gridField.getTipo());
+        assertEquals(List.of("Columna 1", "Columna 2"), gridField.getOpciones());
+
+        // Verify CHECKBOX
+        CampoFormulario checkboxField = validar.getFormulario().stream()
+                .filter(f -> "Aceptar términos".equals(f.getCampo())).findFirst().orElseThrow();
+        assertEquals(TipoCampo.CHECKBOX, checkboxField.getTipo());
+        assertEquals(List.of("Opción 1", "Opción 2"), checkboxField.getOpciones());
+
+        // Verify SELECCION
+        CampoFormulario seleccionField = validar.getFormulario().stream()
+                .filter(f -> "Color favorito".equals(f.getCampo())).findFirst().orElseThrow();
+        assertEquals(TipoCampo.SELECCION, seleccionField.getTipo());
+        assertEquals(List.of("Opción 1", "Opción 2"), seleccionField.getOpciones());
+
+        // Verify TEXTAREA
+        CampoFormulario textareaField = validar.getFormulario().stream()
+                .filter(f -> "Comentarios".equals(f.getCampo())).findFirst().orElseThrow();
+        assertEquals(TipoCampo.TEXTAREA, textareaField.getTipo());
+        assertTrue(textareaField.getOpciones() == null || textareaField.getOpciones().isEmpty());
+    }
 }
 
