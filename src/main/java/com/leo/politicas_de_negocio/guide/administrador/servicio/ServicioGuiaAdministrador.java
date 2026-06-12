@@ -449,6 +449,7 @@ public class ServicioGuiaAdministrador {
         }
         return switch (tipoCampo) {
             case TEXTO -> "TEXT";
+            case TEXTAREA -> "TEXTAREA";
             case NUMERO -> "NUMBER";
             case BOOLEANO -> "BOOLEAN";
             case ARCHIVO -> "FILE";

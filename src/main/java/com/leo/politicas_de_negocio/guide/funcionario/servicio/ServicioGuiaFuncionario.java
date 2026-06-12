@@ -695,6 +695,7 @@ public class ServicioGuiaFuncionario {
             case FECHA -> "DATE";
             case NUMERO -> "NUMBER";
             case TEXTO -> "TEXTAREA";
+            case TEXTAREA -> "TEXTAREA";
             case CHECKBOX -> "CHECKBOX";
             case SELECCION -> "SELECTION";
             case GRID -> "GRID";

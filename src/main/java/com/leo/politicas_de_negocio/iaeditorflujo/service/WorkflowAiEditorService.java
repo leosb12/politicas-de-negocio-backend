@@ -1119,6 +1119,9 @@ public class WorkflowAiEditorService {
         if (source.contains("fecha") || source.contains("date")) {
             return TipoCampo.FECHA;
         }
+        if (source.contains("textarea") || source.contains("area de texto") || source.contains("texto largo") || source.contains("multilinea")) {
+            return TipoCampo.TEXTAREA;
+        }
         return TipoCampo.TEXTO;
     }
 
