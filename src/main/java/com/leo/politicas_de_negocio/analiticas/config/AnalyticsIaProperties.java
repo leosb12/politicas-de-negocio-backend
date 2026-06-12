@@ -9,6 +9,6 @@ import org.springframework.stereotype.Component;
 @Data
 public class AnalyticsIaProperties {
 
-    private String baseUrl = "http://localhost:8001";
+    private String baseUrl = "http://localhost:8000";
     private long timeoutMs = 30000L;
 }

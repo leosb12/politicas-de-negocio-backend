@@ -90,4 +90,60 @@ public class WorkflowPredictionController {
             return ResponseEntity.status(500).body(err);
         }
     }
+
+    @PostMapping("/policy-analysis/offline")
+    public ResponseEntity<java.util.Map<String, Object>> getPolicyPredictionsOffline(@RequestBody PoliticaNegocio politica) {
+        System.out.println("[PREDICCIONES OFFLINE][BACKEND] Request recibido");
+        System.out.println("[PREDICCIONES OFFLINE][BACKEND] No se consulta MongoDB");
+        
+        String politicaJson = "{}";
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+            java.util.Map<String, Object> safeMap = new java.util.HashMap<>();
+            safeMap.put("nodos", politica.getNodos());
+            safeMap.put("conexiones", politica.getConexiones());
+            politicaJson = mapper.writeValueAsString(safeMap);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        PredictionRequest clientReq = PredictionRequest.builder()
+                .politicaId(politica.getId())
+                .nombrePolitica(politica.getNombre())
+                .cantidadNodos(politica.getNodos() != null ? politica.getNodos().size() : 0)
+                .cantidadDecisiones(politica.getNodos() != null ? (int) politica.getNodos().stream().filter(n -> "DECISION".equals(n.getTipo())).count() : 0)
+                .cantidadForks(politica.getNodos() != null ? (int) politica.getNodos().stream().filter(n -> "FORK".equals(n.getTipo())).count() : 0)
+                .cantidadJoins(politica.getNodos() != null ? (int) politica.getNodos().stream().filter(n -> "JOIN".equals(n.getTipo())).count() : 0)
+                .cantidadDocumentos(politica.getNodos() != null ? politica.getNodos().stream().mapToInt(n -> n.getFormulario() != null ? (int) n.getFormulario().stream().filter(f -> "ARCHIVO".equals(f.getTipo()) || "DOCUMENTO_COLABORATIVO".equals(f.getTipo())).count() : 0).sum() : 0)
+                .cantidadFuncionariosInvolucrados(politica.getNodos() != null ? (int) politica.getNodos().stream().filter(n -> n.getResponsableId() != null).map(n -> n.getResponsableId()).distinct().count() : 0)
+                .duracionPromedioHistorica(24.5) // Default placeholder
+                .prioridadActual("NORMAL")
+                .rutaEjecutadaCodificada("")
+                .rutaEjecutadaLegible("")
+                .carrilesVisitados("")
+                .actividadesVisitadas("")
+                .politicaEstructuraJson(politicaJson)
+                .skipDeepSeek(true)
+                .build();
+
+        System.out.println("[PREDICCIONES OFFLINE][BACKEND] Enviando a ia-deep-learning-service");
+        java.util.Map<String, Object> response;
+        try {
+            response = predictionClient.predict(clientReq);
+            System.out.println("[PREDICCIONES OFFLINE][BACKEND] Respuesta IA recibida");
+        } catch (Exception e) {
+            java.util.Map<String, Object> err = new java.util.HashMap<>();
+            err.put("error", "Error calling predict: " + e.getMessage());
+            return ResponseEntity.status(500).body(err);
+        }
+
+        if (response == null) {
+            java.util.Map<String, Object> err = new java.util.HashMap<>();
+            err.put("error", "Prediction client returned null");
+            return ResponseEntity.status(500).body(err);
+        }
+
+        return ResponseEntity.ok(response);
+    }
 }

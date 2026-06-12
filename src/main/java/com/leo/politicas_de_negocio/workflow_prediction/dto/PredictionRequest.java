@@ -28,4 +28,5 @@ public class PredictionRequest {
     private String carrilesVisitados;
     private String actividadesVisitadas;
     private String politicaEstructuraJson;
+    private boolean skipDeepSeek;
 }
