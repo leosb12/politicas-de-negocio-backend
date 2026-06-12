@@ -60,6 +60,32 @@ public class OfflineDeepLearningDynamicReportService {
             return response;
 
         } catch (Exception e) {
+            boolean isConnectionOrServerUnavailable = 
+                e instanceof org.springframework.web.client.ResourceAccessException 
+                || e instanceof org.springframework.web.client.HttpStatusCodeException
+                || e instanceof java.net.ConnectException 
+                || e instanceof java.net.SocketTimeoutException
+                || (e.getCause() != null && (
+                    e.getCause() instanceof java.net.ConnectException 
+                    || e.getCause() instanceof java.net.SocketTimeoutException
+                    || (e.getCause().getMessage() != null && (
+                        e.getCause().getMessage().contains("Connection refused") 
+                        || e.getCause().getMessage().contains("timed out")
+                        || e.getCause().getMessage().contains("refused")
+                    ))
+                ))
+                || (e.getMessage() != null && (
+                    e.getMessage().contains("Connection refused")
+                    || e.getMessage().contains("connect timed out")
+                    || e.getMessage().contains("Network is unreachable")
+                    || e.getMessage().contains("route to host")
+                ));
+
+            if (isConnectionOrServerUnavailable) {
+                log.error("OFFLINE_LOCAL_DEEP_LEARNING_UNAVAILABLE: El microservicio ia-deep-learning-service no está disponible en {}. Detalle: {}", url, e.getMessage());
+                throw new OfflineLocalAiUnavailableException("El servicio de IA local (FastAPI) no está disponible en " + localIaUrl, e);
+            }
+
             log.error("Error al comunicarse con FastAPI local en url: {}. Falló la inferencia local de IA: {}", url, e.getMessage());
             throw new RuntimeException("El servicio de IA local (FastAPI) no está disponible en " + localIaUrl, e);
         }

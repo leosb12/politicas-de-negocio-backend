@@ -42,5 +42,17 @@ public class OfflineReportController {
         ReporteVisualDTO response = offlineFacade.generarReporteOffline(request.getPrompt(), finalUserId, request.getIaPlus());
         return ResponseEntity.ok(response);
     }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(OfflineLocalAiUnavailableException.class)
+    public ResponseEntity<Map<String, Object>> handleLocalAiUnavailable(OfflineLocalAiUnavailableException ex) {
+        log.info("OFFLINE_BROWSER_FALLBACK_ALLOWED: Retornando respuesta controlada para fallback del navegador ante error en ia-deep-learning-service.");
+        Map<String, Object> body = Map.of(
+            "code", "LOCAL_IA_UNAVAILABLE",
+            "message", "El motor de Deep Learning local no está disponible. Puede usarse fallback simple del navegador.",
+            "fallbackAllowed", true,
+            "mode", "OFFLINE_BROWSER_SIMPLE_FALLBACK_REQUIRED"
+        );
+        return ResponseEntity.status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE).body(body);
+    }
 }
 
