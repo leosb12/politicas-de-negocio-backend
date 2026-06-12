@@ -292,7 +292,7 @@ public class AdminManagementService {
         Usuario admin = usuarioRepository.findByIdAndActivo(adminUserId, true)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Administrador no autorizado"));
 
-        if (admin.getRol() == null || !"ADMIN".equalsIgnoreCase(admin.getRol())) {
+        if (admin.getRol() == null || (!"ADMIN".equalsIgnoreCase(admin.getRol()) && !"ADMINISTRADOR".equalsIgnoreCase(admin.getRol()))) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Solo un ADMIN puede realizar esta acción");
         }
     }

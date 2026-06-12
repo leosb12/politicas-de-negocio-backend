@@ -400,7 +400,7 @@ public class AuditoriaDocumentalPoliticaService {
         }
         Usuario admin = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Administrador no autorizado"));
-        if (admin.getRol() == null || !"ADMIN".equalsIgnoreCase(admin.getRol())) {
+        if (admin.getRol() == null || (!"ADMIN".equalsIgnoreCase(admin.getRol()) && !"ADMINISTRADOR".equalsIgnoreCase(admin.getRol()))) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Solo un ADMIN puede realizar esta accion");
         }
         return admin;

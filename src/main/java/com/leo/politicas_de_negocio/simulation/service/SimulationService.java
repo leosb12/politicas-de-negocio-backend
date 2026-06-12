@@ -460,7 +460,7 @@ public class SimulationService {
         String adminId = normalizeRequired(userId, "Debe enviar el header X-Admin-User-Id");
         Usuario actor = usuarioRepository.findByIdAndActivo(adminId, true)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Usuario administrador no autorizado"));
-        if (!"ADMIN".equalsIgnoreCase(actor.getRol())) {
+        if (!"ADMIN".equalsIgnoreCase(actor.getRol()) && !"ADMINISTRADOR".equalsIgnoreCase(actor.getRol())) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Solo un ADMIN puede ejecutar simulaciones");
         }
         return actor;
