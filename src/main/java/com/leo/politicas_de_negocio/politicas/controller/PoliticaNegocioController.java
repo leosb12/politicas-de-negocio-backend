@@ -64,6 +64,15 @@ public class PoliticaNegocioController {
         return ResponseEntity.ok(service.obtenerTramitesDisponibles(actorUserId));
     }
 
+    @GetMapping("/movil/sincronizar")
+    public ResponseEntity<List<PoliticaNegocio>> obtenerPoliticasDisponiblesCompleto(
+            @RequestHeader(value = "X-User-Id", required = false) String userId,
+            @RequestHeader(value = "X-Admin-User-Id", required = false) String adminUserId
+    ) {
+        String actorUserId = resolverActorUserId(userId, adminUserId);
+        return ResponseEntity.ok(service.obtenerPoliticasDisponiblesCompleto(actorUserId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<PoliticaNegocio> obtenerPorId(
             @RequestHeader("X-Admin-User-Id") String adminUserId,

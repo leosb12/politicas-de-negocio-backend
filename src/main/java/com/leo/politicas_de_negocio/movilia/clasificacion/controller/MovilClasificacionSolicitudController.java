@@ -19,8 +19,9 @@ public class MovilClasificacionSolicitudController {
     @PostMapping("/api/movil/ia/clasificar-solicitud")
     public ResponseEntity<ClasificarSolicitudMovilResponse> clasificarSolicitud(
             @RequestHeader("X-User-Id") String usuarioMovilId,
+            @RequestHeader(value = "X-AI-Mode", required = false) String aiMode,
             @RequestBody ClasificarSolicitudMovilRequest request
     ) {
-        return ResponseEntity.ok(service.clasificar(usuarioMovilId, request));
+        return ResponseEntity.ok(service.clasificar(usuarioMovilId, request, aiMode));
     }
 }

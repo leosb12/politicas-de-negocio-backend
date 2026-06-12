@@ -32,7 +32,7 @@ public class MovilClasificacionSolicitudService {
     private final PoliticaNegocioRepository politicaRepository;
     private final IaClasificacionClient iaClasificacionClient;
 
-    public ClasificarSolicitudMovilResponse clasificar(String usuarioMovilId, ClasificarSolicitudMovilRequest request) {
+    public ClasificarSolicitudMovilResponse clasificar(String usuarioMovilId, ClasificarSolicitudMovilRequest request, String aiMode) {
         validarUsuario(usuarioMovilId);
         String texto = request != null ? request.getTexto() : null;
         String nombreDocumento = request != null ? request.getNombreDocumento() : null;
@@ -60,7 +60,8 @@ public class MovilClasificacionSolicitudService {
                 .politicas(politicasActivas.stream().map(this::mapearPolitica).toList())
                 .usarDeepSeek(usarDeepSeek)
                 .nombreDocumento(nombreDocumento)
-                .build());
+                .usarSoloRequisitosIniciales(request != null && Boolean.TRUE.equals(request.getUsarSoloRequisitosIniciales()))
+                .build(), aiMode);
 
         if (iaResponse == null || iaResponse.getPoliticaId() == null || iaResponse.getPoliticaId().isBlank()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "IA_DEEP_LEARNING_NO_DISPONIBLE");

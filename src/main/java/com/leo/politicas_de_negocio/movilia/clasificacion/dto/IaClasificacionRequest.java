@@ -17,4 +17,5 @@ public class IaClasificacionRequest {
     private List<PoliticaClasificacionDto> politicas;
     private Boolean usarDeepSeek;
     private String nombreDocumento;
+    private Boolean usarSoloRequisitosIniciales;
 }

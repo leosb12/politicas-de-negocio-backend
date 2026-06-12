@@ -24,11 +24,14 @@ public class IaClasificacionClient {
     private final RestTemplate analyticsIaRestTemplate;
     private final AiServiceUrlBuilder aiServiceUrlBuilder;
 
-    public IaClasificacionResponse clasificar(IaClasificacionRequest payload) {
+    public IaClasificacionResponse clasificar(IaClasificacionRequest payload, String aiMode) {
         String url = aiServiceUrlBuilder.buildUrl("/api/ia/clasificar-solicitud");
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        if (aiMode != null && !aiMode.trim().isEmpty()) {
+            headers.set("X-AI-Mode", aiMode.trim());
+        }
         HttpEntity<IaClasificacionRequest> requestEntity = new HttpEntity<>(payload, headers);
 
         try {

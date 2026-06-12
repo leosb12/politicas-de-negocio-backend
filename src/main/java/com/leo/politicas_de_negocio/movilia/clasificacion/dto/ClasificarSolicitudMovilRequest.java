@@ -7,4 +7,5 @@ public class ClasificarSolicitudMovilRequest {
     private String texto;
     private Boolean usarDeepSeek;
     private String nombreDocumento;
+    private Boolean usarSoloRequisitosIniciales;
 }

@@ -191,6 +191,17 @@ public class PoliticaNegocioService {
                 .toList();
     }
 
+    public List<PoliticaNegocio> obtenerPoliticasDisponiblesCompleto(String actorUserId) {
+        Usuario actor = assertUsuarioActivo(actorUserId);
+
+        List<PoliticaNegocio> politicas = repository.findByEstado(EstadoPolitica.ACTIVA).stream()
+                .filter(politica -> puedeIniciarPolitica(actor, politica))
+                .toList();
+
+        politicas.forEach(this::normalizarConfiguracionesDocumento);
+        return politicas;
+    }
+
     public PoliticaNegocio obtenerPorId(String adminUserId, String id) {
         assertAdmin(adminUserId);
         PoliticaNegocio politica = repository.findById(id)
