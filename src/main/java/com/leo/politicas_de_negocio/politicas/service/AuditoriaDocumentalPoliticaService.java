@@ -332,7 +332,7 @@ public class AuditoriaDocumentalPoliticaService {
                 .puedeEditar(puedeEditar)
                 .puedeReemplazar(puedeReemplazar)
                 .puedeEliminar(puedeEliminar)
-                .puedeAuditar(puedeLeer)
+                .puedeAuditar(true)
                 .build();
     }
 
@@ -364,7 +364,7 @@ public class AuditoriaDocumentalPoliticaService {
                 .puedeEditar(puedeEditar)
                 .puedeReemplazar(puedeReemplazar)
                 .puedeEliminar(puedeEliminar)
-                .puedeAuditar(puedeLeer)
+                .puedeAuditar(true)
                 .build();
     }
 
